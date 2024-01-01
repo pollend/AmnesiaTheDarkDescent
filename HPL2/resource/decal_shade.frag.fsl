@@ -1,0 +1,33 @@
+#include "scene_resource.h.fsl"
+
+STRUCT(PsIn)
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float4, color, COLOR);
+    DATA(float2, uv, TEXCOORD0);
+    #if !defined(INDIRECT_ROOT_CONSTANT)
+        DATA(FLAT(uint), drawID,    TEXCOORD1);
+    #endif
+};
+
+
+float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
+{
+    INIT_MAIN;
+
+    #if !defined(INDIRECT_ROOT_CONSTANT)
+        const Decal decal = Get(decals)[In.drawID];
+    #else 
+        const Decal decal = Get(decals)[Get(indirectDrawId)];
+    #endif
+
+    float4 diffuseColor;
+    SampleSceneTextureFloat4(decal.diffuseTextureIndex, Get(sceneSampler), In.uv, diffuseColor);
+    if(diffuseColor.w < 0.01 ) {
+        discard;
+    }
+    float4 color = diffuseColor * In.color;
+    RETURN(color);
+}
+
+

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "Common_3/Utilities/Interfaces/IFileSystem.h"
 #include "engine/IUpdateEventLoop.h"
 #include "engine/Interface.h"
 #include "graphics/GraphicsAllocator.h"
@@ -49,9 +50,19 @@ namespace hpl {
             return;
         }
 
+	    FileSystemInitDesc fsDesc = {};
+        fsDesc.pAppName = "HPL2";
+
+        if (!initFileSystem(&fsDesc)) {
+            LOGF(eERROR, "Filesystem failed to initialize.");
+        }
+
+
         initLog("HPL2", DEFAULT_LOG_LEVEL);
         fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_BINARIES, "./CompiledShaders");
-        fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_SOURCES, "./Shaders");
+        fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_LOG, "./log");
+        fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_GPU_CONFIG, "./");
+        //fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_SOURCES, "./Shaders");
 
         Interface<IUpdateEventLoop>::Register(&m_updateEventLoop);
 
@@ -77,7 +88,6 @@ namespace hpl {
         // graphics allocator
         m_graphicsAlloc = std::make_unique<hpl::GraphicsAllocator>(&m_renderer);
 
-        m_renderer.InitializeResource();
         gui::InitializeGui(m_renderer);
 
         // this is safe because the render target is scheduled on the api thread

@@ -14,6 +14,11 @@
           "name": "AMNESIA_GAME_DIRECTORY",
           "value": "C:/Program Files (x86)/Steam/steamapps/common/Amnesia The Dark Descent",
           "type": "PATH"
+        },
+        {
+          "name": "THE_FORGE_DIR",
+          "value": "C:/projects/The-Forge",
+          "type": "STRING"
         }
       ],
       "cmakeCommandArgs": "VULKAN_SDK=\"C:\\VulkanSDK\\1.3.250.1\""

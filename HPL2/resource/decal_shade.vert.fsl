@@ -1,0 +1,44 @@
+/// Copyright © 2009-2020 Frictional Games
+/// Copyright 2023 Michael Pollind
+/// SPDX-License-Identifier: GPL-3.0
+#include "scene_resource.h.fsl"
+#include "math_utils.h.fsl"
+
+STRUCT(VSInput)
+{
+	DATA(float3, Position, POSITION);
+	DATA(float2, TexCoord, TEXCOORD0);
+	DATA(float4, Color, COLOR);
+};
+
+STRUCT(VSOutput)
+{
+    DATA(float4, Position, SV_Position);
+    DATA(float4, color, COLOR);
+    DATA(float2, uv, TEXCOORD0);
+    #if !defined(INDIRECT_ROOT_CONSTANT)
+        DATA(FLAT(uint), drawID,    TEXCOORD1);
+    #endif
+};
+
+VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
+{
+    INIT_MAIN;
+    
+    VSOutput Out;
+     ViewportInfo info = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
+     #if !defined(INDIRECT_ROOT_CONSTANT)
+        Out.drawID = InstanceID; 
+        const Decal decal = Get(decals)[InstanceID];
+    #else 
+        const Decal decal = Get(decals)[Get(indirectDrawId)];
+    #endif
+
+    float4x4 modelView = mul(info.viewMat, decal.modelMat);
+    float4x4 modelViewPrj = mul(info.projMat, modelView);
+    
+    Out.color = In.Color;
+    Out.uv = mul(decal.uvMat, float4(In.TexCoord, 0, 1.0)).xy;
+    Out.Position = mul(modelViewPrj, float4(In.Position.xyz, 1.0));
+    RETURN(Out);
+}

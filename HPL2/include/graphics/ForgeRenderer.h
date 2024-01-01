@@ -11,6 +11,7 @@
 
 #include <engine/RTTI.h>
 
+#include "Common_3/Utilities/RingBuffer.h"
 #include "graphics/ForgeHandles.h"
 #include "windowing/NativeWindow.h"
 #include "engine/QueuedEventLoopHandler.h"
@@ -54,13 +55,12 @@ namespace hpl {
             CopyPipelineCount = 2
         };
 
+
         static constexpr uint32_t MaxCopyFrames = 32;
         static constexpr uint32_t SwapChainLength = 2; // double buffered
         static constexpr uint32_t ResourcePoolSize = 4; // double buffered
 
         void InitializeRenderer(window::NativeWindowWrapper* window);
-        void InitializeResource();
-        RendererApi GetApi();
 
         struct SamplerPoolKey {
             union {
@@ -104,9 +104,13 @@ namespace hpl {
         * tracks the resources used by a single command buffer
         */
         struct Frame {
+        public:
             uint32_t m_currentFrame = 0;
             uint32_t m_frameIndex = 0;
-            uint32_t m_swapChainIndex = 0;
+            GpuCmdRingElement m_cmdRingElement;
+            bool m_isFinished = true;
+            //FrameState m_state = FrameState::Unitialize;
+
             ForgeRenderer* m_renderer = nullptr;
             SwapChain* m_swapChain = nullptr;
             Cmd* m_cmd = nullptr;
@@ -115,24 +119,37 @@ namespace hpl {
             Semaphore* m_renderCompleteSemaphore = nullptr;
             CommandResourcePool* m_resourcePool = nullptr;
             RenderTarget* m_finalRenderTarget = nullptr;
+
+
+            template<typename T>
+            inline void pushResource(const T& ele) {
+                m_resourcePool->Push(ele);
+            }
+            inline uint32_t index() {
+                return m_frameIndex;
+            }
+
+            inline Cmd*& cmd() {
+                return m_cmdRingElement.pCmds[0];
+            }
+
+            inline RenderTarget* finalTarget() {
+                return m_finalRenderTarget;
+            }
+
+           // inline RenderTarget* swapChainTarget() {
+           //     return m_swapChainTarget;
+           // }
+
+            inline GpuCmdRingElement& RingElement() {
+                return m_cmdRingElement;
+            }
+
+            friend class ForgeRenderer;
         };
 
-
-        const inline Frame GetFrame() {
-            Frame frame;
-            frame.m_currentFrame = FrameCount();
-            frame.m_frameIndex = CurrentFrameIndex();
-            frame.m_swapChainIndex = SwapChainIndex();
-            frame.m_renderer = this;
-            frame.m_swapChain = m_swapChain.m_handle;
-
-            frame.m_cmd = m_cmds[CurrentFrameIndex()];
-            frame.m_cmdPool = m_cmdPools[CurrentFrameIndex()];
-            frame.m_renderCompleteFence = m_renderCompleteFences[CurrentFrameIndex()];
-            frame.m_renderCompleteSemaphore = m_renderCompleteSemaphores[CurrentFrameIndex()];
-            frame.m_resourcePool = &m_resourcePool[CurrentFrameIndex()];
-            frame.m_finalRenderTarget = m_finalRenderTarget[CurrentFrameIndex()].m_handle;
-            return frame;
+        inline Frame& GetFrame() {
+            return m_frame;
         }
         // void BeginFrame() {}
 
@@ -145,10 +162,6 @@ namespace hpl {
         }
         RootSignature* PipelineSignature() { return m_pipelineSignature; }
 
-        size_t SwapChainIndex() { return m_swapChainIndex; }
-        size_t CurrentFrameIndex() { return m_currentFrameCount % SwapChainLength; }
-        size_t FrameCount() { return m_currentFrameCount; }
-        inline SwapChain* GetSwapChain() { return m_swapChain.m_handle; }
         inline Queue* GetGraphicsQueue() { return m_graphicsQueue; }
 
         void cmdCopyTexture(Cmd* cmd, Texture* srcTexture, RenderTarget* dstTexture);
@@ -158,16 +171,14 @@ namespace hpl {
     private:
         std::array<Sampler*, SamplerPoolKey::NumOfVariants> m_samplerPool;
         std::array<CommandResourcePool, SwapChainLength> m_resourcePool;
-        std::array<Fence*, SwapChainLength> m_renderCompleteFences;
-        std::array<Semaphore*, SwapChainLength> m_renderCompleteSemaphores;
         std::array<CmdPool*, SwapChainLength> m_cmdPools;
         std::array<Cmd*, SwapChainLength> m_cmds;
         std::array<SharedRenderTarget, SwapChainLength> m_finalRenderTarget;
 
-        float m_gamma = 1.0f;
-
         window::WindowEvent::QueuedEventHandler m_windowEventHandler;
         window::NativeWindowWrapper* m_window = nullptr;
+
+        GpuCmdRing m_graphicsCmdRing;
 
         Renderer* m_renderer = nullptr;
         RootSignature* m_pipelineSignature = nullptr;
@@ -187,11 +198,14 @@ namespace hpl {
         SharedSampler m_pointSampler ;
 
         RootSignature* m_copyPostProcessingRootSignature = nullptr;
-        DescriptorSet* m_copyPostProcessingDescriptorSet = nullptr;
+        std::array<DescriptorSet*, SwapChainLength> m_copyPostProcessingDescriptorSet ;
         uint32_t m_copyRegionDescriptorIndex = 0;
+        float m_gamma = 1.0f;
+        uint32_t m_swapChainCount;
 
-        uint32_t m_currentFrameCount = 0;
-        uint32_t m_swapChainIndex = 0;
+
+        Frame m_frame;
+
     };
 
 } // namespace hpl

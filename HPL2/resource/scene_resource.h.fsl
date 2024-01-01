@@ -1,0 +1,107 @@
+#include "scene_defs.h.fsl"
+
+#ifndef _SCENE_RESOURCE_H
+#define _SCENE_RESOURCE_H
+
+#if defined(DIRECT3D12)
+	PUSH_CONSTANT(indirectRootConstant, b0)
+	{
+		DATA(uint, indirectDrawId, None);
+	};
+
+	#define INDIRECT_ROOT_CONSTANT 1
+#endif
+
+RES(SamplerState,  nearEdgeClampSampler, UPDATE_FREQ_NONE, s0, binding = 0);
+RES(SamplerState,  nearPointWrapSampler, UPDATE_FREQ_NONE, s1, binding = 1);
+RES(SamplerState,  linearBorderSampler, UPDATE_FREQ_NONE, s2, binding = 2);
+RES(SamplerState, sceneSampler, UPDATE_FREQ_NONE, s3, binding = 3); 
+
+CBUFFER(sceneInfo, UPDATE_FREQ_PER_FRAME, b1, binding = 4) {
+  DATA(WorldInfo, worldInfo, None);
+  DATA(ViewportInfo, viewports[64], None);
+};
+
+RES(Buffer(UniformObject), sceneObjects, UPDATE_FREQ_PER_FRAME, t0, binding = 5);
+RES(Buffer(Light), lights,               UPDATE_FREQ_PER_FRAME, t1, binding = 6);
+RES(Buffer(Particle), particles,         UPDATE_FREQ_PER_FRAME, t2, binding = 7);
+RES(Buffer(Decal), decals,               UPDATE_FREQ_PER_FRAME, t3, binding = 8);
+
+// opaque geometry set
+RES(ByteBuffer,   vtxOpaqueIndex,     UPDATE_FREQ_NONE, t4, binding = 9);
+RES(ByteBuffer,   vtxOpaquePosition,  UPDATE_FREQ_NONE, t5, binding = 10);
+RES(ByteBuffer,   vtxOpaqueTangnet,   UPDATE_FREQ_NONE, t6, binding = 11);
+RES(ByteBuffer,   vtxOpaqueNormal,    UPDATE_FREQ_NONE, t7, binding = 12);
+RES(ByteBuffer,   vtxOpaqueUv,        UPDATE_FREQ_NONE, t8, binding = 13);
+RES(ByteBuffer,   vtxOpaqueColor,     UPDATE_FREQ_NONE, t9, binding = 14);
+
+RES(Buffer(DiffuseMaterial), sceneDiffuseMat, UPDATE_FREQ_NONE, t10, binding = 15);
+RES(Buffer(TranslucentMaterial), sceneTranslucentMat, UPDATE_FREQ_NONE, t11, binding = 16);
+RES(Buffer(WaterMaterial), sceneWaterMat, UPDATE_FREQ_NONE, t12, binding = 17);
+
+RES(Tex2D(float4), visibilityTexture,   UPDATE_FREQ_PER_FRAME, t13, binding = 18);
+RES(Tex2D(float4), albedoTexture,      UPDATE_FREQ_PER_FRAME, t14, binding = 19);
+RES(Tex2D(float4), refractionTexture,      UPDATE_FREQ_PER_FRAME, t15, binding = 20);
+
+RES(Tex2D(float4), dissolveTexture,    UPDATE_FREQ_NONE, t16, binding = 21);
+
+RES(ByteBuffer, lightClustersCount, UPDATE_FREQ_PER_FRAME, t17, binding = 22);
+RES(ByteBuffer, lightClusters,      UPDATE_FREQ_PER_FRAME, t18, binding = 23);
+
+RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t19, binding = 24);
+RES(TexCube(float4), sceneCubeTextures[SCENE_MAX_TEXTURE_CUBE_COUNT],  UPDATE_FREQ_PER_FRAME, t10020, binding = 25);
+
+#define SCENE_OBJECT_ID_BIT 19 // 13  bits for ObjectID 
+#define SCENE_PRIM_ID_BIT  0 // 19 bits for PrimitiveID
+
+// reserve a bit for alpha
+#define SCENE_ALPHA_MASK_FLAG 0x80000000   // 1111 1111 1111 1000 0000 0000 0000 0000
+#define SCENE_OBJECT_ID_MASK  0x7FF80000   // 1111 1111 1111 1000 0000 0000 0000 0000 
+#define SCENE_PRIM_ID_MASK    0x0007FFFF   // 0000 0000 0000 0111 1111 1111 1111 1111
+
+#define SCENE_VIZ_ALPHA_ID(objectId, primitiveId) ((SCENE_ALPHA_MASK_FLAG) | ((objectId << SCENE_OBJECT_ID_BIT) & SCENE_OBJECT_ID_MASK) | ((primitiveId << SCENE_PRIM_ID_BIT) & SCENE_PRIM_ID_MASK)) 
+#define SCENE_VIZ_ID(objectId, primitiveId) (((objectId << SCENE_OBJECT_ID_BIT) & SCENE_OBJECT_ID_MASK) | ((primitiveId << SCENE_PRIM_ID_BIT) & SCENE_PRIM_ID_MASK)) 
+
+#define SCENE_VIZ_OBJECT_ID(id) (((id) & SCENE_OBJECT_ID_MASK) >> SCENE_OBJECT_ID_BIT)
+#define SCENE_VIZ_PRIM_ID(id) (((id) & SCENE_PRIM_ID_MASK) >> SCENE_PRIM_ID_BIT)
+
+bool SampleSceneTextureProjFloat4(uint textureIdx, SamplerState sh, float4 projectUV, inout float4 value) {
+    if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(textureIdx);
+            value = SampleTex2DProj(Get(sceneTextures)[textureIdx], sh, projectUV);
+        EndNonUniformResourceIndex(); 
+        return true;
+    }
+    return false;
+}
+
+INLINE bool SampleSceneCubeTextureFloat4(uint textureIdx, SamplerState sh, float3 uv, inout float4 value) {
+    if(textureIdx < SCENE_MAX_TEXTURE_CUBE_COUNT) {
+        BeginNonUniformResourceIndex(textureIdx);
+            value = SampleTexCube(Get(sceneCubeTextures)[textureIdx], sh, uv);
+	    EndNonUniformResourceIndex();
+        return true;
+    }
+    return false;
+}
+
+INLINE bool SampleSceneTextureFloat4(uint textureIdx,SamplerState sh, float2 uv, inout float4 value) {
+    if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(textureIdx);
+            value = SampleTex2D(Get(sceneTextures)[textureIdx], sh, uv);
+	    EndNonUniformResourceIndex();
+        return true;
+    }
+    return false;
+}
+INLINE bool SampleSceneTextureGradFloat4(uint textureIdx, SamplerState sh, float2 uv, float2 texCoordDX, float2 texCoordDY, inout float4 value) {
+    if(textureIdx < SCENE_MAX_TEXTURE_COUNT) {
+        BeginNonUniformResourceIndex(textureIdx);
+	        value = SampleGradTex2D(Get(sceneTextures)[textureIdx], sh, uv, texCoordDX, texCoordDY);
+        EndNonUniformResourceIndex(); 
+        return true;
+    }
+    return false;
+}
+
+#endif

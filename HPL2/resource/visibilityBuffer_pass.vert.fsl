@@ -1,0 +1,32 @@
+#include "scene_resource.h.fsl"
+
+STRUCT(VSInput)
+{
+	DATA(float3, Position, POSITION);
+};
+
+STRUCT(VSOutput)
+{
+	DATA(float4, Position, SV_Position);
+#if !defined(INDIRECT_ROOT_CONSTANT)
+    DATA(FLAT(uint), drawID,   TEXCOORD0);
+#endif
+};
+
+VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
+{
+    INIT_MAIN;
+    VSOutput Out;
+    
+    ViewportInfo info = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
+    #if !defined(INDIRECT_ROOT_CONSTANT)
+        Out.drawID = InstanceID; 
+        float4x4 modelView = mul(info.viewMat, Get(sceneObjects)[InstanceID].modelMat);
+    #else 
+        float4x4 modelView = mul(info.viewMat, Get(sceneObjects)[Get(indirectDrawId)].modelMat);
+    #endif
+    
+    float4x4 modelViewPrj = mul(info.projMat, modelView);
+    Out.Position = mul(modelViewPrj, float4(In.Position.xyz, 1.0));
+    RETURN(Out);
+}

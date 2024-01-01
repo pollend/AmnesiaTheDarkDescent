@@ -26,6 +26,8 @@
 #include "graphics/Material.h"
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/VertexBuffer.h"
+#include <graphics/GraphicsBuffer.h>
+#include <graphics/MeshUtility.h>
 
 #include "resources/Resources.h"
 #include "resources/MaterialManager.h"
@@ -55,51 +57,114 @@ namespace hpl {
 		mfLengthTileAmount = 1;
 		mfLengthTileSize = 1;
 
-		mpVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(	eVertexBufferType_Hardware, eVertexBufferDrawType_Tri, eVertexBufferUsageType_Dynamic,
-																4 * mlMaxSegments, 6 * mlMaxSegments);
+        {
+            auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
+            auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
+            m_geometry = opaqueSet.allocate(4 * mlMaxSegments, 6 * mlMaxSegments);
 
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
+            auto& indexStream = m_geometry->indexBuffer();
+            auto positionStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+            auto normalStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL);
+            auto colorStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR);
+            auto textureStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0);
+            auto tangentStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
 
-		for(int i=0; i<mlMaxSegments; ++i)
-		{
-			cVector3f vTexCoords[4] = {cVector3f(1,1,0),	//Bottom left
-										cVector3f(-1,1,0),	//Bottom right
-										cVector3f(-1,-1,0),	//Top left
-										cVector3f(1,-1,0)};	//Top right
+            BufferUpdateDesc indexUpdateDesc = { indexStream.m_handle,
+                                                 m_geometry->indexOffset() * GeometrySet::IndexBufferStride,
+                                                 GeometrySet::IndexBufferStride * 6 * mlMaxSegments * NumberOfCopies };
+            BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle,
+                                                    m_geometry->vertexOffset() * positionStream->stride(),
+                                                    positionStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
+            BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle,
+                                                  m_geometry->vertexOffset() * normalStream->stride(),
+                                                  normalStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
+            BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle,
+                                                 m_geometry->vertexOffset() * colorStream->stride(),
+                                                 colorStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
+            BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle,
+                                                   m_geometry->vertexOffset() * textureStream->stride(),
+                                                   textureStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
+            BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle,
+                                                   m_geometry->vertexOffset() * tangentStream->stride(),
+                                                   tangentStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
 
-			for(int j=0;j<4;j++)
-			{
-				mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Position,	0);
-				mpVtxBuffer->AddVertexColor(eVertexBufferElement_Color0,	mColor);
-				mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, 0);
-				mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Normal,	cVector3f(0,0,1));
-			}
+            beginUpdateResource(&indexUpdateDesc);
+            beginUpdateResource(&positionUpdateDesc);
+            beginUpdateResource(&normalUpdateDesc);
+            beginUpdateResource(&colorUpdateDesc);
+            beginUpdateResource(&textureUpdateDesc);
+            beginUpdateResource(&tangentUpdateDesc);
 
-			for(int j=0;j<3;j++) mpVtxBuffer->AddIndex(j + i*4);
-			for(int j=2;j<5;j++) mpVtxBuffer->AddIndex( (j==4?0:j)  + i*4);
-		}
+            GraphicsBuffer gpuIndexBuffer(indexUpdateDesc);
+            GraphicsBuffer gpuPositionBuffer(positionUpdateDesc);
+            GraphicsBuffer gpuNormalBuffer(normalUpdateDesc);
+            GraphicsBuffer gpuColorBuffer(colorUpdateDesc);
+            GraphicsBuffer gpuTextureBuffer(textureUpdateDesc);
+            GraphicsBuffer gpuTangentBuffer(tangentUpdateDesc);
+            auto indexView = gpuPositionBuffer.CreateIndexView();
+		    uint32_t index = 0;
+            for (int i = 0; i < mlMaxSegments; ++i) {
+                for (int j = 0; j < 3; j++) {
+                    indexView.Write(index, j + i * 4);
+                }
+                for (int j = 2; j < 5; j++) {
+                    indexView.Write(index, (j == 4 ? 0 : j) + i * 4);
+                }
+            }
 
-		mpVtxBuffer->Compile(eVertexCompileFlag_CreateTangents);
+            for(size_t copyIdx = 0; copyIdx < 2; copyIdx++) {
+                auto positionView = gpuPositionBuffer.CreateStructuredView<float3>(positionStream->stride() * copyIdx * mlMaxSegments * 4);
+                auto normalView = gpuNormalBuffer.CreateStructuredView<float3>(normalStream->stride() * copyIdx * mlMaxSegments * 4);
+                auto colorView = gpuColorBuffer.CreateStructuredView<float4>(colorStream->stride() * copyIdx * mlMaxSegments * 4);
+                auto textureView = gpuTextureBuffer.CreateStructuredView<float2>(textureStream->stride() * copyIdx * mlMaxSegments * 4);
+                auto tangentView = gpuTangentBuffer.CreateStructuredView<float3>(tangentStream->stride() * copyIdx * mlMaxSegments * 4);
+		        for(int i=0; i < mlMaxSegments; ++i)
+		        {
+		            for(size_t j = 0; j < 4; j++) {
+                        tangentView.Write((i *  4) + j, float3(0, 0, 1));
+                        positionView.Write((i *  4) + j, float3(0,0,0));
+                        normalView.Write((i *  4) + j, float3(0.0f, 0.0f, 1.0f));
+                        colorView.Write((i *  4) + j, float4(mColor.r, mColor.g, mColor.g, mColor.a));
+                        textureView.Write((i *  4) + j, float2(0,0));
+                    }
+		        }
+                Matrix4 trans = Matrix4::identity();
+                hpl::MeshUtility::MikkTSpaceGenerate(4 * mlMaxSegments, 6 * mlMaxSegments, &indexView, &positionView, &textureView, &normalView, &tangentView);
+		    }
+
+            endUpdateResource(&indexUpdateDesc);
+            endUpdateResource(&positionUpdateDesc);
+            endUpdateResource(&normalUpdateDesc);
+            endUpdateResource(&colorUpdateDesc);
+            endUpdateResource(&textureUpdateDesc);
+            endUpdateResource(&tangentUpdateDesc);
+        }
 
 		mbApplyTransformToBV = false;
 
 		mlLastUpdateCount = -1;
 	}
 
-	//-----------------------------------------------------------------------
+    DrawPacket cRopeEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame)  {
+  		DrawPacket packet;
+		if(m_numberSegments <= 0) {
+            return packet;
+		}
 
-    DrawPacket cRopeEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)  {
-
-	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame, elements);
+        DrawPacket::GeometrySetBinding binding{};
+        packet.m_type = DrawPacket::DrawGeometryset;
+        binding.m_subAllocation = m_geometry.get();
+        binding.m_indexOffset = 0;
+        binding.m_set = GraphicsAllocator::AllocationSet::OpaqueSet;
+        binding.m_numIndices = 6 * m_numberSegments;
+        binding.m_vertexOffset = (m_activeCopy * mlMaxSegments * 4);
+        packet.m_unified = binding;
+        return packet;
     }
 
     cRopeEntity::~cRopeEntity()
 	{
 		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
-		if(mpVtxBuffer) hplDelete(mpVtxBuffer);
 	}
 
 
@@ -118,36 +183,14 @@ namespace hpl {
 
 		mColor = aColor;
 
-		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
-
-		cColor finalColor = mColor;
-		if(mbMultiplyAlphaWithColor)
-		{
-			finalColor.r = finalColor.r * mColor.a;
-			finalColor.g = finalColor.g * mColor.a;
-			finalColor.b = finalColor.b * mColor.a;
-		}
-
-		for(int i=0; i<mlMaxSegments * 4; ++i)
-		{
-			pColors[0] = finalColor.r;
-			pColors[1] = finalColor.g;
-			pColors[2] = finalColor.b;
-			pColors[3] = finalColor.a;
-			pColors+=4;
-		}
-
-		mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
 	}
 
-	//-----------------------------------------------------------------------
 
 	void cRopeEntity::SetMaterial(cMaterial * apMaterial)
 	{
 		mpMaterial = apMaterial;
 	}
 
-	//-----------------------------------------------------------------------
 
 	cBoundingVolume* cRopeEntity::GetBoundingVolume()
 	{
@@ -179,25 +222,6 @@ namespace hpl {
 
 	}
 
-	//-----------------------------------------------------------------------
-
-	static inline void SetVec3(float *apPos, const cVector3f &aPos)
-	{
-		apPos[0] = aPos.x;
-		apPos[1] = aPos.y;
-		apPos[2] = aPos.z;
-	}
-
-	static inline void SetVec4(float *apPos, const cVector3f &aPos)
-	{
-		apPos[0] = aPos.x;
-		apPos[1] = aPos.y;
-		apPos[2] = aPos.z;
-		apPos[3] = 1;
-	}
-
-	//-----------------------------------------------------------------------
-
 	static cVector2f gvPosAdd[4] = {
 		//cVector2f (1,1), cVector2f (1,0), cVector2f (-1,0), cVector2f (-1,1)
 		cVector2f (1,0), cVector2f (-1,0), cVector2f (-1,1), cVector2f (1,1)
@@ -205,18 +229,52 @@ namespace hpl {
 
 	bool cRopeEntity::UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime)
 	{
-		float *pPosArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
-		float *pUvArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Texture0);
-		float *pNrmArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Normal);
-		float *pTanArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Texture1Tangent);
+        m_activeCopy = (m_activeCopy + 1) % NumberOfCopies;
+		cColor finalColor = mColor;
+		if(mbMultiplyAlphaWithColor)
+		{
+			finalColor.r = finalColor.r * mColor.a;
+			finalColor.g = finalColor.g * mColor.a;
+			finalColor.b = finalColor.b * mColor.a;
+		}
+
+
+        auto positionStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+        auto colorStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR);
+        auto textureStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0);
+        auto normalStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL);
+        auto tangentStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
+
+        BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle, positionStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy) + m_geometry->vertexOffset()), positionStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle, textureStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy)+ m_geometry->vertexOffset()), textureStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle, colorStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy)+ m_geometry->vertexOffset()), colorStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle, normalStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy)+ m_geometry->vertexOffset()), normalStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle, tangentStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy)+ m_geometry->vertexOffset()), tangentStream->stride() * mlMaxSegments * 4 };
+
+        beginUpdateResource(&positionUpdateDesc);
+        beginUpdateResource(&textureUpdateDesc);
+        beginUpdateResource(&colorUpdateDesc);
+        beginUpdateResource(&normalUpdateDesc);
+        beginUpdateResource(&tangentUpdateDesc);
+
+        GraphicsBuffer gpuPositionBuffer(positionUpdateDesc);
+        GraphicsBuffer gpuNormalBuffer(normalUpdateDesc);
+        GraphicsBuffer gpuColorBuffer(colorUpdateDesc);
+        GraphicsBuffer gpuTextureBuffer(textureUpdateDesc);
+        GraphicsBuffer gpuTangentBuffer(tangentUpdateDesc);
+        auto positionView = gpuPositionBuffer.CreateStructuredView<float3>();
+        auto normalView = gpuNormalBuffer.CreateStructuredView<float3>();
+        auto colorView = gpuColorBuffer.CreateStructuredView<float4>();
+        auto textureView = gpuTextureBuffer.CreateStructuredView<float2>();
+        auto tangentView = gpuTangentBuffer.CreateStructuredView<float3>();
 
 		float fSegmentLength = mpRope->GetSegmentLength();
 
-		cVector3f vTexCoords[4] = {
-				cVector3f(1,1,0),	//Bottom left
-				cVector3f(0,1,0),	//Bottom right
-				cVector3f(0,0,0),	//Top left
-				cVector3f(1,0,0)	//Top right
+		cVector2f vTexCoords[4] = {
+				cVector2f(1,1),	//Bottom left
+				cVector2f(0,1),	//Bottom right
+				cVector2f(0,0),	//Top left
+				cVector2f(1,0)	//Top right
 		};
 
 		vTexCoords[0].y *= mfLengthTileAmount;
@@ -225,7 +283,9 @@ namespace hpl {
 		cVerletParticleIterator it = mpRope->GetParticleIterator();
 		int lCount=0;
 		cVector3f vPrevPos;
-		while(it.HasNext())
+
+        size_t segmentIndex = 0;
+	    while(it.HasNext())
 		{
 			if(lCount >= mlMaxSegments) break;
 			++lCount;
@@ -237,7 +297,6 @@ namespace hpl {
 				continue;
 			}
 
-			/////////////////////////
 			//Calculate properties
 			cVector3f vPos = pPart->GetSmoothPosition();
 			cVector3f vDelta = vPos - vPrevPos;
@@ -246,74 +305,65 @@ namespace hpl {
 			cVector3f vRight = cMath::Vector3Normalize(cMath::Vector3Cross(vUp, apFrustum->GetForward()));
 			cVector3f vFwd = cMath::Vector3Cross(vRight, vUp);
 
-			/////////////////////////
 			//Update position
-			for(int i=0; i<4; ++i)
-				SetVec4(&pPosArray[i*4], vPrevPos + vRight * gvPosAdd[i].x*mfRadius + vUp * gvPosAdd[i].y*fLength);
+			for(int i=0; i<4; ++i) {
+				positionView.Write(segmentIndex + i, v3ToF3(cMath::ToForgeVec3(vPrevPos + vRight * gvPosAdd[i].x*mfRadius + vUp * gvPosAdd[i].y*fLength)));
+			    //SetVec4(&pPosArray[i*4], vPrevPos + vRight * gvPosAdd[i].x*mfRadius + vUp * gvPosAdd[i].y*fLength);
+		    }
 
-			/////////////////////////
 			//Update uv
 			if(lCount==2 && (fLength < fSegmentLength || fSegmentLength==0))
 			{
-				//////////////////
 				//No segments
 				if(fSegmentLength==0)
 				{
 					float fYAdd = 1 - fLength/ mfLengthTileSize;
-
-					SetVec3(&pUvArray[0*3], vTexCoords[0] - cVector3f(0,fYAdd,0));
-					SetVec3(&pUvArray[1*3], vTexCoords[1] - cVector3f(0,fYAdd,0));
-
-					SetVec3(&pUvArray[2*3], vTexCoords[2]);
-					SetVec3(&pUvArray[3*3], vTexCoords[3]);
+                    textureView.Write(segmentIndex + 0, v2ToF2(cMath::ToForgeVec2(vTexCoords[0] - cVector2f(0,fYAdd))));
+                    textureView.Write(segmentIndex + 1, v2ToF2(cMath::ToForgeVec2(vTexCoords[1] - cVector2f(0,fYAdd))));
+                    textureView.Write(segmentIndex + 2, v2ToF2(cMath::ToForgeVec2(vTexCoords[2])));
+                    textureView.Write(segmentIndex + 3, v2ToF2(cMath::ToForgeVec2(vTexCoords[3])));
 				}
-				//////////////////
 				//First segment of many
 				else
 				{
 					float fYAdd = (1 - (fLength / fSegmentLength))*mfLengthTileAmount;
 
-					SetVec3(&pUvArray[0*3], vTexCoords[0] - cVector3f(0,fYAdd,0) );
-					SetVec3(&pUvArray[1*3], vTexCoords[1] - cVector3f(0,fYAdd,0) );
-
-					SetVec3(&pUvArray[2*3], vTexCoords[2]);
-					SetVec3(&pUvArray[3*3], vTexCoords[3]);
+                    textureView.Write(segmentIndex + 0, v2ToF2(cMath::ToForgeVec2(vTexCoords[0] - cVector2f(0,fYAdd))));
+                    textureView.Write(segmentIndex + 1, v2ToF2(cMath::ToForgeVec2(vTexCoords[1] - cVector2f(0,fYAdd))));
+                    textureView.Write(segmentIndex + 2, v2ToF2(cMath::ToForgeVec2(vTexCoords[2])));
+                    textureView.Write(segmentIndex + 3, v2ToF2(cMath::ToForgeVec2(vTexCoords[3])));
 				}
 			}
 			else
 			{
-				for(int i=0; i<4; ++i)
-					SetVec3(&pUvArray[i*3], vTexCoords[i]);
+				for(int i=0; i<4; ++i) {
+                    textureView.Write(segmentIndex + i, v2ToF2(cMath::ToForgeVec2(vTexCoords[i])));
+			    }
 			}
 
-			/////////////////////////
 			//Update Normal and Tangent
 			for(int i=0; i<4; ++i)
 			{
-				SetVec3(&pNrmArray[i*3], vFwd);
-				SetVec4(&pTanArray[i*4], vRight);
+                normalView.Write(i + segmentIndex, v3ToF3(cMath::ToForgeVec3(vFwd)));
+			    tangentView.Write(i + segmentIndex, v3ToF3(cMath::ToForgeVec3(vRight)));
+                colorView.Write(i + segmentIndex,float4(finalColor.r,finalColor.g,finalColor.b,finalColor.a));
 			}
 
-			/////////////////////////
-			//Update pointers
-			pPosArray += 4 * 4;
-			pUvArray +=	 3 * 4;
-			pNrmArray += 3 * 4;
-			pTanArray += 4 * 4;
+            segmentIndex++;
 
-			/////////////////////////
 			//Update misc
 			vPrevPos = vPos;
 		}
 
-		mpVtxBuffer->SetElementNum((lCount-1) * 6);
-
-		mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Texture0 | eVertexElementFlag_Texture1 | eVertexElementFlag_Normal, false);
+        endUpdateResource(&positionUpdateDesc);
+        endUpdateResource(&textureUpdateDesc);
+        endUpdateResource(&colorUpdateDesc);
+        endUpdateResource(&normalUpdateDesc);
+        endUpdateResource(&tangentUpdateDesc);
+		m_numberSegments = lCount - 1;
 
 		return true;
 	}
-
-	//-----------------------------------------------------------------------
 
 	cMatrixf* cRopeEntity::GetModelMatrix(cFrustum *apFrustum)
 	{
@@ -322,14 +372,10 @@ namespace hpl {
 		return NULL;
 	}
 
-	//-----------------------------------------------------------------------
-
 	int cRopeEntity::GetMatrixUpdateCount()
 	{
 		return GetTransformUpdateCount();
 	}
-
-	//-----------------------------------------------------------------------
 
 	bool cRopeEntity::IsVisible()
 	{
@@ -338,16 +384,4 @@ namespace hpl {
 		return mbIsVisible;
 	}
 
-
-	//-----------------------------------------------------------------------
-
-
-
-	//////////////////////////////////////////////////////////////////////////
-	// PRIVATE METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------
 }

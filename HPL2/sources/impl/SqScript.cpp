@@ -27,6 +27,8 @@
 #include "resources/BinaryBuffer.h"
 #include "resources/Resources.h"
 
+#undef GetMessage
+
 namespace hpl {
 
 	//////////////////////////////////////////////////////////////////////////

@@ -23,6 +23,7 @@ namespace hpl {
             uint32_t m_numStreams;
             struct {
                 SharedBuffer* m_buffer;
+                eVertexBufferElement m_element;
                 uint64_t m_offset;
                 uint32_t m_stride;
             } m_vertexStream[MaxVertexBindings];
@@ -33,8 +34,6 @@ namespace hpl {
         };
 
         struct GeometrySetBinding {
-            uint32_t m_numStreams;
-            eVertexBufferElement m_elements[MaxVertexBindings];
             GraphicsAllocator::AllocationSet m_set;
             GeometrySet::GeometrySetSubAllocation* m_subAllocation;
             uint32_t m_numIndices;
@@ -51,7 +50,7 @@ namespace hpl {
             return 0;
         }
 
-        static void cmdBindBuffers(Cmd* cmd, ForgeRenderer::CommandResourcePool* resourcePool, DrawPacket* packet);
+        static void cmdBindBuffers(Cmd* cmd, ForgeRenderer::CommandResourcePool* resourcePool, DrawPacket* packet, std::span<eVertexBufferElement> elements);
 
         DrawPacket()
             : m_type(DrawPacketType::Unknown) {

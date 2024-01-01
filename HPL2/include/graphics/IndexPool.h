@@ -11,15 +11,19 @@
 namespace hpl {
     class IndexPool {
     public:
-        IndexPool(uint32_t reserve);
+        explicit IndexPool(uint32_t reserve);
+        IndexPool();
+        static constexpr uint32_t InvalidHandle = UINT32_MAX;
 
         uint32_t requestId();
+        inline uint32_t reserve() {return m_reserve;}
         void returnId(uint32_t);
     private:
         struct IdRange {
             uint32_t m_start;
             uint32_t m_end;
         };
+        uint32_t m_reserve;
         folly::small_vector<IdRange, 256> m_avaliable;
     };
 

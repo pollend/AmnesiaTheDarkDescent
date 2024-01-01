@@ -134,7 +134,6 @@ namespace hpl {
 		inline int GetUpdateCount() const { return mlUpdateCount; }
 
 		cVerletParticleIterator GetParticleIterator(){ return cVerletParticleIterator(&mlstParticles); }
-
 	protected:
 		virtual bool CheckParticleBodyCollision(iPhysicsBody *apBody)=0;
 		virtual bool CheckSpecificDataSleeping()=0;	//Tested when container is NOT sleeping

@@ -33,8 +33,8 @@ class DebugDraw final {
             Count
         };
 
-        static constexpr uint32_t ImmediateVertexBufferSize = 1 << 25;
-        static constexpr uint32_t ImmediateIndexBufferSize = 1 << 23;
+        static constexpr uint32_t ImmediateVertexBufferSize = 1 << 10;
+        static constexpr uint32_t ImmediateIndexBufferSize = 1 << 10;
         static constexpr uint32_t NumberOfPerFrameUniforms = 32;
         static constexpr uint32_t NumberOfTextureUnits = 512;
 
@@ -131,8 +131,8 @@ class DebugDraw final {
            mat4 m_viewProj2DMat;
         };
 
-		GPURingBuffer* m_vertexBuffer = nullptr;
-		GPURingBuffer* m_indexBuffer = nullptr;
+		GPURingBuffer m_vertexBuffer = {};
+		GPURingBuffer m_indexBuffer = {};
         std::array<SharedBuffer, NumberOfPerFrameUniforms> m_viewBufferUniform;
         uint32_t m_frameIndex = 0;
         uint32_t m_activeFrame = 0;

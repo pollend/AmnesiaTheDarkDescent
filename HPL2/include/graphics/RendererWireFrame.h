@@ -86,13 +86,12 @@ namespace hpl {
 
         virtual void Draw(
             Cmd* cmd,
-            const ForgeRenderer::Frame& context,
+            ForgeRenderer::Frame& context,
             cViewport& viewport,
             float afFrameTime,
             cFrustum* apFrustum,
             cWorld* apWorld,
-            cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects) override;
+            cRenderSettings* apSettings) override;
 
         std::array<SharedBuffer, NumberOfPerFrameUniforms> m_frameBufferUniform;
         uint32_t m_perFrameIndex = 0;

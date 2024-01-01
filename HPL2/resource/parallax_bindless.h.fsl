@@ -1,0 +1,107 @@
+#include "scene_resource.h.fsl"
+#include "math_utils.h.fsl"
+
+#ifndef _PARALLAX_BINDLESS_H
+#define _PARALLAX_BINDLESS_H
+
+INLINE float GetNormalizedDepth(float currentSample, float startDepth, float stopDepth, float inverseDepthRange) {
+    //float currentSample = 0.0;
+   //   BeginNonUniformResourceIndex(heightIdx);
+    //  EndNonUniformResourceIndex(); 
+
+    float normalizedDepth = 0.0;
+    if(stopDepth - startDepth > 0.0001)
+    {
+        float minNormalizedDepth = -startDepth * inverseDepthRange;
+        normalizedDepth = max(currentSample, minNormalizedDepth);
+    }
+    return normalizedDepth; 
+}
+
+float2 ParallaxAdvance(
+    float2 uv,
+    float depthOffset, 
+    float numberOfSteps, 
+    float heightMapScale, 
+    float3 dir, 
+    float3 normal,
+    float3 tangent,
+    float3 bitangent,
+    uint heightTextureIndex, 
+    bool isHeightMapSingleChannel) {
+
+    float3 dirToCameraTS = normalize(WorldSpaceToTangent(dir, normal, tangent, bitangent));
+    
+    float dirToCameraZInverse = 1.0 / dirToCameraTS.z;
+    float step =  float(1.0 / numberOfSteps);
+    float currentStep = 0.0;
+
+    // the amount to shift per step, shift in the inverse direction of dirToCameraTS
+    float3 delta = -dirToCameraTS.xyz * heightMapScale * dirToCameraZInverse * step;
+
+    float depthSearchStart = depthOffset;
+    float depthSearchEnd = depthSearchStart + heightMapScale;
+    float inverseDepthFactor = 1.0 / heightMapScale;
+    
+    // This is the relative position at which we begin searching for intersection.
+    // It is adjusted according to the depthOffset, raising or lowering the whole surface by depthOffset units.
+    float3 parallaxOffset = -dirToCameraTS.xyz * dirToCameraZInverse * depthOffset;
+   
+    float currentSample = 0.0;
+    uint index2 = heightTextureIndex;
+    BeginNonUniformResourceIndex(index2);
+      currentSample =  isHeightMapSingleChannel ? SampleTex2D(Get(sceneTextures)[index2], Get(sceneSampler),  uv.xy + parallaxOffset.xy).r : SampleTex2D(Get(sceneTextures)[index2], Get(sceneSampler),  uv.xy + parallaxOffset.xy).a;
+    EndNonUniformResourceIndex(); 
+    float prevSample = 0.0;
+
+    // Do a basic search for the intersect step
+    while(currentSample > currentStep) {
+        currentStep += step;
+        parallaxOffset += delta;
+                
+        prevSample = currentSample;
+        float newSample;
+        uint index = heightTextureIndex;
+        BeginNonUniformResourceIndex(index);
+            newSample =  isHeightMapSingleChannel ? SampleTex2D(Get(sceneTextures)[index], Get(sceneSampler),  uv.xy + parallaxOffset.xy).r : SampleTex2D(Get(sceneTextures)[index], Get(sceneSampler),  uv.xy + parallaxOffset.xy).a;
+        EndNonUniformResourceIndex(); 
+        currentSample = GetNormalizedDepth(newSample, depthSearchStart, depthSearchEnd, inverseDepthFactor);
+    }
+
+    if(currentStep > 0.0)
+    {
+        // Contact refinement propose by Andrea Riccardi 
+        // https://www.artstation.com/andreariccardi/blog/3VPo/a-new-approach-for-parallax-mapping-presenting-the-contact-refinement-parallax-mapping-technique
+
+        // Based on the rough approximation, rolling back to the previous step along the ray.
+        parallaxOffset -= delta;
+        currentStep -= step;
+        currentSample = prevSample;
+
+        // Adjust precision
+        float3 adjustedDelta = delta * step;
+        float adjustedStep = step * step;
+
+        // Uses another loop with the same step numbers, this times only covers the distance between previous point and the rough intersection point.
+        while(currentSample > currentStep)
+        {
+            currentStep += adjustedStep;
+            parallaxOffset += adjustedDelta;
+            prevSample = currentSample;
+
+            float newSample;
+            uint index = heightTextureIndex;
+            BeginNonUniformResourceIndex(index);
+                newSample =  isHeightMapSingleChannel ? SampleTex2D(Get(sceneTextures)[index], Get(sceneSampler),  uv.xy + parallaxOffset.xy).r : SampleTex2D(Get(sceneTextures)[index], Get(sceneSampler),  uv.xy + parallaxOffset.xy).a;
+            EndNonUniformResourceIndex(); 
+            currentSample = GetNormalizedDepth(newSample, depthSearchStart, depthSearchEnd, inverseDepthFactor);
+        }
+    }
+    if(parallaxOffset.z > 0.0)
+    {
+        parallaxOffset = float3(0,0,0);
+    }
+    return parallaxOffset.xy; 
+}
+
+#endif
