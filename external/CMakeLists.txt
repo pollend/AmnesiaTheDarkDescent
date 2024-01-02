@@ -7,10 +7,6 @@ add_subdirectory(AngelScript)
 
 set(THE_FORGE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/The-Forge" CACHE STRING "Location of the forge.")
 
-# file(GLOB EASTL_SOURCES
-#    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/EASTL/*.cpp)
-# add_library(Eastl STATIC ${EASTL_SOURCES})
-
 add_library(cpu_features OBJECT 
      ${THE_FORGE_DIR}/Common_3/OS/ThirdParty/OpenSource/cpu_features/src/impl_x86_macos.c
      ${THE_FORGE_DIR}/Common_3/OS/ThirdParty/OpenSource/cpu_features/src/impl_aarch64_iOS.c
@@ -57,8 +53,11 @@ file(GLOB ZSTD_FILESYSTEM_SOURCES
      ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/common/*.c
      ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/compress/*.c
      ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/decompress/*.c
-    # ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/decompress/huf_decompress_amd64.S
+     
 )
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+    list(APPEND ZSTD_FILESYSTEM_SOURCES ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/decompress/huf_decompress_amd64.S)
+endif()
 add_library(zstd_filesystem OBJECT ${ZSTD_FILESYSTEM_SOURCES}) 
 target_include_directories(zstd_filesystem   PUBLIC ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd)
 
