@@ -171,6 +171,19 @@ namespace hpl::resource {
     };
 
     struct WaterMaterial {
+        uint32_t m_diffuseTextureIndex;
+        uint32_t m_normalTextureIndex;        
+        uint32_t m_cubemapTextureIndex;
+        uint32_t m_config;
 
+        float m_refractionScale;
+        float m_frenselBias;
+        float m_frenselPow;
+        float m_reflectionFadeStart;
+
+        float m_reflectionFadeEnd;
+        float m_waveSpeed;
+        float m_waveAmplitude;
+        float m_waveFreq;
     };
 }

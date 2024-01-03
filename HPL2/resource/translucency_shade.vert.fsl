@@ -21,7 +21,7 @@ STRUCT(VSOutput)
         DATA(float3,     normal,    NORMAL);
         DATA(float3,     tangent,   TANGENT);
         DATA(float3,     bitangent, BITANGENT);
-	    DATA(float4, color, COLOR);
+	    DATA(float4, Color, COLOR);
 };
 
 VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
@@ -46,7 +46,7 @@ VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
     Out.tangent = normalize(mul(normalMat, In.Tangent.xyz));
     Out.bitangent = normalize(mul(normalMat, cross(In.Tangent.xyz, In.Normal.xyz)));
     Out.Position = mul(modelViewPrj, float4(In.Position.xyz, 1.0));
-    Out.color = In.Color;
+    Out.Color = In.Color;
 
     RETURN(Out);
 }

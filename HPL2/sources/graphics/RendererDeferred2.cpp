@@ -910,35 +910,7 @@ namespace hpl {
                     return true;
                 });
             }
-            struct {
-                SharedShader* shader;
-                SharedPipeline* pipline;
-                SharedPipeline* piplineNoDepth;
-                eMaterialBlendMode blendMode;
-            } translucencyIlluminationPipelineInit[] = {
-                { &m_translucencyIlluminationShaderAdd,
-                  &m_translucencyIlluminationPipline.m_pipelineBlendAdd,
-                  &m_translucencyIlluminationPiplineNoDepth.m_pipelineBlendAdd,
-                  eMaterialBlendMode_Add },
-                { &m_translucencyIlluminationShaderMul,
-                  &m_translucencyIlluminationPipline.m_pipelineBlendMul,
-                  &m_translucencyIlluminationPiplineNoDepth.m_pipelineBlendMul,
-                  eMaterialBlendMode_Mul },
-                { &m_translucencyIlluminationShaderMulX2,
-                  &m_translucencyIlluminationPipline.m_pipelineBlendMulX2,
-                  &m_translucencyIlluminationPiplineNoDepth.m_pipelineBlendMulX2,
-                  eMaterialBlendMode_MulX2 },
-                { &m_translucencyIlluminationShaderAlpha,
-                  &m_translucencyIlluminationPipline.m_pipelineBlendAlpha,
-                  &m_translucencyIlluminationPiplineNoDepth.m_pipelineBlendAlpha,
-                  eMaterialBlendMode_Alpha },
-                { &m_translucencyIlluminationShaderPremulAlpha,
-                  &m_translucencyIlluminationPipline.m_pipelineBlendPremulAlpha,
-                  &m_translucencyIlluminationPiplineNoDepth.m_pipelineBlendPremulAlpha,
-                  eMaterialBlendMode_PremulAlpha },
-            };
-
-            for (auto& init : translucencyIlluminationPipelineInit) {
+            {
                 BlendStateDesc blendStateDesc{};
                 blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
                 blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
@@ -956,29 +928,29 @@ namespace hpl {
                 pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
                 pipelineSettings.pRootSignature = m_sceneRootSignature.m_handle;
                 pipelineSettings.pVertexLayout = &vertexLayout;
-                pipelineSettings.pShaderProgram = init.shader->m_handle;
+                pipelineSettings.pShaderProgram = m_translucencyIlluminationShaderAdd.m_handle;
 
                 RasterizerStateDesc rasterizerStateDesc = {};
                 rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
                 rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
                 pipelineSettings.pRasterizerState = &rasterizerStateDesc;
 
-                blendStateDesc.mSrcFactors[0] = hpl::HPL2BlendTable[init.blendMode].src;
-                blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[init.blendMode].dst;
-                blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[init.blendMode].mode;
+                blendStateDesc.mSrcFactors[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].src;
+                blendStateDesc.mDstFactors[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].dst;
+                blendStateDesc.mBlendModes[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].mode;
 
-                blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[init.blendMode].srcAlpha;
-                blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[init.blendMode].dstAlpha;
-                blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[init.blendMode].alphaMode;
+                blendStateDesc.mSrcAlphaFactors[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].srcAlpha;
+                blendStateDesc.mDstAlphaFactors[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].dstAlpha;
+                blendStateDesc.mBlendAlphaModes[0] = hpl::HPL2BlendTable[eMaterialBlendMode_Add].alphaMode;
 
                 pipelineSettings.pDepthState = &depthStateDesc;
-                init.pipline->Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+                m_translucencyIlluminationPipline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
                     addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
                     return true;
                 });
 
                 pipelineSettings.pDepthState = &noDepthStateDesc;
-                init.piplineNoDepth->Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+                m_translucencyIlluminationPiplineNoDepth.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
                     addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
                     return true;
                 });
@@ -1742,27 +1714,8 @@ namespace hpl {
 
                 auto& resourceMaterial = resolveResourceMaterial(material);
                 auto& materialSet = resourceMaterial.resolveSet(MaterialSetType::PrimarySet);
-
                 const uint32_t slot = frameVars.m_objectIndex++;
 
-                BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle, sizeof(resource::SceneObject) * slot };
-                beginUpdateResource(&updateDesc);
-                auto& uniformObjectData = (*reinterpret_cast<resource::SceneObject*>(updateDesc.pMappedData));
-                uniformObjectData.m_dissolveAmount = renderable->GetCoverageAmount();
-                uniformObjectData.m_modelMat = modelMat;
-                uniformObjectData.m_invModelMat = inverse(modelMat);
-                uniformObjectData.m_lightLevel = 1.0f;
-                uniformObjectData.m_alphaAmount = 1.0f;
-                for (auto& fogArea : fogRenderData) {
-                    uniformObjectData.m_alphaAmount *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, renderable);
-                }
-                uniformObjectData.m_illuminationAmount = renderable->GetIlluminationAmount();
-                uniformObjectData.m_materialIndex = materialSet.m_slot.get();
-                uniformObjectData.m_materialType = static_cast<uint32_t>(descriptor.m_id);
-                uniformObjectData.m_vertexOffset = packet.m_unified.m_subAllocation->vertexOffset();
-                uniformObjectData.m_indexOffset = packet.m_unified.m_subAllocation->indexOffset();
-                uniformObjectData.m_uvMat = cMath::ToForgeMatrix4(material->GetUvMatrix().GetTranspose());
-                endUpdateResource(&updateDesc);
 
                 if (!materialSet.m_slot.isValid()) {
                     const auto alphaMapImage = material->GetImage(eMaterialTexture_Alpha);
@@ -1798,16 +1751,8 @@ namespace hpl {
                             translucenctMaterial.m_frenselPow = descriptor.m_translucent.m_frenselPow;
                             translucenctMaterial.m_rimMulLight = descriptor.m_translucent.m_rimLightMul;
                             translucenctMaterial.m_rimMulPower = descriptor.m_translucent.m_rimLightPow;
-                            translucenctMaterial.m_config = ((alphaMapImage &&
-                                                              TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(
-                                                                  alphaMapImage->GetTexture().m_handle->mFormat)) == 1)
-                                                                 ? resource::IsAlphaSingleChannel
-                                                                 : 0) |
-                                ((heightMapImage &&
-                                  TinyImageFormat_ChannelCount(
-                                      static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1)
-                                     ? resource::IsHeightSingleChannel
-                                     : 0);
+                            translucenctMaterial.m_config = ((alphaMapImage &&TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1) ? resource::IsAlphaSingleChannel : 0) |
+                                ((heightMapImage && TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1) ? resource::IsHeightSingleChannel : 0);
                             endUpdateResource(&updateDesc);
                             break;
                         }
@@ -1820,8 +1765,36 @@ namespace hpl {
                         break;
                     }
                 }
+                BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle, sizeof(resource::SceneObject) * slot };
+                beginUpdateResource(&updateDesc);
+                auto& uniformObjectData = (*reinterpret_cast<resource::SceneObject*>(updateDesc.pMappedData));
+                uniformObjectData.m_dissolveAmount = renderable->GetCoverageAmount();
+                uniformObjectData.m_modelMat = modelMat;
+                uniformObjectData.m_invModelMat = inverse(modelMat);
+                uniformObjectData.m_lightLevel = 1.0f;
+                uniformObjectData.m_alphaAmount = 1.0f;
+                if (material->IsAffectedByLightLevel()) {
+                    uniformObjectData.m_lightLevel = detail::calcLightLevel(m_rendererList.GetLights(), renderable);
+                }
+                for (auto& fogArea : fogRenderData) {
+                    uniformObjectData.m_alphaAmount *= detail::GetFogAreaVisibilityForObject(fogArea, *apFrustum, renderable);
+                }
+                uniformObjectData.m_illuminationAmount = renderable->GetIlluminationAmount();
+                uniformObjectData.m_materialIndex = materialSet.m_slot.get();
+                uniformObjectData.m_materialType = static_cast<uint32_t>(descriptor.m_id);
+                uniformObjectData.m_vertexOffset = packet.m_unified.m_subAllocation->vertexOffset();
+                uniformObjectData.m_indexOffset = packet.m_unified.m_subAllocation->indexOffset();
+                uniformObjectData.m_uvMat = cMath::ToForgeMatrix4(material->GetUvMatrix().GetTranspose());
+                endUpdateResource(&updateDesc);
+
                 translucenctArgs.push_back({
-                    (cubeMap && !isRefraction) ? TranslucentDrawType::TranslucencyIllumination : TranslucentDrawType::Translucency,
+                    ([&]() {
+                        if (descriptor.m_id == MaterialID::Water) {
+                            return TranslucentDrawType::Water;
+                        }
+                        return (cubeMap && !isRefraction) ? TranslucentDrawType::TranslucencyIllumination
+                                                          : TranslucentDrawType::Translucency; 
+                    })(),
                     renderable,
                     isRefraction,
                     isReflection,
@@ -1906,6 +1879,9 @@ namespace hpl {
                     uniformObjectData.m_modelMat = modelMat;
                     uniformObjectData.m_invModelMat = inverse(modelMat);
                     uniformObjectData.m_lightLevel = 1.0f;
+                    if (material->IsAffectedByLightLevel()) {
+                        uniformObjectData.m_lightLevel = detail::calcLightLevel(m_rendererList.GetLights(), renderable);
+                    }
                     uniformObjectData.m_illuminationAmount = renderable->GetIlluminationAmount();
                     uniformObjectData.m_materialIndex = materialSet.m_slot.get();
                     uniformObjectData.m_materialType = static_cast<uint32_t>(material->Descriptor().m_id);
@@ -2375,18 +2351,15 @@ namespace hpl {
 
                         if (arg.m_refraction) {
                             if (pMaterial->GetDepthTest()) {
-                                cmdBindPipeline(
-                                    cmd, m_translucencyRefractionPipline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                                cmdBindPipeline(cmd, m_translucencyRefractionPipline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
                             } else {
-                                cmdBindPipeline(
-                                    cmd, m_translucencyRefractionPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                                cmdBindPipeline(cmd, m_translucencyRefractionPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
                             }
                         } else {
                             if (pMaterial->GetDepthTest()) {
                                 cmdBindPipeline(cmd, m_translucencyPipline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
                             } else {
-                                cmdBindPipeline(
-                                    cmd, m_translucencyPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                                cmdBindPipeline(cmd, m_translucencyPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
                             }
                         }
 
@@ -2399,10 +2372,9 @@ namespace hpl {
 
                         if (arg.type == TranslucentDrawType::TranslucencyIllumination) {
                             if (pMaterial->GetDepthTest()) {
-                                cmdBindPipeline(cmd, m_translucencyPipline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                                cmdBindPipeline(cmd, m_translucencyIlluminationPipline.m_handle);
                             } else {
-                                cmdBindPipeline(
-                                    cmd, m_translucencyPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
+                                cmdBindPipeline(cmd, m_translucencyIlluminationPiplineNoDepth.m_handle);
                             }
                             cmdDrawIndexedInstanced(cmd, arg.numberIndecies, arg.indexOffset, 1, arg.vertexOffset, arg.indirectDrawIndex);
                         }

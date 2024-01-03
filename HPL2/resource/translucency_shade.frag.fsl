@@ -13,7 +13,7 @@ STRUCT(PsIn)
         DATA(float3,     normal,    NORMAL);
         DATA(float3,     tangent,   TANGENT);
         DATA(float3,     bitangent, BITANGENT);
-	    DATA(float4, color, COLOR);
+	    DATA(float4, Color, COLOR);
 };
 
 STRUCT(PsOut)
@@ -37,7 +37,7 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
 
 #ifndef USE_ILLUMINATION  
     SampleSceneTextureFloat4(material.diffuseTextureIndex, Get(sceneSampler), In.uv.xy, finalColor);
-    finalColor *= In.color;
+    finalColor *= In.Color;
 #endif
 
     float finalAlpha = obj.alphaAmount;

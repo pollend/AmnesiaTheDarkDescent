@@ -46,20 +46,22 @@ STRUCT(TranslucentMaterial) {
 };
 
 STRUCT(WaterMaterial) {
+    DATA(uint, diffuseTextureIndex, None);
+    DATA(uint, normalTextureIndex, None);
+    DATA(uint, cubeMapTextureIndex, None);
     DATA(uint, config, None);
+
     DATA(float, refractionScale, None);
     DATA(float, frenselBias, None);
-    DATA(float, frenselPow, None);
-
+    DATA(float, frenselPos, None);
     DATA(float, reflectionFadeStart, None);
+
+    
     DATA(float, reflectionFadeEnd, None);
     DATA(float, waveSpeed, None);
     DATA(float, waveAmplitude, None);
-    
     DATA(float, waveFreq, None);
-	DATA(uint, _pad0, None);
-	DATA(uint, _pad1, None);
-	DATA(uint, _pad2, None);
+
 };
 
 
