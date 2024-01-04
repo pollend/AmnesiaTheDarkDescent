@@ -310,8 +310,8 @@ namespace hpl {
         SharedPipeline m_translucencyIlluminationPipline;
         SharedPipeline m_translucencyIlluminationPiplineNoDepth;
 
-        //BlendPipelines m_translucencyIlluminationPipline;
-        //BlendPipelines m_translucencyIlluminationPiplineNoDepth;
+        BlendPipelines m_translucencyIlluminationPipline;
+        BlendPipelines m_translucencyIlluminationPiplineNoDepth;
 
         CopyTextureSubpass4 m_copySubpass;
 

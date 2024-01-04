@@ -1288,6 +1288,7 @@ namespace hpl {
                 DescriptorData{ .pName = "dissolveTexture", .ppTextures = &m_dissolveImage->GetTexture().m_handle },
                 DescriptorData{ .pName = "sceneDiffuseMat", .ppBuffers = &m_diffuseMatUniformBuffer.m_handle },
                 DescriptorData{ .pName = "sceneTranslucentMat", .ppBuffers = &m_translucencyMatBuffer.m_handle },
+                DescriptorData{ .pName = "sceneWaterMat", .ppBuffers = &m_waterMatBuffer.m_handle },
                 // DescriptorData{ .pName = "sceneFilters", .mCount = samplers.size(), .ppSamplers = samplers.data() },
                 DescriptorData{ .pName = "vtxOpaqueIndex", .ppBuffers = &opaqueSet.indexBuffer().m_handle },
                 DescriptorData{ .pName = "vtxOpaquePosition",
@@ -1758,6 +1759,12 @@ namespace hpl {
                         }
                     case MaterialID::Water:
                         {
+                            materialSet.m_slot = IndexPoolHandle(&m_waterIndexPool);
+                            BufferUpdateDesc updateDesc = { m_translucencyMatBuffer.m_handle,
+                                                            sizeof(resource::WaterMaterial) * materialSet.m_slot.get() };
+                            beginUpdateResource(&updateDesc);
+
+                            endUpdateResource(&updateDesc);
                             break;
                         }
                     default:
