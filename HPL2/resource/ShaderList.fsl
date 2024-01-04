@@ -451,3 +451,9 @@
   #include "translucency_shade.frag.fsl"
 #end
 
+#frag translucency_water_shade.frag
+  #define WAVE_AMPLITUDE_SCALE 0.04
+  #define WAVE_FREQUENCY_SCALE 10.0
+  #include "translucency_water_shade.frag.fsl"
+#end
+

@@ -374,11 +374,8 @@ namespace hpl {
                                         { "translucency_refraction_shade_premul_alpha.frag", &m_translucencyRefractionShaderPremulAlpha },
                                         // illumination
                                         { "translucency_shade_illumination_add.frag", &m_translucencyIlluminationShaderAdd },
-                                        { "translucency_shade_illumination_mul.frag", &m_translucencyIlluminationShaderMul },
-                                        { "translucency_shade_illumination_mulX2.frag", &m_translucencyIlluminationShaderMulX2 },
-                                        { "translucency_shade_illumination_alpha.frag", &m_translucencyIlluminationShaderAlpha },
-                                        { "translucency_shade_illumination_premul_alpha.frag",
-                                          &m_translucencyIlluminationShaderPremulAlpha } };
+                                        // water
+                                        { "translucency_water_shade.frag", &m_translucencyWaterShader } };
         for (auto& init : translucencyShadersInit) {
             init.shader->Load(forgeRenderer->Rend(), [&](Shader** shader) {
                 ShaderLoadDesc loadDesc = {};
@@ -432,15 +429,12 @@ namespace hpl {
                                    m_translucencyShaderAlpha.m_handle,
                                    m_translucencyShaderPremulAlpha.m_handle,
                                    m_translucencyIlluminationShaderAdd.m_handle,
-                                   m_translucencyIlluminationShaderMul.m_handle,
-                                   m_translucencyIlluminationShaderMulX2.m_handle,
-                                   m_translucencyIlluminationShaderAlpha.m_handle,
                                    m_translucencyRefractionShaderAdd.m_handle,
+                                   m_translucencyWaterShader.m_handle,
                                    m_translucencyRefractionShaderMul.m_handle,
                                    m_translucencyRefractionShaderMulX2.m_handle,
                                    m_translucencyRefractionShaderAlpha.m_handle,
-                                   m_translucencyRefractionShaderPremulAlpha.m_handle,
-                                   m_translucencyIlluminationShaderPremulAlpha.m_handle };
+                                   m_translucencyRefractionShaderPremulAlpha.m_handle };
             std::array vbShadeSceneSamplers = { m_samplerLinearClampToBorder.m_handle,
                                                 m_samplerMaterial.m_handle,
                                                 m_samplerNearEdgeClamp.m_handle,
@@ -543,6 +537,8 @@ namespace hpl {
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
             return true;
         });
+
+
         m_visbilityEmitBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             std::array colorFormats = { ColorBufferFormat };
             RasterizerStateDesc rasterizerStateDesc = {};
@@ -951,6 +947,49 @@ namespace hpl {
 
                 pipelineSettings.pDepthState = &noDepthStateDesc;
                 m_translucencyIlluminationPiplineNoDepth.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+                    return true;
+                });
+            }
+
+            {
+                BlendStateDesc blendStateDesc{};
+                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
+                blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
+                blendStateDesc.mIndependentBlend = false;
+
+                PipelineDesc pipelineDesc = {};
+                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+                auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+                pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+                pipelineSettings.mRenderTargetCount = colorFormats.size();
+                pipelineSettings.pColorFormats = colorFormats.data();
+                pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+                pipelineSettings.mSampleQuality = 0;
+                pipelineSettings.pBlendState = &blendStateDesc;
+                pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+                pipelineSettings.pRootSignature = m_sceneRootSignature.m_handle;
+                pipelineSettings.pVertexLayout = &vertexLayout;
+
+                RasterizerStateDesc rasterizerStateDesc = {};
+                rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+                rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
+                pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+
+                blendStateDesc.mSrcFactors[0] = BC_ONE;
+                blendStateDesc.mDstFactors[0] = BC_ZERO;
+                blendStateDesc.mBlendModes[0] = BlendMode::BM_ADD;
+                pipelineSettings.pShaderProgram = m_translucencyWaterShader.m_handle;
+
+
+                pipelineSettings.pDepthState = &depthStateDesc;
+                m_translucencyWaterPipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+                    addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+                    return true;
+                });
+
+                pipelineSettings.pDepthState = &noDepthStateDesc;
+                m_translucencyWaterPipelineNoDepth.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
                     addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
                     return true;
                 });
@@ -1763,7 +1802,29 @@ namespace hpl {
                             BufferUpdateDesc updateDesc = { m_translucencyMatBuffer.m_handle,
                                                             sizeof(resource::WaterMaterial) * materialSet.m_slot.get() };
                             beginUpdateResource(&updateDesc);
+                            auto& waterMaterial = (*reinterpret_cast<resource::WaterMaterial*>(updateDesc.pMappedData));
+                            struct {
+                                eMaterialTexture m_type;
+                                uint32_t* m_value;
+                            } textures[] = {
+                                { eMaterialTexture_Diffuse, &waterMaterial.m_diffuseTextureIndex },
+                                { eMaterialTexture_NMap, &waterMaterial.m_normalTextureIndex },
+                                { eMaterialTexture_CubeMap, &waterMaterial.m_cubemapTextureIndex },
+                            };
+                            for (auto& tex : textures) {
+                                (*tex.m_value) = resourceMaterial.m_textureHandles[tex.m_type];
+                            }
 
+                            waterMaterial.m_refractionScale = descriptor.m_water.m_refractionScale;
+                            waterMaterial.m_frenselBias = descriptor.m_water.m_frenselBias;
+                            waterMaterial.m_frenselPow = descriptor.m_water.m_frenselPow;
+
+                            waterMaterial.m_reflectionFadeStart = descriptor.m_water.m_reflectionFadeStart;
+                            waterMaterial.m_reflectionFadeEnd = descriptor.m_water.m_reflectionFadeEnd;
+                            waterMaterial.m_waveSpeed = descriptor.m_water.m_waveSpeed;
+                            waterMaterial.mfWaveAmplitude = descriptor.m_water.m_waveAmplitude;
+
+                            waterMaterial.mfWaveFreq = descriptor.m_water.m_waveFreq;
                             endUpdateResource(&updateDesc);
                             break;
                         }
@@ -1800,7 +1861,7 @@ namespace hpl {
                             return TranslucentDrawType::Water;
                         }
                         return (cubeMap && !isRefraction) ? TranslucentDrawType::TranslucencyIllumination
-                                                          : TranslucentDrawType::Translucency; 
+                                                          : TranslucentDrawType::Translucency;
                     })(),
                     renderable,
                     isRefraction,

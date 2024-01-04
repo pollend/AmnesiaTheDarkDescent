@@ -42,14 +42,15 @@ RES(Buffer(WaterMaterial), sceneWaterMat, UPDATE_FREQ_NONE, t12, binding = 17);
 RES(Tex2D(float4), visibilityTexture,   UPDATE_FREQ_PER_FRAME, t13, binding = 18);
 RES(Tex2D(float4), albedoTexture,      UPDATE_FREQ_PER_FRAME, t14, binding = 19);
 RES(Tex2D(float4), refractionTexture,      UPDATE_FREQ_PER_FRAME, t15, binding = 20);
+RES(Tex2D(float4), reflectionTexture[SCENE_MAX_REFLECTION_COUNT],      UPDATE_FREQ_PER_FRAME, t16, binding = 20);
 
-RES(Tex2D(float4), dissolveTexture,    UPDATE_FREQ_NONE, t16, binding = 21);
+RES(Tex2D(float4), dissolveTexture,    UPDATE_FREQ_NONE, t21, binding = 21);
 
-RES(ByteBuffer, lightClustersCount, UPDATE_FREQ_PER_FRAME, t17, binding = 22);
-RES(ByteBuffer, lightClusters,      UPDATE_FREQ_PER_FRAME, t18, binding = 23);
+RES(ByteBuffer, lightClustersCount, UPDATE_FREQ_PER_FRAME, t22, binding = 22);
+RES(ByteBuffer, lightClusters,      UPDATE_FREQ_PER_FRAME, t23, binding = 23);
 
-RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t19, binding = 24);
-RES(TexCube(float4), sceneCubeTextures[SCENE_MAX_TEXTURE_CUBE_COUNT],  UPDATE_FREQ_PER_FRAME, t10020, binding = 25);
+RES(Tex2D(float4), sceneTextures[SCENE_MAX_TEXTURE_COUNT],  UPDATE_FREQ_PER_FRAME, t24, binding = 24);
+RES(TexCube(float4), sceneCubeTextures[SCENE_MAX_TEXTURE_CUBE_COUNT],  UPDATE_FREQ_PER_FRAME, t10024, binding = 25);
 
 #define SCENE_OBJECT_ID_BIT 19 // 13  bits for ObjectID 
 #define SCENE_PRIM_ID_BIT  0 // 19 bits for PrimitiveID

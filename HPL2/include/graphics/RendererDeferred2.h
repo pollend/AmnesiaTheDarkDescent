@@ -265,10 +265,8 @@ namespace hpl {
         SharedShader m_translucencyRefractionShaderPremulAlpha;
 
         SharedShader m_translucencyIlluminationShaderAdd;
-        SharedShader m_translucencyIlluminationShaderMul;
-        SharedShader m_translucencyIlluminationShaderMulX2;
-        SharedShader m_translucencyIlluminationShaderAlpha;
-        SharedShader m_translucencyIlluminationShaderPremulAlpha;
+
+        SharedShader m_translucencyWaterShader;
 
         struct BlendPipelines {
             SharedPipeline m_pipelineBlendAdd;
@@ -309,12 +307,10 @@ namespace hpl {
 
         SharedPipeline m_translucencyIlluminationPipline;
         SharedPipeline m_translucencyIlluminationPiplineNoDepth;
-
-        BlendPipelines m_translucencyIlluminationPipline;
-        BlendPipelines m_translucencyIlluminationPiplineNoDepth;
+        SharedPipeline m_translucencyWaterPipeline;
+        SharedPipeline m_translucencyWaterPipelineNoDepth;
 
         CopyTextureSubpass4 m_copySubpass;
-
 
         // variables that are persistent for the frame
         struct TransientFrameVars {
