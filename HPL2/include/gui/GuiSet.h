@@ -27,12 +27,8 @@
 namespace hpl {
 
 	namespace gui {
-		static constexpr size_t GUI_STREAM_BUFFER_VB_SIZE = 32768;
-        static constexpr size_t GUI_STREAM_BUFFER_IB_SIZE = 32768;
-        static constexpr size_t GUI_MAX_BATCHES = 1024;
 		static constexpr uint32_t MAX_GUI_DRAW_CALLS = 1024;
-
-
+		
 		void InitializeGui(ForgeRenderer& pipeline);
 		void exitGui();
 	}
