@@ -29,8 +29,8 @@ namespace hpl {
         static constexpr uint32_t ParticleVertexBufferSize = 0xf << 12;
         static constexpr uint32_t ParticleIndexBufferSize = 0xf << 12;
 
-        static constexpr uint32_t ImmediateVertexBufferSize = 1;
-        static constexpr uint32_t ImmediateIndexBufferSize = 1;
+        static constexpr uint32_t ImmediateVertexBufferSize = 0xf << 14;
+        static constexpr uint32_t ImmediateIndexBufferSize = 0xf << 14;
 
         GPURingBufferOffset allocTransientVertexBuffer(uint32_t size);
         GPURingBufferOffset allocTransientIndexBuffer(uint32_t size);

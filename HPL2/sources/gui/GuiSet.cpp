@@ -244,6 +244,7 @@ namespace hpl {
 				}
 
 			}
+            addUniformGPURingBuffer(pipeline.Rend(), sizeof(UniformBlock) * MAX_GUI_DRAW_CALLS, &GuiUniformRingBuffer, true);
 		}
 
 		void exitGui() {
