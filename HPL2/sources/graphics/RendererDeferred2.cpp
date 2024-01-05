@@ -1274,6 +1274,9 @@ namespace hpl {
         m_diffuseIndexPool = IndexPool(resource::MaxSolidDiffuseMaterials);
         m_translucencyIndexPool = IndexPool(resource::MaxTranslucenctMaterials);
         m_waterIndexPool = IndexPool(resource::MaxWaterMaterials);
+        
+        addUniformGPURingBuffer(forgeRenderer->Rend(), ViewportRingBufferSize, &m_viewPortUniformBuffer);
+
 
         // create Descriptor sets
         m_sceneDescriptorConstSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
@@ -1481,6 +1484,7 @@ namespace hpl {
             vars.m_objectIndex = 0;
             vars.m_indirectIndex = 0;
             vars.m_particleIndex = 0;
+            vars.m_viewportIndex = 0;
             vars.m_objectSlotIndex.clear();
         });
 
@@ -1618,6 +1622,9 @@ namespace hpl {
             updateDescriptorSet(
                 forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
         }
+
+        
+
         {
             BufferUpdateDesc updateDesc = { m_perSceneInfoBuffer[frame.m_frameIndex].m_handle, 0, sizeof(resource::SceneInfoResource) };
             beginUpdateResource(&updateDesc);

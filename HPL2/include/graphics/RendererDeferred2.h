@@ -107,6 +107,8 @@ namespace hpl {
         static constexpr uint32_t LightClusterSlices = 24;
         static constexpr uint32_t TransientImagePoolCount = 256;
 
+        static constexpr uint32_t ViewportRingBufferSize = 2048;
+
         static constexpr uint32_t IndirectArgumentSize = 8 * sizeof(uint32_t);
 
         struct RootConstantDrawIndexArguments {
@@ -225,6 +227,8 @@ namespace hpl {
 
         cRenderList m_rendererList;
 
+         GPURingBuffer m_viewPortUniformBuffer{};
+   
         SharedRootSignature m_lightClusterRootSignature;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightDescriptorPerFrameSet;
         SharedShader m_lightClusterShader;
@@ -312,6 +316,7 @@ namespace hpl {
             uint32_t m_objectIndex = 0;
             uint32_t m_indirectIndex = 0;
             uint32_t m_particleIndex = 0;
+            uint32_t m_viewportIndex = 0;
         };
         ResetFrameHandler m_resetHandler;
         TransientFrameVariable<TransientFrameVars> m_variables;

@@ -22,6 +22,10 @@ CBUFFER(sceneInfo, UPDATE_FREQ_PER_FRAME, b1, binding = 4) {
   DATA(ViewportInfo, viewports[64], None);
 };
 
+CBUFFER(viewportBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 5) {
+  DATA(ViewportInfo, viewport, None);
+};
+
 RES(Buffer(UniformObject), sceneObjects, UPDATE_FREQ_PER_FRAME, t0, binding = 5);
 RES(Buffer(Light), lights,               UPDATE_FREQ_PER_FRAME, t1, binding = 6);
 RES(Buffer(Particle), particles,         UPDATE_FREQ_PER_FRAME, t2, binding = 7);
