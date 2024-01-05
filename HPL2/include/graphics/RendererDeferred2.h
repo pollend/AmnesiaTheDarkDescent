@@ -206,7 +206,7 @@ namespace hpl {
         SharedRootSignature m_sceneRootSignature;
         SharedDescriptorSet m_sceneDescriptorConstSet;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerFrameSet;
-        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerBatchSet;
+      //  std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerBatchSet;
 
         SharedShader m_visibilityBufferPassShader;
         SharedShader m_visibilityBufferAlphaPassShader;
@@ -227,7 +227,7 @@ namespace hpl {
 
         cRenderList m_rendererList;
 
-        GPURingBuffer m_viewPortUniformBuffer{};
+        GPURingBuffer m_viewportUniformBuffer{};
 
         SharedRootSignature m_lightClusterRootSignature;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightDescriptorPerFrameSet;
@@ -243,6 +243,7 @@ namespace hpl {
         SharedBuffer m_translucencyMatBuffer;
         SharedBuffer m_waterMatBuffer;
         SharedBuffer m_diffuseMatUniformBuffer;
+        SharedShader m_depthShader;
 
         SharedShader m_particleShaderAdd;
         SharedShader m_particleShaderMul;
@@ -265,7 +266,7 @@ namespace hpl {
         SharedShader m_translucencyIlluminationShaderAdd;
 
         SharedShader m_translucencyWaterShader;
-
+        
         struct BlendPipelines {
             SharedPipeline m_pipelineBlendAdd;
             SharedPipeline m_pipelineBlendMul;

@@ -30,7 +30,7 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     #else 
         UniformObject obj = Get(sceneObjects)[Get(indirectDrawId)];
     #endif
-    ViewportInfo viewInfo = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
+    ViewportInfo viewInfo = Get(viewport);
 
     TranslucentMaterial material = Get(sceneTranslucentMat)[obj.materialIndex];  
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);

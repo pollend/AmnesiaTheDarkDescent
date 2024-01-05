@@ -19,10 +19,9 @@ RES(SamplerState, sceneSampler, UPDATE_FREQ_NONE, s3, binding = 3);
 
 CBUFFER(sceneInfo, UPDATE_FREQ_PER_FRAME, b1, binding = 4) {
   DATA(WorldInfo, worldInfo, None);
-  DATA(ViewportInfo, viewports[64], None);
 };
 
-CBUFFER(viewportBlock, UPDATE_FREQ_PER_BATCH, b2, binding = 5) {
+CBUFFER(uniformBlock_rootcbv, UPDATE_FREQ_NONE, b2, binding = 5) {
   DATA(ViewportInfo, viewport, None);
 };
 

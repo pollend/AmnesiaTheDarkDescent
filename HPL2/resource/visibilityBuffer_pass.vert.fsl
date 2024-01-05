@@ -18,7 +18,7 @@ VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
     INIT_MAIN;
     VSOutput Out;
     
-    ViewportInfo info = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
+    ViewportInfo info = Get(viewport);
     #if !defined(INDIRECT_ROOT_CONSTANT)
         Out.drawID = InstanceID; 
         float4x4 modelView = mul(info.viewMat, Get(sceneObjects)[InstanceID].modelMat);

@@ -219,6 +219,7 @@ namespace hpl {
         m_sceneTransientImage2DPool = ImageBindlessPool(&m_sceneTexture2DPool, TransientImagePoolCount);
         m_supportIndirectRootConstant = forgeRenderer->Rend()->pGpu->mSettings.mIndirectRootConstant;
 
+
         m_samplerNearEdgeClamp.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
             SamplerDesc bilinearClampDesc = { FILTER_NEAREST,
                                               FILTER_NEAREST,
@@ -341,6 +342,13 @@ namespace hpl {
             return true;
         });
 
+        m_depthShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0].pFileName = "depth_shade.vert";
+            loadDesc.mStages[1].pFileName = "depth_shade.frag";
+            addShader(forgeRenderer->Rend(), &loadDesc, shader);
+            return true; 
+        });
         struct {
             const char* fragmentShader;
             SharedShader* shader;
@@ -1276,7 +1284,7 @@ namespace hpl {
         m_translucencyIndexPool = IndexPool(resource::MaxTranslucenctMaterials);
         m_waterIndexPool = IndexPool(resource::MaxWaterMaterials);
 
-        addUniformGPURingBuffer(forgeRenderer->Rend(), ViewportRingBufferSize, &m_viewPortUniformBuffer);
+        addUniformGPURingBuffer(forgeRenderer->Rend(), ViewportRingBufferSize, &m_viewportUniformBuffer);
 
 
         // create Descriptor sets
@@ -1292,11 +1300,11 @@ namespace hpl {
                 addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
                 return true;
             });
-            m_sceneDescriptorPerBatchSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
-                DescriptorSetDesc descriptorSetDesc{ m_sceneRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, ScenePerDescriptorBatchSize  };
-                addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
-                return true;
-            });
+           // m_sceneDescriptorPerBatchSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
+           //     DescriptorSetDesc descriptorSetDesc{ m_sceneRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, ScenePerDescriptorBatchSize  };
+           //     addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
+           //     return true;
+           // });
             m_lightDescriptorPerFrameSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
                 DescriptorSetDesc descriptorSetDesc{ m_lightClusterRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
                 addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
@@ -1500,10 +1508,9 @@ namespace hpl {
             updateDatum->m_size = viewport.GetSizeU2();
             for (size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
                 updateDatum->m_outputBuffer[i].Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
-                    ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
                     RenderTargetDesc renderTargetDesc = {};
                     renderTargetDesc.mArraySize = 1;
-                    renderTargetDesc.mClearValue = optimizedColorClearBlack;
+                    renderTargetDesc.mClearValue = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0 };
                     renderTargetDesc.mDepth = 1;
                     renderTargetDesc.mWidth = updateDatum->m_size.x;
                     renderTargetDesc.mHeight = updateDatum->m_size.y;
@@ -1553,7 +1560,7 @@ namespace hpl {
                 updateDatum->m_albedoBuffer[i].Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
                     RenderTargetDesc renderTargetDesc = {};
                     renderTargetDesc.mArraySize = 1;
-                    renderTargetDesc.mClearValue = { .depth = 1.0f, .stencil = 0 };
+                    renderTargetDesc.mClearValue = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0 };
                     renderTargetDesc.mDepth = 1;
                     renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
                     renderTargetDesc.mWidth = updateDatum->m_size.x;
@@ -1587,10 +1594,9 @@ namespace hpl {
                     return true;
                 });
                 updateDatum->m_visiblityBuffer[i].Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
-                    ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
                     RenderTargetDesc renderTargetDesc = {};
                     renderTargetDesc.mArraySize = 1;
-                    renderTargetDesc.mClearValue = optimizedColorClearBlack;
+                    renderTargetDesc.mClearValue = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0 };
                     renderTargetDesc.mDepth = 1;
                     renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
                     renderTargetDesc.mWidth = updateDatum->m_size.x;
@@ -1615,22 +1621,18 @@ namespace hpl {
         frame.m_resourcePool->Push(viewportDatum->m_refractionImage[frame.m_frameIndex]);
 
         uint32_t mainBatchIndex = frameVars.m_viewportIndex++;
-        {
-	        GPURingBufferOffset offset = getGPURingBufferOffset(&m_viewPortUniformBuffer, sizeof(resource::ViewportInfo));
-	        BufferUpdateDesc updateDesc = { offset.pBuffer, offset.mOffset };
-	        beginUpdateResource(&updateDesc);
-            resource::ViewportInfo* viewportInfo = reinterpret_cast<resource::ViewportInfo*>(updateDesc.pMappedData);
-	        (*viewportInfo) = resource::ViewportInfo::create(apFrustum, float4(0.0f, 0.0f, static_cast<float>(viewportDatum->m_size.x), static_cast<float>(viewportDatum->m_size.y)));
-	        endUpdateResource(&updateDesc);
 
-            {
-                DescriptorDataRange viewportRange = { (uint32_t)offset.mOffset, sizeof(resource::ViewportInfo) };
-                std::array params = {
-                    DescriptorData { .pName = "viewportBlock", .pRanges = &viewportRange, .ppBuffers = &offset.pBuffer }
-                };
-                updateDescriptorSet(
-                    forgeRenderer->Rend(), mainBatchIndex, m_sceneDescriptorPerBatchSet[frame.m_frameIndex].m_handle, params.size(), params.data());
-            }
+        GPURingBufferOffset viewportOffset = getGPURingBufferOffset(&m_viewportUniformBuffer, sizeof(resource::ViewportInfo));
+        DescriptorDataRange viewportRange = { (uint32_t)viewportOffset.mOffset, sizeof(resource::ViewportInfo) };
+        std::array mainViewportParams = { DescriptorData { .pName = "uniformBlock_rootcbv", .pRanges = &viewportRange, .ppBuffers = &viewportOffset.pBuffer } };
+
+        {
+            BufferUpdateDesc updateDesc = { viewportOffset.pBuffer, viewportOffset.mOffset };
+            beginUpdateResource(&updateDesc);
+            resource::ViewportInfo* viewportInfo = reinterpret_cast<resource::ViewportInfo*>(updateDesc.pMappedData);
+            (*viewportInfo) = resource::ViewportInfo::create(
+                apFrustum, float4(0.0f, 0.0f, static_cast<float>(viewportDatum->m_size.x), static_cast<float>(viewportDatum->m_size.y)));
+            endUpdateResource(&updateDesc);
         }
 
         // ----------------
@@ -2215,7 +2217,7 @@ namespace hpl {
                 cmdBindPipeline(cmd, m_visibilityBufferPass.m_handle);
                 opaqueSet.cmdBindGeometrySet(cmd, semantics);
                 cmdBindIndexBuffer(cmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
-                cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
                 cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
                 cmdExecuteIndirect(
                     cmd,
@@ -2256,7 +2258,7 @@ namespace hpl {
                 cmdBindPipeline(cmd, m_visbilityAlphaBufferPass.m_handle);
                 opaqueSet.cmdBindGeometrySet(cmd, semantics);
                 cmdBindIndexBuffer(cmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
-                cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
                 cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
                 cmdExecuteIndirect(
                     cmd,
@@ -2291,13 +2293,11 @@ namespace hpl {
             cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
             cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
             cmdBindPipeline(cmd, m_visbilityEmitBufferPass.m_handle);
-            cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+            cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-            cmdBindDescriptorSet(cmd, mainBatchIndex, m_sceneDescriptorPerBatchSet[frame.m_frameIndex].m_handle);
             cmdDraw(cmd, 3, 0);
         }
         {
-            //cmdBeginDebugMarker(cmd, 0, 1, 0, "Decal Output Buffer Pass");
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
             std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
                                      ShaderSemantic::SEMANTIC_TEXCOORD0,
@@ -2321,7 +2321,7 @@ namespace hpl {
             cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
             cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
             opaqueSet.cmdBindGeometrySet(cmd, semantics);
-            cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+            cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
 
             struct DecalDrawArg {
@@ -2362,7 +2362,6 @@ namespace hpl {
             cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
         {
-            //cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Output Buffer Pass");
             LoadActionsDesc loadActions = {};
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
             loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
@@ -2371,11 +2370,10 @@ namespace hpl {
             cmdBindRenderTargets(cmd, targets.size(), targets.data(), nullptr, &loadActions, NULL, NULL, -1, -1);
             cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
             cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
-            cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+            cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
             cmdBindPipeline(cmd, m_visiblityShadePass.m_handle);
             cmdDraw(cmd, 3, 0);
-            // cmdEndDebugMarker(cmd);
         }
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -2441,7 +2439,7 @@ namespace hpl {
                                                  ShaderSemantic::SEMANTIC_TEXCOORD0,
                                                  ShaderSemantic::SEMANTIC_COLOR };
                         particleSet.cmdBindGeometrySet(cmd, semantics);
-                        cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                        cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
                         cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
                         cmdBindPipeline(cmd, arg.pipeline);
                         if (m_supportIndirectRootConstant) {
@@ -2459,7 +2457,7 @@ namespace hpl {
                                              ShaderSemantic::SEMANTIC_TANGENT,
                                              ShaderSemantic::SEMANTIC_COLOR };
                     opaqueSet.cmdBindGeometrySet(cmd, semantics);
-                    cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                    cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
                     cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
                     cmdBindPipeline(cmd, m_translucencyWaterPipeline.m_handle);
                     if (m_supportIndirectRootConstant) {
@@ -2478,7 +2476,7 @@ namespace hpl {
                                                  ShaderSemantic::SEMANTIC_TANGENT,
                                                  ShaderSemantic::SEMANTIC_COLOR };
                         opaqueSet.cmdBindGeometrySet(cmd, semantics);
-                        cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                        cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
                         cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
                         cmdBindPipeline(cmd, arg.pipeline);
 
