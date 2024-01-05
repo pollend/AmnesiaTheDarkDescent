@@ -1,4 +1,5 @@
 #include "graphics/RendererDeferred2.h"
+#include "Common_3/Utilities/RingBuffer.h"
 #include "graphics/DrawPacket.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/ForgeRenderer.h"
@@ -1274,7 +1275,7 @@ namespace hpl {
         m_diffuseIndexPool = IndexPool(resource::MaxSolidDiffuseMaterials);
         m_translucencyIndexPool = IndexPool(resource::MaxTranslucenctMaterials);
         m_waterIndexPool = IndexPool(resource::MaxWaterMaterials);
-        
+
         addUniformGPURingBuffer(forgeRenderer->Rend(), ViewportRingBufferSize, &m_viewPortUniformBuffer);
 
 
@@ -1291,7 +1292,11 @@ namespace hpl {
                 addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
                 return true;
             });
-
+            m_sceneDescriptorPerBatchSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
+                DescriptorSetDesc descriptorSetDesc{ m_sceneRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, ScenePerDescriptorBatchSize  };
+                addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
+                return true;
+            });
             m_lightDescriptorPerFrameSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
                 DescriptorSetDesc descriptorSetDesc{ m_lightClusterRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
                 addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
@@ -1488,6 +1493,7 @@ namespace hpl {
             vars.m_objectSlotIndex.clear();
         });
 
+
         auto viewportDatum = m_boundViewportData.resolve(viewport);
         if (!viewportDatum || viewportDatum->m_size != viewport.GetSizeU2()) {
             auto updateDatum = std::make_unique<ViewportData>();
@@ -1607,6 +1613,26 @@ namespace hpl {
         frame.m_resourcePool->Push(viewportDatum->m_outputBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_albedoBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_refractionImage[frame.m_frameIndex]);
+
+        uint32_t mainBatchIndex = frameVars.m_viewportIndex++;
+        {
+	        GPURingBufferOffset offset = getGPURingBufferOffset(&m_viewPortUniformBuffer, sizeof(resource::ViewportInfo));
+	        BufferUpdateDesc updateDesc = { offset.pBuffer, offset.mOffset };
+	        beginUpdateResource(&updateDesc);
+            resource::ViewportInfo* viewportInfo = reinterpret_cast<resource::ViewportInfo*>(updateDesc.pMappedData);
+	        (*viewportInfo) = resource::ViewportInfo::create(apFrustum, float4(0.0f, 0.0f, static_cast<float>(viewportDatum->m_size.x), static_cast<float>(viewportDatum->m_size.y)));
+	        endUpdateResource(&updateDesc);
+
+            {
+                DescriptorDataRange viewportRange = { (uint32_t)offset.mOffset, sizeof(resource::ViewportInfo) };
+                std::array params = {
+                    DescriptorData { .pName = "viewportBlock", .pRanges = &viewportRange, .ppBuffers = &offset.pBuffer }
+                };
+                updateDescriptorSet(
+                    forgeRenderer->Rend(), mainBatchIndex, m_sceneDescriptorPerBatchSet[frame.m_frameIndex].m_handle, params.size(), params.data());
+            }
+        }
+
         // ----------------
         // Setup Data
         // -----------------
@@ -1623,7 +1649,7 @@ namespace hpl {
                 forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
         }
 
-        
+
 
         {
             BufferUpdateDesc updateDesc = { m_perSceneInfoBuffer[frame.m_frameIndex].m_handle, 0, sizeof(resource::SceneInfoResource) };
@@ -2255,7 +2281,6 @@ namespace hpl {
             cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
         {
-            //cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Emit Buffer Pass");
             LoadActionsDesc loadActions = {};
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
             loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
@@ -2268,8 +2293,8 @@ namespace hpl {
             cmdBindPipeline(cmd, m_visbilityEmitBufferPass.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+            cmdBindDescriptorSet(cmd, mainBatchIndex, m_sceneDescriptorPerBatchSet[frame.m_frameIndex].m_handle);
             cmdDraw(cmd, 3, 0);
-            //cmdEndDebugMarker(cmd);
         }
         {
             //cmdBeginDebugMarker(cmd, 0, 1, 0, "Decal Output Buffer Pass");

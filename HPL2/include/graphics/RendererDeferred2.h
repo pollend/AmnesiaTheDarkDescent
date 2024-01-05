@@ -108,6 +108,7 @@ namespace hpl {
         static constexpr uint32_t TransientImagePoolCount = 256;
 
         static constexpr uint32_t ViewportRingBufferSize = 2048;
+        static constexpr uint32_t ScenePerDescriptorBatchSize = 32;
 
         static constexpr uint32_t IndirectArgumentSize = 8 * sizeof(uint32_t);
 
@@ -205,6 +206,7 @@ namespace hpl {
         SharedRootSignature m_sceneRootSignature;
         SharedDescriptorSet m_sceneDescriptorConstSet;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerFrameSet;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerBatchSet;
 
         SharedShader m_visibilityBufferPassShader;
         SharedShader m_visibilityBufferAlphaPassShader;
@@ -219,16 +221,14 @@ namespace hpl {
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_perSceneInfoBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_indirectDrawArgsBuffer;
 
-        std::array<SharedSampler, resource::MaterialSceneSamplersCount> m_materialSampler;
-
         SharedTexture m_emptyTexture2D;
         SharedTexture m_emptyTextureCube;
         Image* m_dissolveImage;
 
         cRenderList m_rendererList;
 
-         GPURingBuffer m_viewPortUniformBuffer{};
-   
+        GPURingBuffer m_viewPortUniformBuffer{};
+
         SharedRootSignature m_lightClusterRootSignature;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightDescriptorPerFrameSet;
         SharedShader m_lightClusterShader;
