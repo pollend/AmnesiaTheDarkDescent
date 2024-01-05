@@ -125,11 +125,6 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     float fSpecular = pow(fLDotN,16.0);
 
     float fFogAmount = 0.0;
-   // if (UseFog(Get(options))) {
-   //         fFogAmount = (-In.pos.z - Get(worldFogStart)) /Get(worldFogLength);
-   //         fFogAmount = clamp(fFogAmount, 0.0, 1.0);
-   //         fFogAmount = pow(fFogAmount, Get(fogFalloffExp)) * Get(worldFogColor).a;
-   // } 
     if ((Get(worldInfo).worldFlags & WORLD_FLAG_IS_FOG_ENABLED) > 0) {
         fFogAmount =  pow(clamp((-In.pos.z - Get(worldInfo).worldFogStart) / Get(worldInfo).worldFogLength, 0.0, 1.0), Get(worldInfo).fogFalloffExp) * Get(worldInfo).worldFogColor.a;
     }

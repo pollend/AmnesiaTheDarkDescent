@@ -48,6 +48,8 @@ namespace hpl::resource {
     uint32_t constexpr IsAlphaSingleChannel = 0x1;
     uint32_t constexpr IsHeightSingleChannel = 0x2;
     uint32_t constexpr UseAlphaDissolveFilter = 0x4;
+    uint32_t constexpr UseReflection = 0x8;
+    uint32_t constexpr UseRefraction = 0x16;
 
     struct ViewportInfo {
         static constexpr uint32_t PrmaryViewportIndex = 0;
@@ -172,7 +174,7 @@ namespace hpl::resource {
 
     struct WaterMaterial {
         uint32_t m_diffuseTextureIndex;
-        uint32_t m_normalTextureIndex;        
+        uint32_t m_normalTextureIndex;
         uint32_t m_cubemapTextureIndex;
         uint32_t m_config;
 

@@ -1676,12 +1676,16 @@ namespace hpl {
             RangeSubsetAlloc::RangeSubset range;
             eMaterialBlendMode blend;
         };
-        enum class TranslucentDrawType : uint8_t { Translucency, TranslucencyIllumination, Particle, Water };
+        enum class TranslucentDrawType : uint8_t {
+            Translucency,
+            Particle,
+            Water
+        };
         struct TranslucentArgs {
             TranslucentDrawType type;
             iRenderable* renderable;
-            bool m_refraction;
-            bool m_reflection;
+            Pipeline* pipeline;
+            Pipeline* illuminationPipline;
             uint32_t indirectDrawIndex;
             uint32_t numberIndecies;
             uint32_t indexOffset;
@@ -1738,8 +1742,10 @@ namespace hpl {
                 translucenctArgs.push_back({
                     TranslucentDrawType::Particle,
                     renderable,
-                    false,
-                    false,
+                    material->GetDepthTest() ?
+                        m_particlePipeline.getPipelineByBlendMode(material->GetBlendMode()).m_handle:
+                        m_particlePipelineNoDepth.getPipelineByBlendMode(material->GetBlendMode()).m_handle,
+                    nullptr,
                     frameVars.m_particleIndex,
                     packet.m_unified.m_numIndices,
                     packet.m_unified.m_subAllocation->indexOffset(),
@@ -1815,6 +1821,10 @@ namespace hpl {
                                 (*tex.m_value) = resourceMaterial.m_textureHandles[tex.m_type];
                             }
 
+                            waterMaterial.m_config =
+                                (isReflection ? resource::UseReflection : 0) |
+                                (isRefraction ? resource::UseRefraction : 0);
+
                             waterMaterial.m_refractionScale = descriptor.m_water.m_refractionScale;
                             waterMaterial.m_frenselBias = descriptor.m_water.m_frenselBias;
                             waterMaterial.m_frenselPow = descriptor.m_water.m_frenselPow;
@@ -1822,9 +1832,9 @@ namespace hpl {
                             waterMaterial.m_reflectionFadeStart = descriptor.m_water.m_reflectionFadeStart;
                             waterMaterial.m_reflectionFadeEnd = descriptor.m_water.m_reflectionFadeEnd;
                             waterMaterial.m_waveSpeed = descriptor.m_water.m_waveSpeed;
-                            waterMaterial.mfWaveAmplitude = descriptor.m_water.m_waveAmplitude;
+                            waterMaterial.m_waveAmplitude = descriptor.m_water.m_waveAmplitude;
 
-                            waterMaterial.mfWaveFreq = descriptor.m_water.m_waveFreq;
+                            waterMaterial.m_waveFreq = descriptor.m_water.m_waveFreq;
                             endUpdateResource(&updateDesc);
                             break;
                         }
@@ -1860,12 +1870,24 @@ namespace hpl {
                         if (descriptor.m_id == MaterialID::Water) {
                             return TranslucentDrawType::Water;
                         }
-                        return (cubeMap && !isRefraction) ? TranslucentDrawType::TranslucencyIllumination
-                                                          : TranslucentDrawType::Translucency;
+                        return TranslucentDrawType::Translucency;
                     })(),
                     renderable,
-                    isRefraction,
-                    isReflection,
+                    ([&]() {
+                        if (isRefraction) {
+                            if (material->GetDepthTest()) {
+                                return m_translucencyRefractionPipline.getPipelineByBlendMode(material->GetBlendMode()).m_handle;
+                            }
+                            return m_translucencyRefractionPiplineNoDepth.getPipelineByBlendMode(material->GetBlendMode()).m_handle;
+                        }
+                        if (material->GetDepthTest()) {
+                            return m_translucencyPipline.getPipelineByBlendMode(material->GetBlendMode()).m_handle;
+                        }
+                        return m_translucencyPiplineNoDepth.getPipelineByBlendMode(material->GetBlendMode()).m_handle;
+                    })(),
+                    (cubeMap && !isRefraction) ? (material->GetDepthTest() ? m_translucencyIlluminationPipline.m_handle
+                                                                           : m_translucencyIlluminationPiplineNoDepth.m_handle)
+                                               : nullptr,
                     slot,
                     packet.m_unified.m_numIndices,
                     packet.m_unified.m_subAllocation->indexOffset(),
@@ -2391,12 +2413,7 @@ namespace hpl {
                         particleSet.cmdBindGeometrySet(cmd, semantics);
                         cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
                         cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-                        if (pMaterial->GetDepthTest()) {
-                            cmdBindPipeline(cmd, m_particlePipeline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-                        } else {
-                            cmdBindPipeline(cmd, m_particlePipelineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-                        }
-
+                        cmdBindPipeline(cmd, arg.pipeline);
                         if (m_supportIndirectRootConstant) {
                             const uint32_t pushConstantIndex =
                                 getDescriptorIndexFromName(m_sceneRootSignature.m_handle, "indirectRootConstant");
@@ -2405,7 +2422,24 @@ namespace hpl {
                         cmdDrawIndexedInstanced(cmd, arg.numberIndecies, arg.indexOffset, 1, arg.vertexOffset, arg.indirectDrawIndex);
                         break;
                     }
-                case TranslucentDrawType::TranslucencyIllumination:
+                case TranslucentDrawType::Water: {
+                    std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
+                                             ShaderSemantic::SEMANTIC_TEXCOORD0,
+                                             ShaderSemantic::SEMANTIC_NORMAL,
+                                             ShaderSemantic::SEMANTIC_TANGENT,
+                                             ShaderSemantic::SEMANTIC_COLOR };
+                    opaqueSet.cmdBindGeometrySet(cmd, semantics);
+                    cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                    cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+                    cmdBindPipeline(cmd, m_translucencyWaterPipeline.m_handle);
+                    if (m_supportIndirectRootConstant) {
+                        const uint32_t pushConstantIndex =
+                            getDescriptorIndexFromName(m_sceneRootSignature.m_handle, "indirectRootConstant");
+                        cmdBindPushConstants(cmd, m_sceneRootSignature.m_handle, pushConstantIndex, &arg.indirectDrawIndex);
+                    }
+                    cmdDrawIndexedInstanced(cmd, arg.numberIndecies, arg.indexOffset, 1, arg.vertexOffset, arg.indirectDrawIndex);
+                    break;
+                }
                 case TranslucentDrawType::Translucency:
                     {
                         std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
@@ -2416,20 +2450,7 @@ namespace hpl {
                         opaqueSet.cmdBindGeometrySet(cmd, semantics);
                         cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
                         cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
-
-                        if (arg.m_refraction) {
-                            if (pMaterial->GetDepthTest()) {
-                                cmdBindPipeline(cmd, m_translucencyRefractionPipline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-                            } else {
-                                cmdBindPipeline(cmd, m_translucencyRefractionPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-                            }
-                        } else {
-                            if (pMaterial->GetDepthTest()) {
-                                cmdBindPipeline(cmd, m_translucencyPipline.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-                            } else {
-                                cmdBindPipeline(cmd, m_translucencyPiplineNoDepth.getPipelineByBlendMode(pMaterial->GetBlendMode()).m_handle);
-                            }
-                        }
+                        cmdBindPipeline(cmd, arg.pipeline);
 
                         if (m_supportIndirectRootConstant) {
                             const uint32_t pushConstantIndex =
@@ -2438,12 +2459,8 @@ namespace hpl {
                         }
                         cmdDrawIndexedInstanced(cmd, arg.numberIndecies, arg.indexOffset, 1, arg.vertexOffset, arg.indirectDrawIndex);
 
-                        if (arg.type == TranslucentDrawType::TranslucencyIllumination) {
-                            if (pMaterial->GetDepthTest()) {
-                                cmdBindPipeline(cmd, m_translucencyIlluminationPipline.m_handle);
-                            } else {
-                                cmdBindPipeline(cmd, m_translucencyIlluminationPiplineNoDepth.m_handle);
-                            }
+                        if (arg.illuminationPipline) {
+                            cmdBindPipeline(cmd, arg.illuminationPipline);
                             cmdDrawIndexedInstanced(cmd, arg.numberIndecies, arg.indexOffset, 1, arg.vertexOffset, arg.indirectDrawIndex);
                         }
                         break;
