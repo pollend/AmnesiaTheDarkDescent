@@ -181,7 +181,6 @@ namespace hpl {
             MaterialSet& resolveSet(MaterialSetType set);
         };
         ResourceMaterial& resolveResourceMaterial(cMaterial* material);
-        uint32_t resolveObjectSlot(uint32_t uid, std::function<void(uint32_t)> initializeHandler);
 
         UniqueViewportData<ViewportData> m_boundViewportData;
 
@@ -219,15 +218,10 @@ namespace hpl {
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_indirectDrawArgsBuffer;
 
         std::array<SharedSampler, resource::MaterialSceneSamplersCount> m_materialSampler;
-        folly::F14ValueMap<uint32_t, uint32_t> m_objectDescriptorLookup;
 
         SharedTexture m_emptyTexture2D;
         SharedTexture m_emptyTextureCube;
         Image* m_dissolveImage;
-
-        uint32_t m_activeFrame = 0;
-        uint32_t m_objectIndex = 0;
-        uint32_t m_indirectDrawIndex = 0;
 
         cRenderList m_rendererList;
 
@@ -265,10 +259,8 @@ namespace hpl {
         SharedShader m_translucencyRefractionShaderPremulAlpha;
 
         SharedShader m_translucencyIlluminationShaderAdd;
-        SharedShader m_translucencyIlluminationShaderMul;
-        SharedShader m_translucencyIlluminationShaderMulX2;
-        SharedShader m_translucencyIlluminationShaderAlpha;
-        SharedShader m_translucencyIlluminationShaderPremulAlpha;
+
+        SharedShader m_translucencyWaterShader;
 
         struct BlendPipelines {
             SharedPipeline m_pipelineBlendAdd;
@@ -309,12 +301,10 @@ namespace hpl {
 
         SharedPipeline m_translucencyIlluminationPipline;
         SharedPipeline m_translucencyIlluminationPiplineNoDepth;
-
-        //BlendPipelines m_translucencyIlluminationPipline;
-        //BlendPipelines m_translucencyIlluminationPiplineNoDepth;
+        SharedPipeline m_translucencyWaterPipeline;
+        SharedPipeline m_translucencyWaterPipelineNoDepth;
 
         CopyTextureSubpass4 m_copySubpass;
-
 
         // variables that are persistent for the frame
         struct TransientFrameVars {

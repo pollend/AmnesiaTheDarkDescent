@@ -5,6 +5,7 @@
 #include "graphics/Material.h"
 
 #include "Common_3/Utilities/Math/MathTypes.h"
+#include "math/cFrustum.h"
 #include <FixPreprocessor.h>
 
 #include <functional>
@@ -48,9 +49,13 @@ namespace hpl::resource {
     uint32_t constexpr IsAlphaSingleChannel = 0x1;
     uint32_t constexpr IsHeightSingleChannel = 0x2;
     uint32_t constexpr UseAlphaDissolveFilter = 0x4;
+    uint32_t constexpr UseReflection = 0x8;
+    uint32_t constexpr UseRefraction = 0x16;
 
     struct ViewportInfo {
         static constexpr uint32_t PrmaryViewportIndex = 0;
+        static ViewportInfo create(cFrustum* frustum, float4 rect);
+
         mat4 m_invViewMat;
         mat4 m_invProjMat;
         mat4 m_invViewProj;
@@ -172,7 +177,7 @@ namespace hpl::resource {
 
     struct WaterMaterial {
         uint32_t m_diffuseTextureIndex;
-        uint32_t m_normalTextureIndex;        
+        uint32_t m_normalTextureIndex;
         uint32_t m_cubemapTextureIndex;
         uint32_t m_config;
 

@@ -5,10 +5,6 @@
 #define _PARALLAX_BINDLESS_H
 
 INLINE float GetNormalizedDepth(float currentSample, float startDepth, float stopDepth, float inverseDepthRange) {
-    //float currentSample = 0.0;
-   //   BeginNonUniformResourceIndex(heightIdx);
-    //  EndNonUniformResourceIndex(); 
-
     float normalizedDepth = 0.0;
     if(stopDepth - startDepth > 0.0001)
     {
