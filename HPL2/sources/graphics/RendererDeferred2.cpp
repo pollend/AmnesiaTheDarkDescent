@@ -1323,12 +1323,10 @@ namespace hpl {
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
 
             std::array params = {
-
                 DescriptorData{ .pName = "dissolveTexture", .ppTextures = &m_dissolveImage->GetTexture().m_handle },
                 DescriptorData{ .pName = "sceneDiffuseMat", .ppBuffers = &m_diffuseMatUniformBuffer.m_handle },
                 DescriptorData{ .pName = "sceneTranslucentMat", .ppBuffers = &m_translucencyMatBuffer.m_handle },
                 DescriptorData{ .pName = "sceneWaterMat", .ppBuffers = &m_waterMatBuffer.m_handle },
-                // DescriptorData{ .pName = "sceneFilters", .mCount = samplers.size(), .ppSamplers = samplers.data() },
                 DescriptorData{ .pName = "vtxOpaqueIndex", .ppBuffers = &opaqueSet.indexBuffer().m_handle },
                 DescriptorData{ .pName = "vtxOpaquePosition",
                                 .ppBuffers = &opaqueSet.getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION)->buffer().m_handle },
@@ -1742,7 +1740,7 @@ namespace hpl {
                 translucenctArgs.push_back({
                     TranslucentDrawType::Particle,
                     renderable,
-                    material->GetDepthTest() ?
+                    material->GetDepthTest()?
                         m_particlePipeline.getPipelineByBlendMode(material->GetBlendMode()).m_handle:
                         m_particlePipelineNoDepth.getPipelineByBlendMode(material->GetBlendMode()).m_handle,
                     nullptr,

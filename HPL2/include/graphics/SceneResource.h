@@ -5,6 +5,7 @@
 #include "graphics/Material.h"
 
 #include "Common_3/Utilities/Math/MathTypes.h"
+#include "math/cFrustum.h"
 #include <FixPreprocessor.h>
 
 #include <functional>
@@ -53,6 +54,8 @@ namespace hpl::resource {
 
     struct ViewportInfo {
         static constexpr uint32_t PrmaryViewportIndex = 0;
+        static ViewportInfo create(cFrustum* frustum, float4 rect);
+
         mat4 m_invViewMat;
         mat4 m_invProjMat;
         mat4 m_invViewProj;

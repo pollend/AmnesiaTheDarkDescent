@@ -1,9 +1,24 @@
 #include "graphics/SceneResource.h"
 #include "graphics/Material.h"
+#include "math/cFrustum.h"
 #include "tinyimageformat_query.h"
 #include <cstdint>
 
 namespace hpl::resource  {
+
+    ViewportInfo ViewportInfo::create(cFrustum* apFrustum, float4 rect) {
+        ViewportInfo info;
+        info.m_viewMat = apFrustum->GetViewMat();
+        info.m_projMat = apFrustum->GetProjectionMat();
+        info.m_invProjMat = inverse(apFrustum->GetProjectionMat());
+        info.m_invViewMat = inverse(apFrustum->GetViewMat());
+        info.m_invViewProj = inverse(info.m_projMat * info.m_viewMat);
+        info.m_zFar = apFrustum->GetFarPlane();
+        info.m_zNear = apFrustum->GetNearPlane();
+        info.m_rect = rect;//float4(0.0f, 0.0f, static_cast<float>(viewportDatum->m_size.x), static_cast<float>(viewportDatum->m_size.y));
+        info.m_cameraPosition = v3ToF3(cMath::ToForgeVec3(apFrustum->GetOrigin()));
+        return info;
+    }
 
     uint32_t textureFilterIdx(TextureAntistropy anisotropy, eTextureWrap wrap, eTextureFilter filter) {
         const uint32_t anisotropyGroup =
