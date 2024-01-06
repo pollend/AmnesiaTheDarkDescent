@@ -22,6 +22,7 @@
 
 #include "graphics/CommandBufferPool.h"
 #include "graphics/CopyTextureSubpass4.h"
+#include "graphics/DrawPacket.h"
 #include "graphics/GraphicsTypes.h"
 #include "graphics/ImageBindlessPool.h"
 #include "graphics/SceneResource.h"
@@ -66,6 +67,19 @@ namespace hpl {
     class cRendererDeferred2 : public iRenderer {
         HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{B3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
     public:
+        // variables that are persistent for the frame
+        struct TransientFrameVars {
+        public:
+            folly::F14ValueMap<iRenderable*, uint32_t> m_objectSlotIndex;
+            uint32_t m_objectIndex = 0;
+            uint32_t m_indirectIndex = 0;
+            uint32_t m_particleIndex = 0;
+            uint32_t m_viewportIndex = 0;
+        };
+        struct DiffuseResult {
+            uint32_t m_slot;
+            DrawPacket m_packet;
+        };
         struct RangeSubsetAlloc {
         public:
             struct RangeSubset {
@@ -165,6 +179,7 @@ namespace hpl {
     private:
         void setIndirectDrawArg(const ForgeRenderer::Frame& frame, uint32_t drawArgIndex, uint32_t slot, DrawPacket& packet);
 
+
         enum MaterialSetType {
             PrimarySet = 0,
             ParticleSet = 1
@@ -183,6 +198,8 @@ namespace hpl {
             std::array<uint32_t, eMaterialTexture_LastEnum> m_textureHandles;
             MaterialSet& resolveSet(MaterialSetType set);
         };
+        std::optional<DiffuseResult> fetchDiffuseRenderableDraw(
+            ForgeRenderer::Frame& frame, TransientFrameVars& frameVars, iRenderable* renderable);
         ResourceMaterial& resolveResourceMaterial(cMaterial* material);
 
         UniqueViewportData<ViewportData> m_boundViewportData;
@@ -220,6 +237,8 @@ namespace hpl {
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_perSceneInfoBuffer;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_indirectDrawArgsBuffer;
+        SharedPipeline m_depthBufferPass;
+        SharedRenderTarget m_shadowTarget;
 
         SharedTexture m_emptyTexture2D;
         SharedTexture m_emptyTextureCube;
@@ -228,6 +247,7 @@ namespace hpl {
         cRenderList m_rendererList;
 
         GPURingBuffer m_viewportUniformBuffer{};
+        GpuCmdRing m_shadowCmdRing;
 
         SharedRootSignature m_lightClusterRootSignature;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightDescriptorPerFrameSet;
@@ -264,9 +284,8 @@ namespace hpl {
         SharedShader m_translucencyRefractionShaderPremulAlpha;
 
         SharedShader m_translucencyIlluminationShaderAdd;
-
         SharedShader m_translucencyWaterShader;
-        
+
         struct BlendPipelines {
             SharedPipeline m_pipelineBlendAdd;
             SharedPipeline m_pipelineBlendMul;
@@ -309,16 +328,22 @@ namespace hpl {
         SharedPipeline m_translucencyWaterPipeline;
         SharedPipeline m_translucencyWaterPipelineNoDepth;
 
+        class ShadowMapInfo {
+        public:
+            //    SharedRenderTarget m_target;
+            //    uint32_t m_transformCount = 0;
+            //    float m_radius = 0.0f;
+            //    float m_fov = 0.0f;
+            //    float m_aspect = 0.0f;
+            uint32_t m_frameCount = 0;
+            iLight* m_light = nullptr;
+        };
+
+        ShadowCache<ShadowMapInfo> m_shadowCache;
         CopyTextureSubpass4 m_copySubpass;
 
-        // variables that are persistent for the frame
-        struct TransientFrameVars {
-            folly::F14ValueMap<iRenderable*, uint32_t> m_objectSlotIndex;
-            uint32_t m_objectIndex = 0;
-            uint32_t m_indirectIndex = 0;
-            uint32_t m_particleIndex = 0;
-            uint32_t m_viewportIndex = 0;
-        };
+
+
         ResetFrameHandler m_resetHandler;
         TransientFrameVariable<TransientFrameVars> m_variables;
 

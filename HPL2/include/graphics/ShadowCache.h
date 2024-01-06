@@ -110,7 +110,7 @@ namespace hpl {
 
                         if (age - container.m_age > MinimumAge &&
                             (bestCandidate.m_container == nullptr ||
-                             bestCandidate.m_container->m_slots[bestCandidate.m_slotIdx].m_age < slot.m_age)) {
+                            bestCandidate.m_container->m_slots[bestCandidate.m_slotIdx].m_age < slot.m_age)) {
                             bestCandidate.m_container = &container;
                             bestCandidate.m_slotIdx = i;
                         }
