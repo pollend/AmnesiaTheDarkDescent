@@ -1346,7 +1346,7 @@ void cLuxMainMenu::CreateBackground()
 void cLuxMainMenu::UpdateBackground() {
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
     EngineInterface* engine = Interface<EngineInterface>::Get();
-    auto frame = forgeRenderer->GetFrame();
+    auto& frame = forgeRenderer->GetFrame();
     auto* scene = engine->GetScene();
     auto* viewport = gpBase->mpMapHandler->GetViewport();
     auto* renderer = viewport->GetRenderer();

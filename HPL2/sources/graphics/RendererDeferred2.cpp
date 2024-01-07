@@ -468,6 +468,20 @@ namespace hpl {
             return true;
         });
 
+        m_shadowCmpSampler.Load(forgeRenderer->Rend(), [&](Sampler** handle) {
+            SamplerDesc miplessLinearSamplerDesc = {};
+            miplessLinearSamplerDesc.mMinFilter = FILTER_LINEAR;
+            miplessLinearSamplerDesc.mMagFilter = FILTER_LINEAR;
+            miplessLinearSamplerDesc.mMipLodBias = 0.f;
+            miplessLinearSamplerDesc.mMaxAnisotropy = 0.f;
+            miplessLinearSamplerDesc.mCompareFunc = CompareMode::CMP_LEQUAL;
+            miplessLinearSamplerDesc.mMipMapMode = MIPMAP_MODE_LINEAR;
+            miplessLinearSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+            miplessLinearSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+            miplessLinearSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+            addSampler(forgeRenderer->Rend(), &miplessLinearSamplerDesc, handle);
+            return true;
+        });
         m_samplerNearEdgeClamp.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
             SamplerDesc bilinearClampDesc = { FILTER_NEAREST,
                                               FILTER_NEAREST,
@@ -597,6 +611,13 @@ namespace hpl {
             addShader(forgeRenderer->Rend(), &loadDesc, shader);
             return true;
         });
+        m_depthClearShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0].pFileName = "depth_clear_shade.vert";
+            loadDesc.mStages[1].pFileName = "depth_clear_shade.frag";
+            addShader(forgeRenderer->Rend(), &loadDesc, shader);
+            return true;
+        });
         struct {
             const char* fragmentShader;
             SharedShader* shader;
@@ -664,12 +685,17 @@ namespace hpl {
             return true;
         });
 
+        m_depthClearRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
+            std::array shaders = { m_depthClearShader.m_handle };
+            RootSignatureDesc rootSignatureDesc = {};
+            rootSignatureDesc.ppShaders = shaders.data();
+            rootSignatureDesc.mShaderCount = shaders.size();
+            rootSignatureDesc.mMaxBindlessTextures = hpl::resource::MaxScene2DTextureCount;
+            addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, signature);
+            return true;
+        });
+
         m_sceneRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
-            ASSERT(m_lightClusterShader.IsValid());
-            ASSERT(m_clearLightClusterShader.IsValid());
-            ASSERT(m_visibilityBufferAlphaPassShader.IsValid());
-            ASSERT(m_visibilityBufferPassShader.IsValid());
-            ASSERT(m_visibilityShadePassShader.IsValid());
             std::array shaders = { m_visibilityBufferAlphaPassShader.m_handle,
                                    m_visibilityBufferPassShader.m_handle,
                                    m_visibilityShadePassShader.m_handle,
@@ -693,12 +719,13 @@ namespace hpl {
                                    m_translucencyRefractionShaderAlpha.m_handle,
                                    m_depthShader.m_handle,
                                    m_translucencyRefractionShaderPremulAlpha.m_handle };
-            std::array vbShadeSceneSamplers = { m_samplerLinearClampToBorder.m_handle,
+            std::array vbShadeSceneSamplers = { m_shadowCmpSampler.m_handle,
+                                                m_samplerLinearClampToBorder.m_handle,
                                                 m_samplerMaterial.m_handle,
                                                 m_samplerNearEdgeClamp.m_handle,
                                                 m_samplerPointWrap.m_handle };
             std::array vbShadeSceneSamplersNames = {
-                "linearBorderSampler", "sceneSampler", "nearEdgeClampSampler", "nearPointWrapSampler"
+                "shadowCmpSampler", "linearBorderSampler", "sceneSampler", "nearEdgeClampSampler", "nearPointWrapSampler"
             };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();
@@ -750,6 +777,32 @@ namespace hpl {
             return true;
         });
 
+        m_depthClearPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = true;
+            depthStateDisabledDesc.mDepthTest = true;
+            depthStateDisabledDesc.mDepthFunc = CMP_ALWAYS;
+
+            RasterizerStateDesc rasterStateNoneDesc = {};
+            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+            graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            graphicsPipelineDesc.pShaderProgram = m_depthClearShader.m_handle;
+            graphicsPipelineDesc.pRootSignature = m_depthClearRootSignature.m_handle;
+            graphicsPipelineDesc.mRenderTargetCount = 0;
+            graphicsPipelineDesc.mDepthStencilFormat = DepthBufferFormat;
+            graphicsPipelineDesc.pVertexLayout = NULL;
+            graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            graphicsPipelineDesc.pBlendState = NULL;
+            graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+            graphicsPipelineDesc.mSampleQuality = 0;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
         m_depthBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
             VertexLayout vertexLayout = {};
             vertexLayout.mBindingCount = 2;
@@ -1920,12 +1973,12 @@ namespace hpl {
 
         uint32_t mainBatchIndex = frameVars.m_viewportIndex++;
 
-        GPURingBufferOffset viewportOffset = getGPURingBufferOffset(&m_viewportUniformBuffer, sizeof(resource::ViewportInfo));
-        DescriptorDataRange viewportRange = { (uint32_t)viewportOffset.mOffset, sizeof(resource::ViewportInfo) };
-        std::array mainViewportParams = { DescriptorData { .pName = "uniformBlock_rootcbv", .pRanges = &viewportRange, .ppBuffers = &viewportOffset.pBuffer } };
+        GPURingBufferOffset mainViewportOffset = getGPURingBufferOffset(&m_viewportUniformBuffer, sizeof(resource::ViewportInfo));
+        DescriptorDataRange mainviewportRange = { (uint32_t)mainViewportOffset.mOffset, sizeof(resource::ViewportInfo) };
+        std::array mainViewportParams = { DescriptorData { .pName = "uniformBlock_rootcbv", .pRanges = &mainviewportRange, .ppBuffers = &mainViewportOffset.pBuffer } };
 
         {
-            BufferUpdateDesc updateDesc = { viewportOffset.pBuffer, viewportOffset.mOffset };
+            BufferUpdateDesc updateDesc = { mainViewportOffset.pBuffer, mainViewportOffset.mOffset };
             beginUpdateResource(&updateDesc);
             resource::ViewportInfo* viewportInfo = reinterpret_cast<resource::ViewportInfo*>(updateDesc.pMappedData);
             (*viewportInfo) = resource::ViewportInfo::create(
@@ -2348,54 +2401,119 @@ namespace hpl {
                         cVector3f forward = cMath::MatrixMul3x3(pLightSpot->GetWorldMatrix(), cVector3f(0, 0, -1));
                         auto goboImage = pLightSpot->GetGoboTexture();
 
-
-                        uint32_t id = folly::hash::fnv32_buf(&pLightSpot, sizeof(void*));
+                        float4 normalizeShadow = float4(0,0,0,0);
                         std::vector<iRenderable*> shadowCasters;
                         std::optional<eShadowMapResolution> shadowResult = detail::resolveShadowResolutionSpot(apFrustum, pLightSpot);
-                        if(shadowResult.has_value() &&
-                            detail::SetupShadowMapRendering(shadowCasters, apWorld, pLightSpot->GetFrustum(), pLightSpot, occlusionPlanes)) {
-                            auto shadowMapResult = m_shadowCache.Search(shadowResult.value(), frame.m_currentFrame, [&](ShadowMapInfo& info) {
-                                return info.m_light == pLightSpot;
-                            });
-
-                            if(shadowMapResult.has_value()) {
-                                shadowMapResult->Meta().m_light = pLightSpot;
-                                auto ringShadowElement = getNextGpuCmdRingElement(&m_shadowCmdRing, true, 1);
-                                Cmd* shadowCmd = ringShadowElement.pCmds[0];
-                                FenceStatus fenceStatus;
-                                getFenceStatus(forgeRenderer->Rend(), ringShadowElement.pFence, &fenceStatus);
-                                if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
-                                    waitForFences(forgeRenderer->Rend(), 1, &ringShadowElement.pFence);
-                                }
-
-                                beginCmd(shadowCmd);
-
-                                {
-                                    cmdBindRenderTargets(shadowCmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                                    std::array rtBarriers = {
-                                        RenderTargetBarrier{
-                                            m_shadowTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE },
-                                    };
-                                    cmdResourceBarrier(shadowCmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-                                }
-                                for (auto& renderable : shadowCasters) {
-                                    auto res = fetchDiffuseRenderableDraw(frame, frameVars, renderable);
-                                    if(res.has_value()) {
-                                        setIndirectDrawArg(frame, indirectAllocSession.Increment(), res->m_slot, res->m_packet);
+                        if (shadowResult.has_value() &&
+                            detail::SetupShadowMapRendering(
+                                shadowCasters, apWorld, pLightSpot->GetFrustum(), pLightSpot, occlusionPlanes)) {
+                            auto shadowMapResult =
+                                m_shadowCache.Search(shadowResult.value(), frame.m_currentFrame, [&](ShadowMapInfo& info) {
+                                    return info.m_light == pLightSpot;
+                                });
+                            if (shadowMapResult.has_value()) {
+                                auto& meta = shadowMapResult->Meta();
+                                meta.m_light = pLightSpot;
+                                const bool updateShadowMap =
+                                    meta.m_transformCount != pLightSpot->GetTransformUpdateCount() || [&]() -> bool {
+                                    // Check if texture map and light are valid
+                                    if (pLightSpot->GetOcclusionCullShadowCasters()) {
+                                        return true;
                                     }
-                                }
-                                shadowMapResult->Mark();
 
-                                endCmd(shadowCmd);
-                                QueueSubmitDesc submitDesc = {};
-                                submitDesc.mCmdCount = 1;
-                                submitDesc.ppCmds = &shadowCmd;
-                                submitDesc.pSignalFence = ringShadowElement.pFence;
-                                submitDesc.mSubmitDone = true;
-                                queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
+                                    if (pLightSpot->GetAspect() != meta.m_aspect || pLightSpot->GetFOV() != meta.m_fov) {
+                                        return true;
+                                    }
+                                    return !pLightSpot->ShadowCastersAreUnchanged(shadowCasters);
+                                }();
+                                meta.m_fov = pLightSpot->GetFOV();
+                                meta.m_aspect = pLightSpot->GetAspect();
+                                meta.m_transformCount = pLightSpot->GetTransformUpdateCount();
+                                normalizeShadow = shadowMapResult->NormalizedRect();
+
+                                if (updateShadowMap) {
+                                    auto ringShadowElement = getNextGpuCmdRingElement(&m_shadowCmdRing, true, 1);
+                                    Cmd* shadowCmd = ringShadowElement.pCmds[0];
+                                    FenceStatus fenceStatus;
+                                    getFenceStatus(forgeRenderer->Rend(), ringShadowElement.pFence, &fenceStatus);
+                                    if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
+                                        waitForFences(forgeRenderer->Rend(), 1, &ringShadowElement.pFence);
+                                    }
+
+                                    beginCmd(shadowCmd);
+
+                                    {
+                                        cmdBindRenderTargets(shadowCmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                                        std::array rtBarriers = {
+                                            RenderTargetBarrier{
+                                                m_shadowTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE },
+                                        };
+                                        cmdResourceBarrier(shadowCmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                                    }
+                                    for (auto& renderable : shadowCasters) {
+                                        auto res = fetchDiffuseRenderableDraw(frame, frameVars, renderable);
+                                        if (res.has_value()) {
+                                            setIndirectDrawArg(frame, indirectAllocSession.Increment(), res->m_slot, res->m_packet);
+                                        }
+                                    }
+
+
+                                    GPURingBufferOffset shadowViewportOffset = getGPURingBufferOffset(&m_viewportUniformBuffer, sizeof(resource::ViewportInfo));
+                                    DescriptorDataRange shadowViewportRange = { (uint32_t)shadowViewportOffset.mOffset, sizeof(resource::ViewportInfo) };
+                                    std::array shadowViewportParams = { DescriptorData { .pName = "uniformBlock_rootcbv", .pRanges = &shadowViewportRange, .ppBuffers = &shadowViewportOffset.pBuffer } };
+
+                                    BufferUpdateDesc updateDesc = { shadowViewportOffset.pBuffer, shadowViewportOffset.mOffset };
+                                    beginUpdateResource(&updateDesc);
+                                    resource::ViewportInfo* viewportInfo = reinterpret_cast<resource::ViewportInfo*>(updateDesc.pMappedData);
+                                    (*viewportInfo) = resource::ViewportInfo::create(
+                                        pLightSpot->GetFrustum(), float4(shadowMapResult->Rect().x, shadowMapResult->Rect().y, shadowMapResult->Rect().z, shadowMapResult->Rect().w));
+                                    endUpdateResource(&updateDesc);
+
+                                    RangeSubsetAlloc::RangeSubset shadowRange = indirectAllocSession.End();
+
+                                    LoadActionsDesc loadActions = {};
+                                    loadActions.mLoadActionsColor[0] = LOAD_ACTION_DONTCARE;
+                                    loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
+                                    loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
+                                    loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+                                    cmdBindRenderTargets(shadowCmd, 0, NULL,  m_shadowTarget.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+
+                                    cmdSetViewport(shadowCmd, shadowMapResult->Rect().x, shadowMapResult->Rect().y, shadowMapResult->Rect().z, shadowMapResult->Rect().w, 0.0f, 1.0f);
+                                    cmdSetScissor(shadowCmd, shadowMapResult->Rect().x, shadowMapResult->Rect().y, shadowMapResult->Rect().z, shadowMapResult->Rect().w);
+                                    cmdBindPipeline(shadowCmd, m_depthClearPass.m_handle);
+                                    cmdDraw(shadowCmd, 3, 0);
+
+                                    cmdBindPipeline(shadowCmd, m_depthBufferPass.m_handle);
+                                    cmdBindDescriptorSetWithRootCbvs(shadowCmd, 0, m_sceneDescriptorConstSet.m_handle, shadowViewportParams.size(), shadowViewportParams.data());
+                                    cmdBindDescriptorSet(shadowCmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+                                    cmdExecuteIndirect(
+                                        shadowCmd,
+                                        m_cmdSignatureVBPass,
+                                        shadowRange.size(),
+                                        m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,
+                                        shadowRange.m_start * IndirectArgumentSize,
+                                        nullptr,
+                                        0);
+
+                                    endCmd(shadowCmd);
+
+		                            FlushResourceUpdateDesc flushUpdateDesc = {};
+		                            flushUpdateDesc.mNodeIndex = 0;
+		                            flushResourceUpdates(&flushUpdateDesc);
+                                    std::array waitSemaphores = {flushUpdateDesc.pOutSubmittedSemaphore};
+
+                                    QueueSubmitDesc submitDesc = {};
+                                    submitDesc.mCmdCount = 1;
+                                    submitDesc.mWaitSemaphoreCount = waitSemaphores.size();
+                                    submitDesc.ppWaitSemaphores = waitSemaphores.data();
+                                    submitDesc.ppCmds = &shadowCmd;
+                                    submitDesc.pSignalFence = ringShadowElement.pFence;
+                                    submitDesc.mSubmitDone = true;
+                                    queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
+                                    shadowMapResult->Mark();
+                                }
                             }
                         }
-
 
                         BufferUpdateDesc lightUpdateDesc = { m_lightBuffer[frame.m_frameIndex].m_handle,
                                                              (lightCount++) * sizeof(resource::SceneLight),
@@ -2409,8 +2527,8 @@ namespace hpl {
                         lightData->m_position = v3ToF3(cMath::ToForgeVec3(light->GetWorldPosition()));
                         lightData->m_angle = pLightSpot->GetFOV();
                         lightData->m_viewProjection = spotViewProj;
-                        lightData->m_goboTexture =
-                            goboImage ? m_sceneTransientImage2DPool.request(goboImage) : resource::InvalidSceneTexture;
+                        lightData->m_normalizeShadow = normalizeShadow;
+                        lightData->m_goboTexture = goboImage ? m_sceneTransientImage2DPool.request(goboImage) : resource::InvalidSceneTexture;
                         endUpdateResource(&lightUpdateDesc);
                         break;
                     }

@@ -76,6 +76,13 @@ namespace hpl {
             uint32_t m_particleIndex = 0;
             uint32_t m_viewportIndex = 0;
         };
+        class ShadowMapInfo {
+        public:
+            uint32_t m_transformCount = 0;
+            float m_fov = 0.0f;
+            float m_aspect = 0.0f;
+            iLight* m_light = nullptr;
+        };
         struct DiffuseResult {
             uint32_t m_slot;
             DrawPacket m_packet;
@@ -179,7 +186,6 @@ namespace hpl {
     private:
         void setIndirectDrawArg(const ForgeRenderer::Frame& frame, uint32_t drawArgIndex, uint32_t slot, DrawPacket& packet);
 
-
         enum MaterialSetType {
             PrimarySet = 0,
             ParticleSet = 1
@@ -209,6 +215,7 @@ namespace hpl {
         SharedSampler m_samplerPointClampToBorder;
         SharedSampler m_samplerMaterial;
         SharedSampler m_samplerLinearClampToBorder;
+        SharedSampler m_shadowCmpSampler;
         std::array<ResourceMaterial, cMaterial::MaxMaterialID> m_sharedMaterial;
         BindlessDescriptorPool m_sceneTexture2DPool;
         BindlessDescriptorPool m_sceneTextureCubePool;
@@ -223,7 +230,6 @@ namespace hpl {
         SharedRootSignature m_sceneRootSignature;
         SharedDescriptorSet m_sceneDescriptorConstSet;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerFrameSet;
-      //  std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerBatchSet;
 
         SharedShader m_visibilityBufferPassShader;
         SharedShader m_visibilityBufferAlphaPassShader;
@@ -239,6 +245,9 @@ namespace hpl {
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_indirectDrawArgsBuffer;
         SharedPipeline m_depthBufferPass;
         SharedRenderTarget m_shadowTarget;
+
+        SharedRootSignature m_depthClearRootSignature;
+        SharedPipeline m_depthClearPass;
 
         SharedTexture m_emptyTexture2D;
         SharedTexture m_emptyTextureCube;
@@ -264,6 +273,7 @@ namespace hpl {
         SharedBuffer m_waterMatBuffer;
         SharedBuffer m_diffuseMatUniformBuffer;
         SharedShader m_depthShader;
+        SharedShader m_depthClearShader;
 
         SharedShader m_particleShaderAdd;
         SharedShader m_particleShaderMul;
@@ -328,21 +338,8 @@ namespace hpl {
         SharedPipeline m_translucencyWaterPipeline;
         SharedPipeline m_translucencyWaterPipelineNoDepth;
 
-        class ShadowMapInfo {
-        public:
-            //    SharedRenderTarget m_target;
-            //    uint32_t m_transformCount = 0;
-            //    float m_radius = 0.0f;
-            //    float m_fov = 0.0f;
-            //    float m_aspect = 0.0f;
-            uint32_t m_frameCount = 0;
-            iLight* m_light = nullptr;
-        };
-
         ShadowCache<ShadowMapInfo> m_shadowCache;
         CopyTextureSubpass4 m_copySubpass;
-
-
 
         ResetFrameHandler m_resetHandler;
         TransientFrameVariable<TransientFrameVars> m_variables;

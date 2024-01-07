@@ -117,6 +117,8 @@ namespace hpl::resource {
         uint m_goboTexture;
         uint m_pad2;
 
+        float4 m_normalizeShadow;
+
         mat4 m_viewProjection;
     };
 

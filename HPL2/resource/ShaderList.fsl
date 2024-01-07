@@ -463,3 +463,11 @@
 #frag depth_shade.frag
     #include "depth_shade.frag.fsl"
 #end
+
+#frag depth_clear_shade.frag
+    #include "depth_clear_shade.frag.fsl"
+#end
+
+#vert depth_clear_shade.vert
+    #include "depth_clear_shade.vert.fsl"
+#end

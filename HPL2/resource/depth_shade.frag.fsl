@@ -33,24 +33,6 @@ float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
         }
     }
 
-
-    //if(obj.dissolveAmount < 1.0 || isTextureIndexValid(material.alphaTextureIndex) || (material.config & MATERIAL_USE_ALPHA_DISSOLVE_FILTER) > 0) {
-    //    const float2 dissolveCoord = In.Position.xy * (1.0/128.0); //128 = size of dissolve texture.
-    //    float fDissolve = SampleTex2D(Get(dissolveTexture), Get(nearPointWrapSampler), dissolveCoord).x;
-    //    
-    //    float4 alphaValue;
-    //    if(SampleSceneTextureFloat4(material.dissolveAlphaTextureIndex, Get(sceneSampler), texCoord, alphaValue)) {
-    //        //Get in 0.75 - 1 range
-    //        fDissolve = fDissolve * 0.25 + 0.75;
-    //        float fDissolveAlpha = ((material.config & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) ? alphaValue.r : alphaValue.a;
-    //        fDissolve -= (0.25 - fDissolveAlpha * 0.25);
-    //    } else {
-    //        //Get in 0.5 - 1 range.
-    //        fDissolve = fDissolve*0.5 + 0.5;
-    //    }
-    //    diffuseAlpha = fDissolve -  (1.0 - (obj.dissolveAmount * diffuseAlpha)) * 0.5;
-    //}
-
     if(diffuseAlpha < 0.5) {
         discard;
     }

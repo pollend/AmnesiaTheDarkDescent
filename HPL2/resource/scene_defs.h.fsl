@@ -158,6 +158,8 @@ STRUCT(Light) {
     DATA(uint, goboTextureIndex, NONE);
     DATA(uint, __pad2, NONE);
 
+    DATA(float4, normalizeShadow, none);
+    
     DATA(float4x4, viewProjection, none);
 };
 
