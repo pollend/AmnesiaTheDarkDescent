@@ -188,7 +188,7 @@ namespace hpl {
                 return eShadowMapResolution_Low;
             }
 
-            return std::nullopt;
+            return targetResolution;
         }
         static inline eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax) {
             if (aMax == eShadowMapResolution_High)
