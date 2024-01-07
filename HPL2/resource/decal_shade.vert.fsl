@@ -26,7 +26,7 @@ VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
     INIT_MAIN;
     
     VSOutput Out;
-     ViewportInfo info = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
+     ViewportInfo info = Get(viewport);
      #if !defined(INDIRECT_ROOT_CONSTANT)
         Out.drawID = InstanceID; 
         const Decal decal = Get(decals)[InstanceID];

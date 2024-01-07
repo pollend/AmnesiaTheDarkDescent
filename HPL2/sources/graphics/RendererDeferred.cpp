@@ -119,6 +119,7 @@ namespace hpl {
             }
         };
 
+
         static inline std::vector<cRendererDeferred::FogRendererData> createFogRenderData(
             std::span<cFogArea*> fogAreas, cFrustum* apFrustum) {
             std::vector<cRendererDeferred::FogRendererData> fogRenderData;
@@ -2597,8 +2598,7 @@ namespace hpl {
                             light->GetShadowMapResolution(), mpCurrentSettings->mMaxShadowMapResolution);
                     } else {
                         cVector3f vIntersection = pLightSpot->GetFrustum()->GetOrigin();
-                        pLightSpot->GetFrustum()->CheckLineIntersection(
-                            apFrustum->GetOrigin(), light->GetBoundingVolume()->GetWorldCenter(), vIntersection);
+                        pLightSpot->GetFrustum()->CheckLineIntersection(apFrustum->GetOrigin(), light->GetBoundingVolume()->GetWorldCenter(), vIntersection);
 
                         float fDistToLight = cMath::Vector3Dist(apFrustum->GetOrigin(), vIntersection);
 

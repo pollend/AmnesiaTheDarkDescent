@@ -1,4 +1,5 @@
 #include "graphics/RendererDeferred2.h"
+#include "Common_3/Utilities/RingBuffer.h"
 #include "graphics/DrawPacket.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/ForgeRenderer.h"
@@ -26,6 +27,7 @@
 #include "tinyimageformat_base.h"
 #include <limits>
 #include <memory>
+#include <optional>
 #include <span>
 #include <tinyimageformat_query.h>
 
@@ -60,6 +62,145 @@ namespace hpl {
             return fLightAmount;
         }
 
+        static inline bool SetupShadowMapRendering(
+            std::vector<iRenderable*>& shadowCasters, cWorld* world, cFrustum* frustum, iLight* light, std::span<cPlanef> clipPlanes) {
+            ASSERT(light->GetLightType() == eLightType_Spot);
+
+            cLightSpot* pSpotLight = static_cast<cLightSpot*>(light);
+            cFrustum* pLightFrustum = pSpotLight->GetFrustum();
+
+            std::function<void(iRenderableContainerNode * apNode, eCollision aPrevCollision)> walkShadowCasters;
+            walkShadowCasters = [&](iRenderableContainerNode* apNode, eCollision aPrevCollision) {
+                // Get frustum collision, if previous was inside, then this is too!
+                eCollision frustumCollision = aPrevCollision == eCollision_Inside ? aPrevCollision : pLightFrustum->CollideNode(apNode);
+
+                // Check if visible but always iterate the root node!
+                if (apNode->GetParent()) {
+                    if (frustumCollision == eCollision_Outside) {
+                        return;
+                    }
+                    if (iRenderableContainer::IsRenderableNodeIsVisible(*apNode, clipPlanes) == false) {
+                        return;
+                    }
+                }
+
+                // Iterate children
+                for (auto& childNode : apNode->GetChildNodes()) {
+                    walkShadowCasters(childNode, frustumCollision);
+                }
+
+                // Iterate objects
+                for (auto& object : apNode->GetObjects()) {
+                    // Check so visible and shadow caster
+                    if (iRenderable::IsObjectIsVisible(*object, eRenderableFlag_ShadowCaster, clipPlanes) == false ||
+                        object->GetMaterial() == NULL || cMaterial::IsTranslucent(object->GetMaterial()->Descriptor().m_id)) {
+                        continue;
+                    }
+
+                    // Check if in frustum
+                    if (frustumCollision != eCollision_Inside &&
+                        frustum->CollideBoundingVolume(object->GetBoundingVolume()) == eCollision_Outside) {
+                        continue;
+                    }
+
+                    // Calculate the view space Z (just a squared distance)
+                    object->SetViewSpaceZ(cMath::Vector3DistSqr(object->GetBoundingVolume()->GetWorldCenter(), frustum->GetOrigin()));
+
+                    // Add to list
+                    shadowCasters.push_back(object);
+                }
+            };
+
+            // If culling by occlusion, skip rest of function
+            if (light->GetOcclusionCullShadowCasters()) {
+                return true;
+            }
+
+            // Clear list
+            shadowCasters.resize(0); // No clear, so we keep all in memory.
+
+            // Get the objects
+            if (light->GetShadowCastersAffected() & eObjectVariabilityFlag_Dynamic) {
+                auto container = world->GetRenderableContainer(eWorldContainerType_Dynamic);
+                container->UpdateBeforeRendering();
+                walkShadowCasters(container->GetRoot(), eCollision_Outside);
+            }
+
+            if (light->GetShadowCastersAffected() & eObjectVariabilityFlag_Static) {
+                auto container = world->GetRenderableContainer(eWorldContainerType_Static);
+                container->UpdateBeforeRendering();
+                walkShadowCasters(container->GetRoot(), eCollision_Outside);
+            }
+
+            // See if any objects where added.
+            if (shadowCasters.empty())
+                return false;
+
+            // Sort the list
+            std::sort(shadowCasters.begin(), shadowCasters.end(), [](iRenderable* a, iRenderable* b) {
+                cMaterial* pMatA = a->GetMaterial();
+                cMaterial* pMatB = b->GetMaterial();
+
+                // Alpha mode
+                if (pMatA->GetAlphaMode() != pMatB->GetAlphaMode()) {
+                    return pMatA->GetAlphaMode() < pMatB->GetAlphaMode();
+                }
+
+                // If alpha, sort by texture (we know alpha is same for both materials, so can just test one)
+                if (pMatA->GetAlphaMode() == eMaterialAlphaMode_Trans) {
+                    if (pMatA->GetImage(eMaterialTexture_Diffuse) != pMatB->GetImage(eMaterialTexture_Diffuse)) {
+                        return pMatA->GetImage(eMaterialTexture_Diffuse) < pMatB->GetImage(eMaterialTexture_Diffuse);
+                    }
+                }
+
+                // View space depth, no need to test further since Z should almost never be the same for two objects.
+                // View space z is really just BB dist dis squared, so use "<"
+                return a->GetViewSpaceZ() < b->GetViewSpaceZ();
+            });
+
+            return true;
+        }
+        static inline std::optional<eShadowMapResolution> resolveShadowResolutionSpot(cFrustum* view, cLightSpot* spotlight) {
+            eShadowMapResolution targetResolution = spotlight->GetShadowMapResolution();
+            if (view->CheckFrustumNearPlaneIntersection(spotlight->GetFrustum())) {
+                return targetResolution;
+            }
+
+            cVector3f intersection = spotlight->GetFrustum()->GetOrigin();
+            spotlight->GetFrustum()->CheckLineIntersection(
+                view->GetOrigin(), spotlight->GetBoundingVolume()->GetWorldCenter(), intersection);
+            float fDistToLight = cMath::Vector3Dist(view->GetOrigin(), intersection);
+            if (fDistToLight > cRendererDeferred2::ShadowDistanceNone) {
+                return std::nullopt;
+            }
+
+            if (fDistToLight > cRendererDeferred2::ShadowDistanceLow) {
+                if (targetResolution == eShadowMapResolution_Low) {
+                    return std::nullopt;
+                }
+                return eShadowMapResolution_Low;
+            }
+
+            if (fDistToLight > cRendererDeferred2::ShadowDistanceMedium) {
+                if (targetResolution == eShadowMapResolution_High) {
+                    return eShadowMapResolution_Medium;
+                }
+                return eShadowMapResolution_Low;
+            }
+
+            return std::nullopt;
+        }
+        static inline eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax) {
+            if (aMax == eShadowMapResolution_High)
+            {
+                return aWanted;
+            }
+            else if (aMax == eShadowMapResolution_Medium)
+            {
+                return aWanted == eShadowMapResolution_High ? eShadowMapResolution_Medium : aWanted;
+            }
+            return eShadowMapResolution_Low;
+        }
         static inline float GetFogAreaVisibilityForObject(
             const cRendererDeferred2::FogRendererData& fogData, cFrustum& frustum, iRenderable* apObject) {
             cFogArea* pFogArea = fogData.m_fogArea;
@@ -209,15 +350,138 @@ namespace hpl {
 
     } // namespace detail
 
+    std::optional<cRendererDeferred2::DiffuseResult> cRendererDeferred2::fetchDiffuseRenderableDraw(ForgeRenderer::Frame& frame, cRendererDeferred2::TransientFrameVars& frameVars, iRenderable* renderable) {
+        cMaterial* material = renderable->GetMaterial();
+
+        DrawPacket packet = renderable->ResolveDrawPacket(frame);
+        if (packet.m_type == DrawPacket::Unknown) {
+            return std::nullopt;
+        }
+
+        ASSERT(material->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
+        ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
+        ASSERT(packet.m_unified.m_set == GraphicsAllocator::AllocationSet::OpaqueSet);
+
+        const Matrix4 modelMat =
+            renderable->GetModelMatrixPtr() ? cMath::ToForgeMatrix4(*renderable->GetModelMatrixPtr()) : Matrix4::identity();
+
+        auto& resourceMaterial = resolveResourceMaterial(material);
+        auto& materialSet = resourceMaterial.resolveSet(MaterialSetType::PrimarySet);
+        auto& descriptor = material->Descriptor();
+        ASSERT(descriptor.m_id == MaterialID::SolidDiffuse);
+        if (!materialSet.m_slot.isValid()) {
+            const auto alphaMapImage = material->GetImage(eMaterialTexture_Alpha);
+            const auto heightMapImage = material->GetImage(eMaterialTexture_Height);
+            materialSet.m_slot = IndexPoolHandle(&m_diffuseIndexPool);
+            BufferUpdateDesc updateDesc = { m_diffuseMatUniformBuffer.m_handle,
+                                            sizeof(resource::DiffuseMaterial) * materialSet.m_slot.get() };
+            beginUpdateResource(&updateDesc);
+            auto& diffuseMaterial = (*reinterpret_cast<resource::DiffuseMaterial*>(updateDesc.pMappedData));
+            struct {
+                eMaterialTexture m_type;
+                uint32_t* m_value;
+            } textures[] = {
+                { eMaterialTexture_Diffuse, &diffuseMaterial.m_diffuseTextureIndex },
+                { eMaterialTexture_NMap, &diffuseMaterial.m_normalTextureIndex },
+                { eMaterialTexture_Alpha, &diffuseMaterial.m_alphaTextureIndex },
+                { eMaterialTexture_Specular, &diffuseMaterial.m_specularTextureIndex },
+                { eMaterialTexture_Height, &diffuseMaterial.m_heightTextureIndex },
+                { eMaterialTexture_Illumination, &diffuseMaterial.m_illuminiationTextureIndex },
+                { eMaterialTexture_DissolveAlpha, &diffuseMaterial.m_dissolveAlphaTextureIndex },
+            };
+            for (auto& tex : textures) {
+                (*tex.m_value) = resourceMaterial.m_textureHandles[tex.m_type];
+            }
+            diffuseMaterial.m_materialConfig =
+                ((alphaMapImage &&
+                  TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1)
+                     ? resource::IsAlphaSingleChannel
+                     : 0) |
+                ((heightMapImage &&
+                  TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1)
+                     ? resource::IsHeightSingleChannel
+                     : 0) |
+                (descriptor.m_solid.m_alphaDissolveFilter ? resource::UseAlphaDissolveFilter : 0);
+
+            diffuseMaterial.m_heightMapScale = descriptor.m_solid.m_heightMapScale;
+            diffuseMaterial.m_heigtMapBias = descriptor.m_solid.m_heightMapBias;
+            diffuseMaterial.m_frenselBias = descriptor.m_solid.m_frenselBias;
+            diffuseMaterial.m_frenselPow = descriptor.m_solid.m_frenselPow;
+            endUpdateResource(&updateDesc);
+        }
+
+        uint32_t objectSlotIndex = 0;
+        auto it = frameVars.m_objectSlotIndex.find(renderable);
+        if (it == frameVars.m_objectSlotIndex.end()) {
+            objectSlotIndex = frameVars.m_objectIndex++;
+
+            BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle,
+                                            sizeof(resource::SceneObject) * objectSlotIndex };
+            beginUpdateResource(&updateDesc);
+            auto& uniformObjectData = (*reinterpret_cast<resource::SceneObject*>(updateDesc.pMappedData));
+            uniformObjectData.m_dissolveAmount = renderable->GetCoverageAmount();
+            uniformObjectData.m_modelMat = modelMat;
+            uniformObjectData.m_invModelMat = inverse(modelMat);
+            uniformObjectData.m_lightLevel = 1.0f;
+            if (material->IsAffectedByLightLevel()) {
+                uniformObjectData.m_lightLevel = detail::calcLightLevel(m_rendererList.GetLights(), renderable);
+            }
+            uniformObjectData.m_illuminationAmount = renderable->GetIlluminationAmount();
+            uniformObjectData.m_materialIndex = materialSet.m_slot.get();
+            uniformObjectData.m_materialType = static_cast<uint32_t>(material->Descriptor().m_id);
+            uniformObjectData.m_vertexOffset = packet.m_unified.m_subAllocation->vertexOffset();
+            uniformObjectData.m_indexOffset = packet.m_unified.m_subAllocation->indexOffset();
+            uniformObjectData.m_uvMat = cMath::ToForgeMatrix4(material->GetUvMatrix().GetTranspose());
+            endUpdateResource(&updateDesc);
+
+            frameVars.m_objectSlotIndex[renderable] = objectSlotIndex;
+        } else {
+            objectSlotIndex = it->second;
+        }
+        return DiffuseResult {objectSlotIndex, packet};
+    }
+
     cRendererDeferred2::cRendererDeferred2(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
-        : iRenderer("Deferred2", apGraphics, apResources),
-            m_copySubpass(*Interface<ForgeRenderer>::Get()){
+        : iRenderer("Deferred2", apGraphics, apResources)
+        , m_copySubpass(*Interface<ForgeRenderer>::Get())
+        , m_shadowCache(8192, 4096, 8, 4, 3) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         m_sceneTexture2DPool = BindlessDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxScene2DTextureCount);
         m_sceneTextureCubePool = BindlessDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxSceneCubeTextureCount);
         m_sceneTransientImage2DPool = ImageBindlessPool(&m_sceneTexture2DPool, TransientImagePoolCount);
         m_supportIndirectRootConstant = forgeRenderer->Rend()->pGpu->mSettings.mIndirectRootConstant;
 
+        m_shadowTarget.Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
+            RenderTargetDesc renderTarget = {};
+            renderTarget.mArraySize = 1;
+            renderTarget.mClearValue.depth = 1.0f;
+            renderTarget.mDepth = 1;
+            renderTarget.mFormat = ShadowDepthBufferFormat;
+            renderTarget.mWidth = m_shadowCache.size().x;
+            renderTarget.mHeight = m_shadowCache.size().y;
+            renderTarget.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+            renderTarget.mSampleCount = SAMPLE_COUNT_1;
+            renderTarget.mSampleQuality = 0;
+            renderTarget.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+            renderTarget.pName = "ShadowMap RT";
+            addRenderTarget(forgeRenderer->Rend(), &renderTarget, target);
+            return true;
+        });
+
+        m_shadowCmpSampler.Load(forgeRenderer->Rend(), [&](Sampler** handle) {
+            SamplerDesc miplessLinearSamplerDesc = {};
+            miplessLinearSamplerDesc.mMinFilter = FILTER_LINEAR;
+            miplessLinearSamplerDesc.mMagFilter = FILTER_LINEAR;
+            miplessLinearSamplerDesc.mMipLodBias = 0.f;
+            miplessLinearSamplerDesc.mMaxAnisotropy = 0.f;
+            miplessLinearSamplerDesc.mCompareFunc = CompareMode::CMP_LEQUAL;
+            miplessLinearSamplerDesc.mMipMapMode = MIPMAP_MODE_LINEAR;
+            miplessLinearSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+            miplessLinearSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+            miplessLinearSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+            addSampler(forgeRenderer->Rend(), &miplessLinearSamplerDesc, handle);
+            return true;
+        });
         m_samplerNearEdgeClamp.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
             SamplerDesc bilinearClampDesc = { FILTER_NEAREST,
                                               FILTER_NEAREST,
@@ -340,6 +604,20 @@ namespace hpl {
             return true;
         });
 
+        m_depthShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0].pFileName = "depth_shade.vert";
+            loadDesc.mStages[1].pFileName = "depth_shade.frag";
+            addShader(forgeRenderer->Rend(), &loadDesc, shader);
+            return true;
+        });
+        m_depthClearShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+            ShaderLoadDesc loadDesc = {};
+            loadDesc.mStages[0].pFileName = "depth_clear_shade.vert";
+            loadDesc.mStages[1].pFileName = "depth_clear_shade.frag";
+            addShader(forgeRenderer->Rend(), &loadDesc, shader);
+            return true;
+        });
         struct {
             const char* fragmentShader;
             SharedShader* shader;
@@ -407,12 +685,17 @@ namespace hpl {
             return true;
         });
 
+        m_depthClearRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
+            std::array shaders = { m_depthClearShader.m_handle };
+            RootSignatureDesc rootSignatureDesc = {};
+            rootSignatureDesc.ppShaders = shaders.data();
+            rootSignatureDesc.mShaderCount = shaders.size();
+            rootSignatureDesc.mMaxBindlessTextures = hpl::resource::MaxScene2DTextureCount;
+            addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, signature);
+            return true;
+        });
+
         m_sceneRootSignature.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
-            ASSERT(m_lightClusterShader.IsValid());
-            ASSERT(m_clearLightClusterShader.IsValid());
-            ASSERT(m_visibilityBufferAlphaPassShader.IsValid());
-            ASSERT(m_visibilityBufferPassShader.IsValid());
-            ASSERT(m_visibilityShadePassShader.IsValid());
             std::array shaders = { m_visibilityBufferAlphaPassShader.m_handle,
                                    m_visibilityBufferPassShader.m_handle,
                                    m_visibilityShadePassShader.m_handle,
@@ -434,13 +717,15 @@ namespace hpl {
                                    m_translucencyRefractionShaderMul.m_handle,
                                    m_translucencyRefractionShaderMulX2.m_handle,
                                    m_translucencyRefractionShaderAlpha.m_handle,
+                                   m_depthShader.m_handle,
                                    m_translucencyRefractionShaderPremulAlpha.m_handle };
-            std::array vbShadeSceneSamplers = { m_samplerLinearClampToBorder.m_handle,
+            std::array vbShadeSceneSamplers = { m_shadowCmpSampler.m_handle,
+                                                m_samplerLinearClampToBorder.m_handle,
                                                 m_samplerMaterial.m_handle,
                                                 m_samplerNearEdgeClamp.m_handle,
                                                 m_samplerPointWrap.m_handle };
             std::array vbShadeSceneSamplersNames = {
-                "linearBorderSampler", "sceneSampler", "nearEdgeClampSampler", "nearPointWrapSampler"
+                "shadowCmpSampler", "linearBorderSampler", "sceneSampler", "nearEdgeClampSampler", "nearPointWrapSampler"
             };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();
@@ -488,6 +773,74 @@ namespace hpl {
             ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
             computePipelineDesc.pShaderProgram = m_clearLightClusterShader.m_handle;
             computePipelineDesc.pRootSignature = m_lightClusterRootSignature.m_handle;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
+
+        m_depthClearPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+            DepthStateDesc depthStateDisabledDesc = {};
+            depthStateDisabledDesc.mDepthWrite = true;
+            depthStateDisabledDesc.mDepthTest = true;
+            depthStateDisabledDesc.mDepthFunc = CMP_ALWAYS;
+
+            RasterizerStateDesc rasterStateNoneDesc = {};
+            rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
+            graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            graphicsPipelineDesc.pShaderProgram = m_depthClearShader.m_handle;
+            graphicsPipelineDesc.pRootSignature = m_depthClearRootSignature.m_handle;
+            graphicsPipelineDesc.mRenderTargetCount = 0;
+            graphicsPipelineDesc.mDepthStencilFormat = DepthBufferFormat;
+            graphicsPipelineDesc.pVertexLayout = NULL;
+            graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
+            graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
+            graphicsPipelineDesc.pBlendState = NULL;
+            graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
+            graphicsPipelineDesc.mSampleQuality = 0;
+            addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
+            return true;
+        });
+        m_depthBufferPass.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
+            VertexLayout vertexLayout = {};
+            vertexLayout.mBindingCount = 2;
+            vertexLayout.mBindings[0] = { .mStride = sizeof(float3) };
+            vertexLayout.mBindings[1] = { .mStride = sizeof(float2) };
+            vertexLayout.mAttribCount = 2;
+            vertexLayout.mAttribs[0] = VertexAttrib{
+                .mSemantic = SEMANTIC_POSITION, .mFormat = TinyImageFormat_R32G32B32_SFLOAT, .mBinding = 0, .mLocation = 0, .mOffset = 0
+            };
+            vertexLayout.mAttribs[1] = VertexAttrib{
+                .mSemantic = SEMANTIC_TEXCOORD0, .mFormat = TinyImageFormat_R32G32_SFLOAT, .mBinding = 1, .mLocation = 1, .mOffset = 0
+            };
+
+            RasterizerStateDesc rasterizerStateDesc = {};
+            rasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
+            rasterizerStateDesc.mFrontFace = FRONT_FACE_CCW;
+
+            DepthStateDesc depthStateDesc = {
+                .mDepthTest = true,
+                .mDepthWrite = true,
+                .mDepthFunc = CMP_LEQUAL };
+
+            PipelineDesc pipelineDesc = {};
+            pipelineDesc.pName = "depth pass";
+            pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
+            auto& pipelineSettings = pipelineDesc.mGraphicsDesc;
+            pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
+            pipelineSettings.mRenderTargetCount = 0;
+            //pipelineSettings.pColorFormats = colorFormats.data();
+            pipelineSettings.pDepthState = &depthStateDesc;
+            pipelineSettings.mSampleCount = SAMPLE_COUNT_1;
+            pipelineSettings.mDepthStencilFormat = DepthBufferFormat;
+            pipelineSettings.mSampleQuality = 0;
+            pipelineSettings.pRootSignature = m_sceneRootSignature.m_handle;
+            pipelineSettings.pShaderProgram = m_depthShader.m_handle;
+            pipelineSettings.pRasterizerState = &rasterizerStateDesc;
+            pipelineSettings.pVertexLayout = &vertexLayout;
+            pipelineSettings.mSupportIndirectCommandBuffer = true;
             addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
             return true;
         });
@@ -1275,6 +1628,16 @@ namespace hpl {
         m_translucencyIndexPool = IndexPool(resource::MaxTranslucenctMaterials);
         m_waterIndexPool = IndexPool(resource::MaxWaterMaterials);
 
+        addUniformGPURingBuffer(forgeRenderer->Rend(), ViewportRingBufferSize, &m_viewportUniformBuffer);
+	    {
+	        GpuCmdRingDesc cmdRingDesc = {};
+		    cmdRingDesc = {};
+		    cmdRingDesc.pQueue = forgeRenderer->GetGraphicsQueue();
+		    cmdRingDesc.mPoolCount = 16;
+		    cmdRingDesc.mCmdPerPoolCount = 1;
+		    cmdRingDesc.mAddSyncPrimitives = true;
+            addGpuCmdRing(forgeRenderer->Rend(), &cmdRingDesc, &m_shadowCmdRing);
+        }
         // create Descriptor sets
         m_sceneDescriptorConstSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
             DescriptorSetDesc descriptorSetDesc{ m_sceneRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_NONE, 1 };
@@ -1288,7 +1651,11 @@ namespace hpl {
                 addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
                 return true;
             });
-
+           // m_sceneDescriptorPerBatchSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
+           //     DescriptorSetDesc descriptorSetDesc{ m_sceneRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, ScenePerDescriptorBatchSize  };
+           //     addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
+           //     return true;
+           // });
             m_lightDescriptorPerFrameSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
                 DescriptorSetDesc descriptorSetDesc{ m_lightClusterRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
                 addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
@@ -1302,7 +1669,7 @@ namespace hpl {
                     DescriptorData{ .pName = "lightClustersCount", .ppBuffers = &m_lightClusterCountBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "lightClusters", .ppBuffers = &m_lightClustersBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "sceneObjects", .ppBuffers = &m_objectUniformBuffer[swapchainIndex].m_handle },
-                    DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle }
                 };
                 updateDescriptorSet(
                     forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[swapchainIndex].m_handle, params.size(), params.data());
@@ -1323,6 +1690,7 @@ namespace hpl {
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
 
             std::array params = {
+                DescriptorData{ .pName = "shadowTexture", .ppTextures = &m_shadowTarget.m_handle->pTexture },
                 DescriptorData{ .pName = "dissolveTexture", .ppTextures = &m_dissolveImage->GetTexture().m_handle },
                 DescriptorData{ .pName = "sceneDiffuseMat", .ppBuffers = &m_diffuseMatUniformBuffer.m_handle },
                 DescriptorData{ .pName = "sceneTranslucentMat", .ppBuffers = &m_translucencyMatBuffer.m_handle },
@@ -1481,8 +1849,10 @@ namespace hpl {
             vars.m_objectIndex = 0;
             vars.m_indirectIndex = 0;
             vars.m_particleIndex = 0;
+            vars.m_viewportIndex = 0;
             vars.m_objectSlotIndex.clear();
         });
+
 
         auto viewportDatum = m_boundViewportData.resolve(viewport);
         if (!viewportDatum || viewportDatum->m_size != viewport.GetSizeU2()) {
@@ -1490,10 +1860,9 @@ namespace hpl {
             updateDatum->m_size = viewport.GetSizeU2();
             for (size_t i = 0; i < ForgeRenderer::SwapChainLength; i++) {
                 updateDatum->m_outputBuffer[i].Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
-                    ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
                     RenderTargetDesc renderTargetDesc = {};
                     renderTargetDesc.mArraySize = 1;
-                    renderTargetDesc.mClearValue = optimizedColorClearBlack;
+                    renderTargetDesc.mClearValue = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0 };
                     renderTargetDesc.mDepth = 1;
                     renderTargetDesc.mWidth = updateDatum->m_size.x;
                     renderTargetDesc.mHeight = updateDatum->m_size.y;
@@ -1543,7 +1912,7 @@ namespace hpl {
                 updateDatum->m_albedoBuffer[i].Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
                     RenderTargetDesc renderTargetDesc = {};
                     renderTargetDesc.mArraySize = 1;
-                    renderTargetDesc.mClearValue = { .depth = 1.0f, .stencil = 0 };
+                    renderTargetDesc.mClearValue = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0 };
                     renderTargetDesc.mDepth = 1;
                     renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
                     renderTargetDesc.mWidth = updateDatum->m_size.x;
@@ -1577,10 +1946,9 @@ namespace hpl {
                     return true;
                 });
                 updateDatum->m_visiblityBuffer[i].Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
-                    ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
                     RenderTargetDesc renderTargetDesc = {};
                     renderTargetDesc.mArraySize = 1;
-                    renderTargetDesc.mClearValue = optimizedColorClearBlack;
+                    renderTargetDesc.mClearValue = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0 };
                     renderTargetDesc.mDepth = 1;
                     renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
                     renderTargetDesc.mWidth = updateDatum->m_size.x;
@@ -1603,6 +1971,22 @@ namespace hpl {
         frame.m_resourcePool->Push(viewportDatum->m_outputBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_albedoBuffer[frame.m_frameIndex]);
         frame.m_resourcePool->Push(viewportDatum->m_refractionImage[frame.m_frameIndex]);
+
+        uint32_t mainBatchIndex = frameVars.m_viewportIndex++;
+
+        GPURingBufferOffset mainViewportOffset = getGPURingBufferOffset(&m_viewportUniformBuffer, sizeof(resource::ViewportInfo));
+        DescriptorDataRange mainviewportRange = { (uint32_t)mainViewportOffset.mOffset, sizeof(resource::ViewportInfo) };
+        std::array mainViewportParams = { DescriptorData { .pName = "uniformBlock_rootcbv", .pRanges = &mainviewportRange, .ppBuffers = &mainViewportOffset.pBuffer } };
+
+        {
+            BufferUpdateDesc updateDesc = { mainViewportOffset.pBuffer, mainViewportOffset.mOffset };
+            beginUpdateResource(&updateDesc);
+            resource::ViewportInfo* viewportInfo = reinterpret_cast<resource::ViewportInfo*>(updateDesc.pMappedData);
+            (*viewportInfo) = resource::ViewportInfo::create(
+                apFrustum, float4(0.0f, 0.0f, static_cast<float>(viewportDatum->m_size.x), static_cast<float>(viewportDatum->m_size.y)));
+            endUpdateResource(&updateDesc);
+        }
+
         // ----------------
         // Setup Data
         // -----------------
@@ -1618,6 +2002,9 @@ namespace hpl {
             updateDescriptorSet(
                 forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle, params.size(), params.data());
         }
+
+
+
         {
             BufferUpdateDesc updateDesc = { m_perSceneInfoBuffer[frame.m_frameIndex].m_handle, 0, sizeof(resource::SceneInfoResource) };
             beginUpdateResource(&updateDesc);
@@ -1895,96 +2282,6 @@ namespace hpl {
         }
 
         {
-            auto consumeDiffuseRenderable = [&](iRenderable* renderable) {
-                cMaterial* material = renderable->GetMaterial();
-
-                DrawPacket packet = renderable->ResolveDrawPacket(frame);
-                if (packet.m_type == DrawPacket::Unknown) {
-                    return;
-                }
-
-                ASSERT(material->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
-                ASSERT(packet.m_type == DrawPacket::DrawPacketType::DrawGeometryset);
-                ASSERT(packet.m_unified.m_set == GraphicsAllocator::AllocationSet::OpaqueSet);
-
-                const Matrix4 modelMat = renderable->GetModelMatrixPtr() ? cMath::ToForgeMatrix4(*renderable->GetModelMatrixPtr()) : Matrix4::identity();
-
-                auto& resourceMaterial = resolveResourceMaterial(material);
-                auto& materialSet = resourceMaterial.resolveSet(MaterialSetType::PrimarySet);
-                auto& descriptor = material->Descriptor();
-                ASSERT(descriptor.m_id == MaterialID::SolidDiffuse);
-                if (!materialSet.m_slot.isValid()) {
-                    const auto alphaMapImage = material->GetImage(eMaterialTexture_Alpha);
-                    const auto heightMapImage = material->GetImage(eMaterialTexture_Height);
-                    materialSet.m_slot = IndexPoolHandle(&m_diffuseIndexPool);
-                    BufferUpdateDesc updateDesc = { m_diffuseMatUniformBuffer.m_handle,
-                                                    sizeof(resource::DiffuseMaterial) * materialSet.m_slot.get() };
-                    beginUpdateResource(&updateDesc);
-                    auto& diffuseMaterial = (*reinterpret_cast<resource::DiffuseMaterial*>(updateDesc.pMappedData));
-                    struct {
-                        eMaterialTexture m_type;
-                        uint32_t* m_value;
-                    } textures[] = {
-                        { eMaterialTexture_Diffuse, &diffuseMaterial.m_diffuseTextureIndex },
-                        { eMaterialTexture_NMap, &diffuseMaterial.m_normalTextureIndex },
-                        { eMaterialTexture_Alpha, &diffuseMaterial.m_alphaTextureIndex },
-                        { eMaterialTexture_Specular, &diffuseMaterial.m_specularTextureIndex },
-                        { eMaterialTexture_Height, &diffuseMaterial.m_heightTextureIndex },
-                        { eMaterialTexture_Illumination, &diffuseMaterial.m_illuminiationTextureIndex },
-                        { eMaterialTexture_DissolveAlpha, &diffuseMaterial.m_dissolveAlphaTextureIndex },
-                    };
-                    for (auto& tex : textures) {
-                        (*tex.m_value) = resourceMaterial.m_textureHandles[tex.m_type];
-                    }
-                    diffuseMaterial.m_materialConfig =
-                        ((alphaMapImage &&
-                          TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(alphaMapImage->GetTexture().m_handle->mFormat)) == 1)
-                             ? resource::IsAlphaSingleChannel
-                             : 0) |
-                        ((heightMapImage &&
-                          TinyImageFormat_ChannelCount(static_cast<TinyImageFormat>(heightMapImage->GetTexture().m_handle->mFormat)) == 1)
-                             ? resource::IsHeightSingleChannel
-                             : 0) |
-                        (descriptor.m_solid.m_alphaDissolveFilter ? resource::UseAlphaDissolveFilter : 0);
-
-                    diffuseMaterial.m_heightMapScale = descriptor.m_solid.m_heightMapScale;
-                    diffuseMaterial.m_heigtMapBias = descriptor.m_solid.m_heightMapBias;
-                    diffuseMaterial.m_frenselBias = descriptor.m_solid.m_frenselBias;
-                    diffuseMaterial.m_frenselPow = descriptor.m_solid.m_frenselPow;
-                    endUpdateResource(&updateDesc);
-                }
-
-                uint32_t objectSlotIndex = 0;
-                auto it = frameVars.m_objectSlotIndex.find(renderable);
-                if(it == frameVars.m_objectSlotIndex.end()) {
-                    objectSlotIndex = frameVars.m_objectIndex++;
-
-                    BufferUpdateDesc updateDesc = { m_objectUniformBuffer[frame.m_frameIndex].m_handle,
-                                                    sizeof(resource::SceneObject) * objectSlotIndex };
-                    beginUpdateResource(&updateDesc);
-                    auto& uniformObjectData = (*reinterpret_cast<resource::SceneObject*>(updateDesc.pMappedData));
-                    uniformObjectData.m_dissolveAmount = renderable->GetCoverageAmount();
-                    uniformObjectData.m_modelMat = modelMat;
-                    uniformObjectData.m_invModelMat = inverse(modelMat);
-                    uniformObjectData.m_lightLevel = 1.0f;
-                    if (material->IsAffectedByLightLevel()) {
-                        uniformObjectData.m_lightLevel = detail::calcLightLevel(m_rendererList.GetLights(), renderable);
-                    }
-                    uniformObjectData.m_illuminationAmount = renderable->GetIlluminationAmount();
-                    uniformObjectData.m_materialIndex = materialSet.m_slot.get();
-                    uniformObjectData.m_materialType = static_cast<uint32_t>(material->Descriptor().m_id);
-                    uniformObjectData.m_vertexOffset = packet.m_unified.m_subAllocation->vertexOffset();
-                    uniformObjectData.m_indexOffset = packet.m_unified.m_subAllocation->indexOffset();
-                    uniformObjectData.m_uvMat = cMath::ToForgeMatrix4(material->GetUvMatrix().GetTranspose());
-                    endUpdateResource(&updateDesc);
-
-                    frameVars.m_objectSlotIndex[renderable] = objectSlotIndex;
-                } else {
-                    objectSlotIndex = it->second;
-                }
-                setIndirectDrawArg(frame, indirectAllocSession.Increment(), objectSlotIndex, packet);
-            };
-
             std::vector<iRenderable*> diffuseCutRenderables;
             // diffuse - building indirect draw list
             for (auto& renderable : m_rendererList.GetRenderableItems(eRenderListType_Diffuse)) {
@@ -1996,12 +2293,19 @@ namespace hpl {
                     diffuseCutRenderables.push_back(renderable);
                     continue;
                 }
-                consumeDiffuseRenderable(renderable);
+                auto res = fetchDiffuseRenderableDraw(frame, frameVars, renderable);
+                if(res.has_value()) {
+                    setIndirectDrawArg(frame, indirectAllocSession.Increment(), res->m_slot, res->m_packet);
+                }
+                //consumeDiffuseRenderable(renderable);
             }
             opaqueIndirectArgs = indirectAllocSession.End();
             // diffuse build indirect list for opaque
             for (auto& renderable : diffuseCutRenderables) {
-                consumeDiffuseRenderable(renderable);
+                auto res = fetchDiffuseRenderableDraw(frame, frameVars, renderable);
+                if(res.has_value()) {
+                    setIndirectDrawArg(frame, indirectAllocSession.Increment(), res->m_slot, res->m_packet);
+                }
             }
             opaqueCutIndirectArgs = indirectAllocSession.End();
         }
@@ -2062,6 +2366,13 @@ namespace hpl {
 
         uint32_t lightCount = 0;
         {
+            folly::small_vector<cPlanef, 3> occlusionPlanes;
+            if (apWorld->GetFogActive() && apWorld->GetFogColor().a >= 1.0f && apWorld->GetFogCulling()) {
+                cPlanef fogPlane;
+                fogPlane.FromNormalPoint(apFrustum->GetForward(), apFrustum->GetOrigin() + apFrustum->GetForward() * -apWorld->GetFogEnd());
+                occlusionPlanes.push_back(fogPlane);
+            }
+            auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
             for (auto& light : m_rendererList.GetLights()) {
                 switch (light->GetLightType()) {
                 case eLightType_Point:
@@ -2083,14 +2394,147 @@ namespace hpl {
                 case eLightType_Spot:
                     {
                         cLightSpot* pLightSpot = static_cast<cLightSpot*>(light);
-                        float fFarHeight = pLightSpot->GetTanHalfFOV() * pLightSpot->GetRadius() * 2.0f;
+                        const float fFarHeight = pLightSpot->GetTanHalfFOV() * pLightSpot->GetRadius() * 2.0f;
                         // Note: Aspect might be wonky if there is no gobo.
-                        float fFarWidth = fFarHeight * pLightSpot->GetAspect();
+                        const float fFarWidth = fFarHeight * pLightSpot->GetAspect();
                         const cColor color = light->GetDiffuseColor();
                         Matrix4 spotViewProj = cMath::ToForgeMatrix4(pLightSpot->GetViewProjMatrix()); //* inverse(apFrustum->GetViewMat());
 
                         cVector3f forward = cMath::MatrixMul3x3(pLightSpot->GetWorldMatrix(), cVector3f(0, 0, -1));
                         auto goboImage = pLightSpot->GetGoboTexture();
+
+                        float4 normalizeShadow = float4(0,0,0,0);
+                        std::vector<iRenderable*> shadowCasters;
+                        std::optional<eShadowMapResolution> shadowResult = detail::resolveShadowResolutionSpot(apFrustum, pLightSpot);
+                        if (shadowResult.has_value() &&
+                            detail::SetupShadowMapRendering(
+                                shadowCasters, apWorld, pLightSpot->GetFrustum(), pLightSpot, occlusionPlanes)) {
+                            auto shadowMapResult =
+                                m_shadowCache.Search(shadowResult.value(), frame.m_currentFrame, [&](ShadowMapInfo& info) {
+                                    return info.m_light == pLightSpot;
+                                });
+                            if (shadowMapResult.has_value()) {
+                                auto& meta = shadowMapResult->Meta();
+                                meta.m_light = pLightSpot;
+                                const bool updateShadowMap =
+                                    meta.m_transformCount != pLightSpot->GetTransformUpdateCount() || [&]() -> bool {
+                                    // Check if texture map and light are valid
+                                    if (pLightSpot->GetOcclusionCullShadowCasters()) {
+                                        return true;
+                                    }
+
+                                    if (pLightSpot->GetAspect() != meta.m_aspect || pLightSpot->GetFOV() != meta.m_fov) {
+                                        return true;
+                                    }
+                                    return !pLightSpot->ShadowCastersAreUnchanged(shadowCasters);
+                                }();
+                                meta.m_fov = pLightSpot->GetFOV();
+                                meta.m_aspect = pLightSpot->GetAspect();
+                                meta.m_transformCount = pLightSpot->GetTransformUpdateCount();
+                                normalizeShadow = shadowMapResult->NormalizedRect();
+
+                                if (updateShadowMap) {
+                                    auto ringShadowElement = getNextGpuCmdRingElement(&m_shadowCmdRing, true, 1);
+                                    Cmd* shadowCmd = ringShadowElement.pCmds[0];
+                                    FenceStatus fenceStatus;
+                                    getFenceStatus(forgeRenderer->Rend(), ringShadowElement.pFence, &fenceStatus);
+                                    if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
+                                        waitForFences(forgeRenderer->Rend(), 1, &ringShadowElement.pFence);
+                                    }
+
+                                    beginCmd(shadowCmd);
+
+                                    {
+                                        cmdBindRenderTargets(shadowCmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                                        std::array rtBarriers = {
+                                            RenderTargetBarrier{
+                                                m_shadowTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE },
+                                        };
+                                        cmdResourceBarrier(shadowCmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                                    }
+                                    for (auto& renderable : shadowCasters) {
+                                        auto res = fetchDiffuseRenderableDraw(frame, frameVars, renderable);
+                                        if (res.has_value()) {
+                                            setIndirectDrawArg(frame, indirectAllocSession.Increment(), res->m_slot, res->m_packet);
+                                        }
+                                    }
+
+
+                                    GPURingBufferOffset shadowViewportOffset = getGPURingBufferOffset(&m_viewportUniformBuffer, sizeof(resource::ViewportInfo));
+                                    DescriptorDataRange shadowViewportRange = { (uint32_t)shadowViewportOffset.mOffset, sizeof(resource::ViewportInfo) };
+                                    std::array shadowViewportParams = { DescriptorData { .pName = "uniformBlock_rootcbv", .pRanges = &shadowViewportRange, .ppBuffers = &shadowViewportOffset.pBuffer } };
+                                    {
+                                        BufferUpdateDesc updateDesc = { shadowViewportOffset.pBuffer, shadowViewportOffset.mOffset };
+                                        beginUpdateResource(&updateDesc);
+                                        resource::ViewportInfo* viewportInfo =
+                                            reinterpret_cast<resource::ViewportInfo*>(updateDesc.pMappedData);
+                                        (*viewportInfo) = resource::ViewportInfo::create(
+                                            pLightSpot->GetFrustum(),
+                                            float4(
+                                                shadowMapResult->Rect().x,
+                                                shadowMapResult->Rect().y,
+                                                shadowMapResult->Rect().z,
+                                                shadowMapResult->Rect().w));
+                                        endUpdateResource(&updateDesc);
+                                    }
+
+                                    RangeSubsetAlloc::RangeSubset shadowRange = indirectAllocSession.End();
+
+                                    LoadActionsDesc loadActions = {};
+                                    loadActions.mLoadActionsColor[0] = LOAD_ACTION_DONTCARE;
+                                    loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
+                                    loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
+                                    loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
+                                    cmdBindRenderTargets(shadowCmd, 0, NULL,  m_shadowTarget.m_handle, &loadActions, nullptr, nullptr, -1, -1);
+
+                                    cmdSetViewport(shadowCmd, shadowMapResult->Rect().x, shadowMapResult->Rect().y, shadowMapResult->Rect().z, shadowMapResult->Rect().w, 0.0f, 1.0f);
+                                    cmdSetScissor(shadowCmd, shadowMapResult->Rect().x, shadowMapResult->Rect().y, shadowMapResult->Rect().z, shadowMapResult->Rect().w);
+                                    cmdBindPipeline(shadowCmd, m_depthClearPass.m_handle);
+                                    cmdDraw(shadowCmd, 3, 0);
+
+                                    std::array semantics = { ShaderSemantic::SEMANTIC_POSITION, ShaderSemantic::SEMANTIC_TEXCOORD0 };
+                                    opaqueSet.cmdBindGeometrySet(shadowCmd, semantics);
+                                    cmdBindIndexBuffer(shadowCmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
+                                    cmdBindPipeline(shadowCmd, m_depthBufferPass.m_handle);
+                                    cmdBindDescriptorSetWithRootCbvs(shadowCmd, 0, m_sceneDescriptorConstSet.m_handle, shadowViewportParams.size(), shadowViewportParams.data());
+                                    cmdBindDescriptorSet(shadowCmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
+                                    cmdExecuteIndirect(
+                                        shadowCmd,
+                                        m_cmdSignatureVBPass,
+                                        shadowRange.size(),
+                                        m_indirectDrawArgsBuffer[frame.m_frameIndex].m_handle,
+                                        shadowRange.m_start * IndirectArgumentSize,
+                                        nullptr,
+                                        0);
+
+                                    {
+                                        cmdBindRenderTargets(shadowCmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                                        std::array rtBarriers = {
+                                            RenderTargetBarrier{ m_shadowTarget.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE},
+                                        };
+                                        cmdResourceBarrier(shadowCmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                                    }
+
+                                    endCmd(shadowCmd);
+
+		                            FlushResourceUpdateDesc flushUpdateDesc = {};
+		                            flushUpdateDesc.mNodeIndex = 0;
+		                            flushResourceUpdates(&flushUpdateDesc);
+                                    std::array waitSemaphores = {flushUpdateDesc.pOutSubmittedSemaphore};
+
+                                    QueueSubmitDesc submitDesc = {};
+                                    submitDesc.mCmdCount = 1;
+                                    submitDesc.mWaitSemaphoreCount = waitSemaphores.size();
+                                    submitDesc.ppWaitSemaphores = waitSemaphores.data();
+                                    submitDesc.ppCmds = &shadowCmd;
+                                    submitDesc.pSignalFence = ringShadowElement.pFence;
+                                    submitDesc.mSubmitDone = true;
+                                    queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
+                                    shadowMapResult->Mark();
+                                }
+                            }
+                        }
+
                         BufferUpdateDesc lightUpdateDesc = { m_lightBuffer[frame.m_frameIndex].m_handle,
                                                              (lightCount++) * sizeof(resource::SceneLight),
                                                              sizeof(resource::SceneLight) };
@@ -2103,8 +2547,8 @@ namespace hpl {
                         lightData->m_position = v3ToF3(cMath::ToForgeVec3(light->GetWorldPosition()));
                         lightData->m_angle = pLightSpot->GetFOV();
                         lightData->m_viewProjection = spotViewProj;
-                        lightData->m_goboTexture =
-                            goboImage ? m_sceneTransientImage2DPool.request(goboImage) : resource::InvalidSceneTexture;
+                        lightData->m_normalizeShadow = normalizeShadow;
+                        lightData->m_goboTexture = goboImage ? m_sceneTransientImage2DPool.request(goboImage) : resource::InvalidSceneTexture;
                         endUpdateResource(&lightUpdateDesc);
                         break;
                     }
@@ -2182,7 +2626,7 @@ namespace hpl {
                 cmdBindPipeline(cmd, m_visibilityBufferPass.m_handle);
                 opaqueSet.cmdBindGeometrySet(cmd, semantics);
                 cmdBindIndexBuffer(cmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
-                cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
                 cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
                 cmdExecuteIndirect(
                     cmd,
@@ -2223,7 +2667,7 @@ namespace hpl {
                 cmdBindPipeline(cmd, m_visbilityAlphaBufferPass.m_handle);
                 opaqueSet.cmdBindGeometrySet(cmd, semantics);
                 cmdBindIndexBuffer(cmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
-                cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
                 cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
                 cmdExecuteIndirect(
                     cmd,
@@ -2248,7 +2692,6 @@ namespace hpl {
             cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
         {
-            //cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Emit Buffer Pass");
             LoadActionsDesc loadActions = {};
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
             loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
@@ -2259,13 +2702,11 @@ namespace hpl {
             cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
             cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
             cmdBindPipeline(cmd, m_visbilityEmitBufferPass.m_handle);
-            cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+            cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
             cmdDraw(cmd, 3, 0);
-            //cmdEndDebugMarker(cmd);
         }
         {
-            //cmdBeginDebugMarker(cmd, 0, 1, 0, "Decal Output Buffer Pass");
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
             std::array semantics = { ShaderSemantic::SEMANTIC_POSITION,
                                      ShaderSemantic::SEMANTIC_TEXCOORD0,
@@ -2289,7 +2730,7 @@ namespace hpl {
             cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
             cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
             opaqueSet.cmdBindGeometrySet(cmd, semantics);
-            cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+            cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
 
             struct DecalDrawArg {
@@ -2330,7 +2771,6 @@ namespace hpl {
             cmdResourceBarrier(cmd, 0, nullptr, 0, nullptr, rtBarriers.size(), rtBarriers.data());
         }
         {
-            //cmdBeginDebugMarker(cmd, 0, 1, 0, "Visibility Output Buffer Pass");
             LoadActionsDesc loadActions = {};
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
             loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
@@ -2339,11 +2779,10 @@ namespace hpl {
             cmdBindRenderTargets(cmd, targets.size(), targets.data(), nullptr, &loadActions, NULL, NULL, -1, -1);
             cmdSetViewport(cmd, 0.0f, 0.0f, viewportDatum->m_size.x, viewportDatum->m_size.y, 0.0f, 1.0f);
             cmdSetScissor(cmd, 0, 0, viewportDatum->m_size.x, viewportDatum->m_size.y);
-            cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+            cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
             cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
             cmdBindPipeline(cmd, m_visiblityShadePass.m_handle);
             cmdDraw(cmd, 3, 0);
-            // cmdEndDebugMarker(cmd);
         }
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
@@ -2409,7 +2848,7 @@ namespace hpl {
                                                  ShaderSemantic::SEMANTIC_TEXCOORD0,
                                                  ShaderSemantic::SEMANTIC_COLOR };
                         particleSet.cmdBindGeometrySet(cmd, semantics);
-                        cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                        cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
                         cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
                         cmdBindPipeline(cmd, arg.pipeline);
                         if (m_supportIndirectRootConstant) {
@@ -2427,7 +2866,7 @@ namespace hpl {
                                              ShaderSemantic::SEMANTIC_TANGENT,
                                              ShaderSemantic::SEMANTIC_COLOR };
                     opaqueSet.cmdBindGeometrySet(cmd, semantics);
-                    cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                    cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
                     cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
                     cmdBindPipeline(cmd, m_translucencyWaterPipeline.m_handle);
                     if (m_supportIndirectRootConstant) {
@@ -2446,7 +2885,7 @@ namespace hpl {
                                                  ShaderSemantic::SEMANTIC_TANGENT,
                                                  ShaderSemantic::SEMANTIC_COLOR };
                         opaqueSet.cmdBindGeometrySet(cmd, semantics);
-                        cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorConstSet.m_handle);
+                        cmdBindDescriptorSetWithRootCbvs(cmd, 0, m_sceneDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
                         cmdBindDescriptorSet(cmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
                         cmdBindPipeline(cmd, arg.pipeline);
 

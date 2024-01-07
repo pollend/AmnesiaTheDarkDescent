@@ -33,7 +33,7 @@ VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
     #else 
         const UniformObject obj = Get(sceneObjects)[Get(indirectDrawId)];
     #endif
-    ViewportInfo viewInfo = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
+    ViewportInfo viewInfo = Get(viewport);
     float4x4 modelView = mul(viewInfo.viewMat, obj.modelMat);
     float4x4 modelViewPrj = mul(viewInfo.projMat, modelView);
 

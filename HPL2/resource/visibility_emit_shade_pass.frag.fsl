@@ -29,7 +29,7 @@ float4 PS_MAIN(PsIn In)
   UniformObject obj = Get(sceneObjects)[objectId];
   uint startIndex = obj.indexOffset;
   uint vertexOffset = obj.vertexOffset;
-  ViewportInfo viewInfo = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
+  ViewportInfo viewInfo = Get(viewport);
     
   float4x4 vp = mul(viewInfo.projMat, viewInfo.viewMat);
   float4x4 mvp = mul(vp, obj.modelMat);

@@ -28,7 +28,7 @@ float4 PS_MAIN(PsIn In)
   UniformObject obj = Get(sceneObjects)[objectId];
   uint startIndex = obj.indexOffset;
   uint vertexOffset = obj.vertexOffset;
-  ViewportInfo viewInfo = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
+  ViewportInfo viewInfo = Get(viewport);
     
   float4x4 vp = mul(viewInfo.projMat, viewInfo.viewMat);
   float4x4 mvp = mul(vp, obj.modelMat);
@@ -164,6 +164,13 @@ float4 PS_MAIN(PsIn In)
             } else {
               float oneMinusCos = 1.0 - dot(normalLightDir, lightCameraDirection);
               attenuation *= saturate(1.0 - (oneMinusCos / (1.0 - cos(light.angle * 0.5))));
+            }
+
+	        const float depthBias = 0.0005;
+	        if(light.normalizeShadow.z != 0.0 && light.normalizeShadow.w != 0.0) {
+               float2 sampleOffset = (projectionUV.xy * light.normalizeShadow.zw);
+               float2 pos = light.normalizeShadow.xy + float2(sampleOffset.x, light.normalizeShadow.w - sampleOffset.y);
+              attenuation *= CompareTex2DProj(Get(shadowTexture), Get(shadowCmpSampler), float4(pos.xy, projectionUV.z - depthBias, projectionUV.w));
             }
             shadedColor += ((specularValue.xxx * light.color.xyz) + (diffuseColor.xyz * light.color.xyz * fLDotN)) * attenuation;
           break;

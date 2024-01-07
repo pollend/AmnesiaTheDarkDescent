@@ -38,7 +38,12 @@
 #end
 
 #vert solid_diffuse.vert
-    #include "solid_diffuse.vert.fsl"
+    #include "legacy/solid_diffuse.vert.fsl"
+#end
+
+#frag solid_diffuse.frag
+    #define ALPHA_REJECT 0.5
+    #include "legacy/solid_diffuse.frag.fsl"
 #end
 
 #vert solid_illumination.vert
@@ -49,18 +54,12 @@
     #include "solid_illumination.frag.fsl"
 #end
 
-#frag solid_diffuse.frag
-    #define ALPHA_REJECT 0.5
-    #include "solid_diffuse.frag.fsl"
-#end
 
 #frag solid_diffuse_parallax.frag
-    // toned down the parallax effect a bit
-
     #define PARALLAX_ENABLED 1
     #define SEARCH_SAMPLE_COUNT 4
     #define ALPHA_REJECT 0.5
-    #include "solid_diffuse.frag.fsl"
+    #include "legacy/solid_diffuse.frag.fsl"
 #end
 
 #vert deferred_light.vert
@@ -457,3 +456,18 @@
   #include "translucency_water_shade.frag.fsl"
 #end
 
+#vert depth_shade.vert 
+    #include "depth_shade.vert.fsl"
+#end
+
+#frag depth_shade.frag
+    #include "depth_shade.frag.fsl"
+#end
+
+#frag depth_clear_shade.frag
+    #include "depth_clear_shade.frag.fsl"
+#end
+
+#vert depth_clear_shade.vert
+    #include "depth_clear_shade.vert.fsl"
+#end

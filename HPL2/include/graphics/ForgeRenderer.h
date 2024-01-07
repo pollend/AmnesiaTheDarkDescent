@@ -110,7 +110,10 @@ namespace hpl {
             uint32_t m_frameIndex = 0;
             GpuCmdRingElement m_cmdRingElement;
             bool m_isFinished = true;
-            //FrameState m_state = FrameState::Unitialize;
+
+            Frame() = default;
+            Frame(Frame& frame) = delete;
+            void operator=(Frame&) = delete;
 
             ForgeRenderer* m_renderer = nullptr;
             SwapChain* m_swapChain = nullptr;
@@ -142,10 +145,6 @@ namespace hpl {
             inline RenderTarget* finalTarget() {
                 return m_finalRenderTarget;
             }
-
-           // inline RenderTarget* swapChainTarget() {
-           //     return m_swapChainTarget;
-           // }
 
             inline GpuCmdRingElement& RingElement() {
                 return m_cmdRingElement;

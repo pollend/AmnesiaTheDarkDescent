@@ -1,0 +1,12 @@
+STRUCT(VSOutput)
+{
+	DATA(float4, Position, SV_Position);
+};
+
+VSOutput VS_MAIN(SV_VertexID(uint) VertexID)
+{
+	INIT_MAIN;
+	VSOutput Out;
+	Out.Position = float4(float2((VertexID << 1) & 2, VertexID & 2) * float2(2, -2) + float2(-1, 1), 1, 1);
+	RETURN(Out);
+}

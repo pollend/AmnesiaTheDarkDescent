@@ -30,7 +30,7 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     #else 
         UniformObject obj = Get(sceneObjects)[Get(indirectDrawId)];
     #endif
-    ViewportInfo viewInfo = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
+    ViewportInfo viewInfo = Get(viewport);
 
     WaterMaterial material = Get(sceneWaterMat)[obj.materialIndex];  
 
