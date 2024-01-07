@@ -128,7 +128,7 @@ namespace hpl {
         static constexpr uint32_t LightClusterSlices = 24;
         static constexpr uint32_t TransientImagePoolCount = 256;
 
-        static constexpr uint32_t ViewportRingBufferSize = 2048;
+        static constexpr uint32_t ViewportRingBufferSize = 128 * sizeof(resource::ViewportInfo);
         static constexpr uint32_t ScenePerDescriptorBatchSize = 32;
 
         static constexpr uint32_t IndirectArgumentSize = 8 * sizeof(uint32_t);

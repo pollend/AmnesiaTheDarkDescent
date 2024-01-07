@@ -15,7 +15,7 @@
 RES(SamplerState,  nearEdgeClampSampler, UPDATE_FREQ_NONE, s0, binding = 0);
 RES(SamplerState,  nearPointWrapSampler, UPDATE_FREQ_NONE, s1, binding = 1);
 RES(SamplerState,  linearBorderSampler, UPDATE_FREQ_NONE, s2, binding = 2);
-RES(SamplerState,  shadowCmpSampler, UPDATE_FREQ_NONE, s3, binding = 2);
+RES(SamplerComparisonState,  shadowCmpSampler, UPDATE_FREQ_NONE, s3, binding = 2);
 RES(SamplerState, sceneSampler, UPDATE_FREQ_NONE, s4, binding = 3); 
 
 CBUFFER(sceneInfo, UPDATE_FREQ_PER_FRAME, b1, binding = 4) {
@@ -42,8 +42,8 @@ RES(ByteBuffer,   vtxOpaqueColor,     UPDATE_FREQ_NONE, t9, binding = 14);
 RES(Buffer(DiffuseMaterial), sceneDiffuseMat, UPDATE_FREQ_NONE, t10, binding = 15);
 RES(Buffer(TranslucentMaterial), sceneTranslucentMat, UPDATE_FREQ_NONE, t11, binding = 16);
 RES(Buffer(WaterMaterial), sceneWaterMat, UPDATE_FREQ_NONE, t12, binding = 17);
-RES(Tex2D(float4), shadowTexture, UPDATE_FREQ_NONE, t13, binding = 17);
 
+RES(Tex2D(float4), shadowTexture, UPDATE_FREQ_NONE, t13, binding = 17);
 RES(Tex2D(float4), visibilityTexture,   UPDATE_FREQ_PER_FRAME, t14, binding = 18);
 RES(Tex2D(float4), albedoTexture,      UPDATE_FREQ_PER_FRAME, t15, binding = 19);
 RES(Tex2D(float4), refractionTexture,      UPDATE_FREQ_PER_FRAME, t16, binding = 20);

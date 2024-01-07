@@ -1669,7 +1669,7 @@ namespace hpl {
                     DescriptorData{ .pName = "lightClustersCount", .ppBuffers = &m_lightClusterCountBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "lightClusters", .ppBuffers = &m_lightClustersBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "sceneObjects", .ppBuffers = &m_objectUniformBuffer[swapchainIndex].m_handle },
-                    DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle },
+                    DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle }
                 };
                 updateDescriptorSet(
                     forgeRenderer->Rend(), 0, m_sceneDescriptorPerFrameSet[swapchainIndex].m_handle, params.size(), params.data());
@@ -1690,6 +1690,7 @@ namespace hpl {
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
 
             std::array params = {
+                DescriptorData{ .pName = "shadowTexture", .ppTextures = &m_shadowTarget.m_handle->pTexture },
                 DescriptorData{ .pName = "dissolveTexture", .ppTextures = &m_dissolveImage->GetTexture().m_handle },
                 DescriptorData{ .pName = "sceneDiffuseMat", .ppBuffers = &m_diffuseMatUniformBuffer.m_handle },
                 DescriptorData{ .pName = "sceneTranslucentMat", .ppBuffers = &m_translucencyMatBuffer.m_handle },
@@ -2371,6 +2372,7 @@ namespace hpl {
                 fogPlane.FromNormalPoint(apFrustum->GetForward(), apFrustum->GetOrigin() + apFrustum->GetForward() * -apWorld->GetFogEnd());
                 occlusionPlanes.push_back(fogPlane);
             }
+            auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
             for (auto& light : m_rendererList.GetLights()) {
                 switch (light->GetLightType()) {
                 case eLightType_Point:
@@ -2461,13 +2463,20 @@ namespace hpl {
                                     GPURingBufferOffset shadowViewportOffset = getGPURingBufferOffset(&m_viewportUniformBuffer, sizeof(resource::ViewportInfo));
                                     DescriptorDataRange shadowViewportRange = { (uint32_t)shadowViewportOffset.mOffset, sizeof(resource::ViewportInfo) };
                                     std::array shadowViewportParams = { DescriptorData { .pName = "uniformBlock_rootcbv", .pRanges = &shadowViewportRange, .ppBuffers = &shadowViewportOffset.pBuffer } };
-
-                                    BufferUpdateDesc updateDesc = { shadowViewportOffset.pBuffer, shadowViewportOffset.mOffset };
-                                    beginUpdateResource(&updateDesc);
-                                    resource::ViewportInfo* viewportInfo = reinterpret_cast<resource::ViewportInfo*>(updateDesc.pMappedData);
-                                    (*viewportInfo) = resource::ViewportInfo::create(
-                                        pLightSpot->GetFrustum(), float4(shadowMapResult->Rect().x, shadowMapResult->Rect().y, shadowMapResult->Rect().z, shadowMapResult->Rect().w));
-                                    endUpdateResource(&updateDesc);
+                                    {
+                                        BufferUpdateDesc updateDesc = { shadowViewportOffset.pBuffer, shadowViewportOffset.mOffset };
+                                        beginUpdateResource(&updateDesc);
+                                        resource::ViewportInfo* viewportInfo =
+                                            reinterpret_cast<resource::ViewportInfo*>(updateDesc.pMappedData);
+                                        (*viewportInfo) = resource::ViewportInfo::create(
+                                            pLightSpot->GetFrustum(),
+                                            float4(
+                                                shadowMapResult->Rect().x,
+                                                shadowMapResult->Rect().y,
+                                                shadowMapResult->Rect().z,
+                                                shadowMapResult->Rect().w));
+                                        endUpdateResource(&updateDesc);
+                                    }
 
                                     RangeSubsetAlloc::RangeSubset shadowRange = indirectAllocSession.End();
 
@@ -2483,6 +2492,9 @@ namespace hpl {
                                     cmdBindPipeline(shadowCmd, m_depthClearPass.m_handle);
                                     cmdDraw(shadowCmd, 3, 0);
 
+                                    std::array semantics = { ShaderSemantic::SEMANTIC_POSITION, ShaderSemantic::SEMANTIC_TEXCOORD0 };
+                                    opaqueSet.cmdBindGeometrySet(shadowCmd, semantics);
+                                    cmdBindIndexBuffer(shadowCmd, opaqueSet.indexBuffer().m_handle, INDEX_TYPE_UINT32, 0);
                                     cmdBindPipeline(shadowCmd, m_depthBufferPass.m_handle);
                                     cmdBindDescriptorSetWithRootCbvs(shadowCmd, 0, m_sceneDescriptorConstSet.m_handle, shadowViewportParams.size(), shadowViewportParams.data());
                                     cmdBindDescriptorSet(shadowCmd, 0, m_sceneDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
@@ -2494,6 +2506,14 @@ namespace hpl {
                                         shadowRange.m_start * IndirectArgumentSize,
                                         nullptr,
                                         0);
+
+                                    {
+                                        cmdBindRenderTargets(shadowCmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                                        std::array rtBarriers = {
+                                            RenderTargetBarrier{ m_shadowTarget.m_handle, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE},
+                                        };
+                                        cmdResourceBarrier(shadowCmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                                    }
 
                                     endCmd(shadowCmd);
 
