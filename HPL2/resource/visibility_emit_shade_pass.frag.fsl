@@ -1,5 +1,5 @@
 #include "scene_resource.h.fsl"
-#include "packing.h.fsl"
+#include "math_utils.h.fsl"
 #include "visiblity_defs.h.fsl"
 #include "visibility_utility.h.fsl"
 #include "math_utils.h.fsl"

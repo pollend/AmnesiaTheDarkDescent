@@ -345,6 +345,9 @@ namespace hpl {
         TransientFrameVariable<TransientFrameVars> m_variables;
 
         bool m_supportIndirectRootConstant = false;
+
+        // GTAO
+
     };
 }; // namespace hpl
 

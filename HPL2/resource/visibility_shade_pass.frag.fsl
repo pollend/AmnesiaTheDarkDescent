@@ -1,8 +1,7 @@
 #include "scene_resource.h.fsl"
-#include "packing.h.fsl"
+#include "math_utils.h.fsl"
 #include "visiblity_defs.h.fsl"
 #include "visibility_utility.h.fsl"
-#include "math_utils.h.fsl"
 #include "parallax_bindless.h.fsl"
 
 STRUCT(PsIn)
@@ -166,8 +165,8 @@ float4 PS_MAIN(PsIn In)
               attenuation *= saturate(1.0 - (oneMinusCos / (1.0 - cos(light.angle * 0.5))));
             }
 
-	        const float depthBias = 0.0005;
-	        if(light.normalizeShadow.z != 0.0 && light.normalizeShadow.w != 0.0) {
+	          const float depthBias = 0.0005;
+	          if(light.normalizeShadow.z != 0.0 && light.normalizeShadow.w != 0.0) {
                float2 sampleOffset = (projectionUV.xy * light.normalizeShadow.zw);
                float2 pos = light.normalizeShadow.xy + float2(sampleOffset.x, light.normalizeShadow.w - sampleOffset.y);
               attenuation *= CompareTex2DProj(Get(shadowTexture), Get(shadowCmpSampler), float4(pos.xy, projectionUV.z - depthBias, projectionUV.w));

@@ -68,7 +68,6 @@ float2 ParallaxAdvance(
     {
         // Contact refinement propose by Andrea Riccardi 
         // https://www.artstation.com/andreariccardi/blog/3VPo/a-new-approach-for-parallax-mapping-presenting-the-contact-refinement-parallax-mapping-technique
-
         // Based on the rough approximation, rolling back to the previous step along the ray.
         parallaxOffset -= delta;
         currentStep -= step;
