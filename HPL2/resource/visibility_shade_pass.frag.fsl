@@ -54,19 +54,19 @@ float PCF(float4 projectionUV) {
 	// waste of shader cycles
 	// Perform percentage-closer shadows with randomly rotated poisson kernel
 	float shadowFactor = 0.0f;
-	
-	float shadowFilterSize = 0.0016f;
+
+	float shadowFilterSize = 0.0001f;
 	float angle = random(projectionUV.xyz, f3(20.0f));
 	float s = sin(angle);
 	float c = cos(angle);
 
 	for (uint i = 0; i < NUM_SHADOW_SAMPLES; i++)
 	{
-			float2 offset = float2(shadowSamples[i * 2], shadowSamples[i * 2 + 1]);
-			offset = float2(offset.x * c + offset.y * s, offset.x * -s + offset.y * c);
-			offset *= shadowFilterSize;
+        float2 offset = float2(shadowSamples[i * 2], shadowSamples[i * 2 + 1]);
+        offset = float2(offset.x * c + offset.y * s, offset.x * -s + offset.y * c);
+        offset *= shadowFilterSize;
 			
-      shadowFactor += CompareTex2DProj(Get(shadowTexture), Get(shadowCmpSampler), float4(projectionUV.xy + offset, projectionUV.zw));
+     shadowFactor += CompareTex2DProj(Get(shadowTexture), Get(shadowCmpSampler), float4(projectionUV.xy + offset, projectionUV.zw));
 	}
 	shadowFactor *= NUM_SHADOW_SAMPLES_INV;
 	return shadowFactor;
@@ -234,7 +234,6 @@ float4 PS_MAIN(PsIn In)
               float oneMinusCos = 1.0 - dot(normalLightDir, lightCameraDirection);
               attenuation *= saturate(1.0 - (oneMinusCos / (1.0 - cos(light.angle * 0.5))));
             }
-
 	          const float depthBias = 0.0005;
 	          if(light.normalizeShadow.z != 0.0 && light.normalizeShadow.w != 0.0) {
                float2 sampleOffset = (projectionUV.xy * light.normalizeShadow.zw);
@@ -252,8 +251,6 @@ float4 PS_MAIN(PsIn In)
       }
   }
 
-  //Out.outColor = float4(diffuseColor.rgb, 0.0f); 
-  //Out.test = float4(clusterCoords.x,clusterCoords.y,slice, lightClusterCount);
   RETURN(float4(shadedColor, 0.0));
 }
 
