@@ -74,11 +74,13 @@ namespace hpl {
 
 		cVector3f GetLocalPosition();
 		cMatrixf& GetLocalMatrix();
+
 		Matrix4 GetLocalMat();
+        Point3 GetWorldPositionP3();
+		Matrix4 GetWorldMat();
 
 		cVector3f GetWorldPosition();
 		cMatrixf& GetWorldMatrix();
-		Matrix4 GetWorldMat();
 
         void SetPosition(const cVector3f& avPos);
 		void SetMatrix(const cMatrixf& a_mtxTransform);
