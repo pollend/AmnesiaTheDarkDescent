@@ -8,6 +8,8 @@
 #include "graphics/Material.h"
 #include "graphics/Renderable.h"
 #include "graphics/SceneResource.h"
+#include "graphics/DebugDraw.h"
+
 
 #include "math/Math.h"
 #include "scene/FogArea.h"
@@ -446,7 +448,8 @@ namespace hpl {
     cRendererDeferred::cRendererDeferred(cGraphics* apGraphics, cResources* apResources, std::shared_ptr<DebugDraw> debug)
         : iRenderer("Deferred2", apGraphics, apResources)
         , m_copySubpass(*Interface<ForgeRenderer>::Get())
-        , m_shadowCache(8192, 4096, 8, 4, 3) {
+        , m_shadowCache(8192, 4096, 8, 4, 3)
+        , m_debug(debug) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         m_sceneTexture2DPool = BindlessDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxScene2DTextureCount);
         m_sceneTextureCubePool = BindlessDescriptorPool(ForgeRenderer::SwapChainLength, resource::MaxSceneCubeTextureCount);
@@ -1818,7 +1821,6 @@ namespace hpl {
         cWorld* apWorld,
         cRenderSettings* apSettings) {
 
-        BeginRendering(frameTime, apFrustum, apWorld, apSettings, false);
 
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
@@ -2141,8 +2143,7 @@ namespace hpl {
                 frameVars.m_particleIndex++;
             } else {
                 const bool isRefraction = iRenderer::GetRefractionEnabled() && material->HasRefraction();
-                const bool isReflection = material->HasWorldReflection() && renderable->GetRenderType() == eRenderableType_SubMesh &&
-                    mpCurrentSettings->mbRenderWorldReflection;
+                const bool isReflection = material->HasWorldReflection() && renderable->GetRenderType() == eRenderableType_SubMesh && apSettings->mbRenderWorldReflection;
                 const auto cubeMap = material->GetImage(eMaterialTexture_CubeMap);
 
                 auto& resourceMaterial = resolveResourceMaterial(material);
@@ -2824,6 +2825,19 @@ namespace hpl {
             cmdResourceBarrier(frame.m_cmd, 0, NULL, textureBarriers.size(), textureBarriers.data(), rtBarriers.size(), rtBarriers.data());
         }
         {
+            cViewport::PostSolidDrawPacket postSolidEvent = cViewport::PostSolidDrawPacket();
+
+            postSolidEvent.m_frustum = apFrustum;
+            postSolidEvent.m_frame = &frame;
+            postSolidEvent.m_outputTarget = &viewportDatum->m_outputBuffer[frame.m_frameIndex];
+            postSolidEvent.m_viewport = &viewport;
+            postSolidEvent.m_renderSettings = apSettings;
+            postSolidEvent.m_debug = m_debug.get();
+            postSolidEvent.m_renderList = &m_rendererList;
+            viewport.SignalDraw(postSolidEvent);
+            m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, viewportDatum->m_outputBuffer[frame.m_frameIndex], viewportDatum->m_depthBuffer[frame.m_frameIndex]);
+        }
+        {
             auto& particleSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::ParticleSet);
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
             LoadActionsDesc loadActions = {};
@@ -2913,7 +2927,18 @@ namespace hpl {
                 }
             }
         }
-
+        {
+            cViewport::PostTranslucenceDrawPacket translucenceEvent = cViewport::PostTranslucenceDrawPacket();
+            translucenceEvent.m_frustum = apFrustum;
+            translucenceEvent.m_frame = &frame;
+            translucenceEvent.m_outputTarget = &viewportDatum->m_outputBuffer[frame.m_frameIndex];
+            translucenceEvent.m_viewport = &viewport;
+            translucenceEvent.m_renderSettings = apSettings;
+            translucenceEvent.m_debug = m_debug.get();
+            translucenceEvent.m_renderList = &m_rendererList;
+            viewport.SignalDraw(translucenceEvent);
+            m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, viewportDatum->m_outputBuffer[frame.m_frameIndex], viewportDatum->m_depthBuffer[frame.m_frameIndex]);
+        }
         {
             cmdBindRenderTargets(cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             std::array barriers = { BufferBarrier{ m_lightClusterCountBuffer[frame.m_frameIndex].m_handle,

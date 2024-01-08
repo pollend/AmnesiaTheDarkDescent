@@ -149,15 +149,5 @@ namespace hpl
         mfTimeCount += afTimeStep;
     }
 
-    void iRenderer::BeginRendering(
-        float afFrameTime,
-        cFrustum* apFrustum,
-        cWorld* apWorld,
-        cRenderSettings* apSettings,
-        bool abSendFrameBufferToPostEffects,
-        bool abAtStartOfRendering)
-    {
-        mpCurrentSettings = apSettings;
-    }
 
 } // namespace hpl

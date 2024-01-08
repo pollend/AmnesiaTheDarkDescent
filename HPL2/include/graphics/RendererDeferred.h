@@ -373,6 +373,7 @@ namespace hpl {
         ResetFrameHandler m_resetHandler;
         TransientFrameVariable<TransientFrameVars> m_variables;
 
+        std::shared_ptr<DebugDraw> m_debug;
         bool m_supportIndirectRootConstant = false;
 
     };

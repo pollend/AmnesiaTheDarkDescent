@@ -229,7 +229,6 @@ namespace hpl {
         cRenderSettings* apSettings) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         // keep around for the moment ...
-        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, false);
 
         if (frame.m_currentFrame != m_activeFrame) {
             m_objectIndex = 0;
@@ -336,7 +335,7 @@ namespace hpl {
         postSolidEvent.m_frame = &frame;
         postSolidEvent.m_outputTarget = &common->m_outputBuffer[frame.m_frameIndex];
         postSolidEvent.m_viewport = &viewport;
-        postSolidEvent.m_renderSettings = mpCurrentSettings;
+        postSolidEvent.m_renderSettings = apSettings;
         postSolidEvent.m_debug = m_debug.get();
         viewport.SignalDraw(postSolidEvent);
         SharedRenderTarget invalidTarget;
@@ -347,7 +346,7 @@ namespace hpl {
         translucenceEvent.m_frame = &frame;
         translucenceEvent.m_outputTarget = &common->m_outputBuffer[frame.m_frameIndex];
         translucenceEvent.m_viewport = &viewport;
-        translucenceEvent.m_renderSettings = mpCurrentSettings;
+        translucenceEvent.m_renderSettings = apSettings;
         translucenceEvent.m_debug = m_debug.get();
         viewport.SignalDraw(translucenceEvent);
         m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, common->m_outputBuffer[frame.m_frameIndex], invalidTarget);

@@ -164,8 +164,6 @@ namespace hpl {
                             bool abSendFrameBufferToPostEffects, bool abAtStartOfRendering=true);
         cResources* mpResources;
 
-        cRenderSettings *mpCurrentSettings;
-
         static int mlRenderFrameCount;
         float mfTimeCount;
 
