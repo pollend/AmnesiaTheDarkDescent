@@ -55,7 +55,7 @@ float PCF(float4 projectionUV) {
 	// Perform percentage-closer shadows with randomly rotated poisson kernel
 	float shadowFactor = 0.0f;
 
-	float shadowFilterSize = 0.0001f;
+	float shadowFilterSize = 0.0004f;
 	float angle = random(projectionUV.xyz, f3(20.0f));
 	float s = sin(angle);
 	float c = cos(angle);
@@ -147,7 +147,7 @@ float4 PS_MAIN(PsIn In)
   const float w = dot(float3(clipPos0.w, clipPos1.w, clipPos2.w), derivativesOut.m_lambda);
 
   // Reconstruct the Z value at this screen point performing only the necessary matrix * vector multiplication operations that involve computing Z
-  const float z = ((w * viewInfo.zFar) / (viewInfo.zFar - viewInfo.zNear)) - ((2.0 * viewInfo.zNear * viewInfo.zFar) / (viewInfo.zFar - viewInfo.zNear));
+  const float z = ((w * (viewInfo.zFar + viewInfo.zNear)) / (viewInfo.zFar - viewInfo.zNear)) - ((2.0 * viewInfo.zNear * viewInfo.zFar) / (viewInfo.zFar - viewInfo.zNear));
   
   // Calculate the world position coordinates:
   // First the projected coordinates at this point are calculated using In.screenPos and the computed Z value at this point.
@@ -227,15 +227,18 @@ float4 PS_MAIN(PsIn In)
             projectionUV.xy = projectionUV.xy * 0.5 + 0.5;
             projectionUV.w = 1.0;
 
-            float4 shadowSample;
-            if(SampleSceneTextureProjFloat4(light.goboTextureIndex, Get(nearEdgeClampSampler), projectionUV, shadowSample)) {
-              attenuation *= shadowSample.x; 
+            const uint goboTextureIndex = light.goboTextureIndex;
+            if(isTextureIndexValid(goboTextureIndex)) {
+                BeginNonUniformResourceIndex(goboTextureIndex);
+                    attenuation *= SampleTex2DProj(Get(sceneTextures)[goboTextureIndex], Get(nearEdgeClampSampler), projectionUV).x;
+                EndNonUniformResourceIndex(); 
             } else {
               float oneMinusCos = 1.0 - dot(normalLightDir, lightCameraDirection);
               attenuation *= saturate(1.0 - (oneMinusCos / (1.0 - cos(light.angle * 0.5))));
             }
-	          const float depthBias = 0.0005;
-	          if(light.normalizeShadow.z != 0.0 && light.normalizeShadow.w != 0.0) {
+
+	        const float depthBias = 0.0005;
+	        if(light.normalizeShadow.z != 0.0 && light.normalizeShadow.w != 0.0) {
                float2 sampleOffset = (projectionUV.xy * light.normalizeShadow.zw);
                float2 pos = light.normalizeShadow.xy + float2(sampleOffset.x, light.normalizeShadow.w - sampleOffset.y);
                attenuation *= PCF(float4(pos.xy, projectionUV.z - depthBias, projectionUV.w));

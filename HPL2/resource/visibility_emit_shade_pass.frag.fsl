@@ -79,8 +79,8 @@ float4 PS_MAIN(PsIn In)
   const float w = dot(float3(clipPos0.w, clipPos1.w, clipPos2.w), derivativesOut.m_lambda);
 
   // Reconstruct the Z value at this screen point performing only the necessary matrix * vector multiplication operations that involve computing Z
-  const float z = ((w * viewInfo.zFar) / (viewInfo.zFar - viewInfo.zNear)) - ((2.0 * viewInfo.zNear * viewInfo.zFar) / (viewInfo.zFar - viewInfo.zNear));
-  
+  const float z = ((w * (viewInfo.zFar + viewInfo.zNear)) / (viewInfo.zFar - viewInfo.zNear)) - ((2.0 * viewInfo.zNear * viewInfo.zFar) / (viewInfo.zFar - viewInfo.zNear));
+   
   // Calculate the world position coordinates:
   // First the projected coordinates at this point are calculated using In.screenPos and the computed Z value at this point.
   // Then, multiplying the perspective projected coordinates by the inverse view-projection matrix (invVP) produces world coordinates
