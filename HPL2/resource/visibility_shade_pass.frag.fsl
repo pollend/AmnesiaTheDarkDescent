@@ -50,7 +50,7 @@ STATIC const float shadowSamples[NUM_SHADOW_SAMPLES * 2] =
 };
 STATIC const float NUM_SHADOW_SAMPLES_INV = (1.0f / NUM_SHADOW_SAMPLES);
 
-float PCF(float4 projectionUV) {
+float PCSS_Main(float4 projectionUV, float radius) {
 	// waste of shader cycles
 	// Perform percentage-closer shadows with randomly rotated poisson kernel
 	float shadowFactor = 0.0f;
@@ -59,14 +59,35 @@ float PCF(float4 projectionUV) {
 	float angle = random(projectionUV.xyz, f3(20.0f));
 	float s = sin(angle);
 	float c = cos(angle);
+    const float sampledDepth = projectionUV.z / projectionUV.w;
+
+    float blockers = 0;
+	float avgBlocker = 0.0f;
+    for(uint k = 0; k < NUM_SHADOW_SAMPLES; k++) {
+        float2 offset = float2(shadowSamples[k * 2], shadowSamples[k * 2 + 1]);
+        offset = float2(offset.x * c + offset.y * s, offset.x * -s + offset.y * c);
+        offset *= shadowFilterSize;
+
+        float z = SampleTex2DProj(Get(shadowTexture), Get(shadowSampler), float4(projectionUV.xy + offset, projectionUV.zw)).r;
+        if(z < sampledDepth) {
+            blockers += 1.0;
+            avgBlocker += z;
+        }
+    }
+    if(blockers <= 0.0f) {
+        return 1.0f;
+    }
+
+    avgBlocker /= blockers;
+    const float penumbraSize = ((sampledDepth - avgBlocker)) / avgBlocker;
 
 	for (uint i = 0; i < NUM_SHADOW_SAMPLES; i++)
 	{
         float2 offset = float2(shadowSamples[i * 2], shadowSamples[i * 2 + 1]);
         offset = float2(offset.x * c + offset.y * s, offset.x * -s + offset.y * c);
-        offset *= shadowFilterSize;
+        offset *= penumbraSize;
 			
-     shadowFactor += CompareTex2DProj(Get(shadowTexture), Get(shadowCmpSampler), float4(projectionUV.xy + offset, projectionUV.zw));
+        shadowFactor += CompareTex2DProj(Get(shadowTexture), Get(shadowCmpSampler), float4(projectionUV.xy + offset, projectionUV.zw));
 	}
 	shadowFactor *= NUM_SHADOW_SAMPLES_INV;
 	return shadowFactor;
@@ -238,7 +259,7 @@ float4 PS_MAIN(PsIn In)
 	          if(light.normalizeShadow.z != 0.0 && light.normalizeShadow.w != 0.0) {
                float2 sampleOffset = (projectionUV.xy * light.normalizeShadow.zw);
                float2 pos = light.normalizeShadow.xy + float2(sampleOffset.x, light.normalizeShadow.w - sampleOffset.y);
-               attenuation *= PCF(float4(pos.xy, projectionUV.z - depthBias, projectionUV.w));
+               attenuation *= PCSS_Main(float4(pos.xy, projectionUV.z - depthBias, projectionUV.w), light.radius);
             }
             shadedColor += ((specularValue.xxx * light.color.xyz) + (diffuseColor.xyz * light.color.xyz * fLDotN)) * attenuation;
           break;

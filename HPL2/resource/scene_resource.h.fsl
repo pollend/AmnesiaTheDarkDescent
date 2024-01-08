@@ -16,7 +16,8 @@ RES(SamplerState,  nearEdgeClampSampler, UPDATE_FREQ_NONE, s0, binding = 0);
 RES(SamplerState,  nearPointWrapSampler, UPDATE_FREQ_NONE, s1, binding = 1);
 RES(SamplerState,  linearBorderSampler, UPDATE_FREQ_NONE, s2, binding = 2);
 RES(SamplerComparisonState,  shadowCmpSampler, UPDATE_FREQ_NONE, s3, binding = 2);
-RES(SamplerState, sceneSampler, UPDATE_FREQ_NONE, s4, binding = 3); 
+RES(SamplerState,  shadowSampler, UPDATE_FREQ_NONE, s4, binding = 2);
+RES(SamplerState, sceneSampler, UPDATE_FREQ_NONE, s5, binding = 3); 
 
 CBUFFER(sceneInfo, UPDATE_FREQ_PER_FRAME, b1, binding = 4) {
   DATA(WorldInfo, worldInfo, None);

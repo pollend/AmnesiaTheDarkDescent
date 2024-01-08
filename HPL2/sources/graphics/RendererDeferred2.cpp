@@ -482,6 +482,20 @@ namespace hpl {
             addSampler(forgeRenderer->Rend(), &miplessLinearSamplerDesc, handle);
             return true;
         });
+
+        m_shadowSampler.Load(forgeRenderer->Rend(), [&](Sampler** handle) {
+            SamplerDesc miplessLinearSamplerDesc = {};
+            miplessLinearSamplerDesc.mMinFilter = FILTER_LINEAR;
+            miplessLinearSamplerDesc.mMagFilter = FILTER_LINEAR;
+            miplessLinearSamplerDesc.mMipLodBias = 0.f;
+            miplessLinearSamplerDesc.mMaxAnisotropy = 0.f;
+            miplessLinearSamplerDesc.mMipMapMode = MIPMAP_MODE_LINEAR;
+            miplessLinearSamplerDesc.mAddressU = ADDRESS_MODE_CLAMP_TO_BORDER;
+            miplessLinearSamplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_BORDER;
+            miplessLinearSamplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_BORDER;
+            addSampler(forgeRenderer->Rend(), &miplessLinearSamplerDesc, handle);
+            return true;
+        });
         m_samplerNearEdgeClamp.Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
             SamplerDesc bilinearClampDesc = { FILTER_NEAREST,
                                               FILTER_NEAREST,
@@ -719,13 +733,14 @@ namespace hpl {
                                    m_translucencyRefractionShaderAlpha.m_handle,
                                    m_depthShader.m_handle,
                                    m_translucencyRefractionShaderPremulAlpha.m_handle };
-            std::array vbShadeSceneSamplers = { m_shadowCmpSampler.m_handle,
+            std::array vbShadeSceneSamplers = { m_shadowSampler.m_handle,
+                                                m_shadowCmpSampler.m_handle,
                                                 m_samplerLinearClampToBorder.m_handle,
                                                 m_samplerMaterial.m_handle,
                                                 m_samplerNearEdgeClamp.m_handle,
                                                 m_samplerPointWrap.m_handle };
             std::array vbShadeSceneSamplersNames = {
-                "shadowCmpSampler", "linearBorderSampler", "sceneSampler", "nearEdgeClampSampler", "nearPointWrapSampler"
+                "shadowSampler", "shadowCmpSampler", "linearBorderSampler", "sceneSampler", "nearEdgeClampSampler", "nearPointWrapSampler"
             };
             RootSignatureDesc rootSignatureDesc = {};
             rootSignatureDesc.ppShaders = shaders.data();

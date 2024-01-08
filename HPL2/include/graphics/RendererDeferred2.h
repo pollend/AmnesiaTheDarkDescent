@@ -216,6 +216,7 @@ namespace hpl {
         SharedSampler m_samplerMaterial;
         SharedSampler m_samplerLinearClampToBorder;
         SharedSampler m_shadowCmpSampler;
+        SharedSampler m_shadowSampler;
         std::array<ResourceMaterial, cMaterial::MaxMaterialID> m_sharedMaterial;
         BindlessDescriptorPool m_sceneTexture2DPool;
         BindlessDescriptorPool m_sceneTextureCubePool;
