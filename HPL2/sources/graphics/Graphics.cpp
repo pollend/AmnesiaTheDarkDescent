@@ -24,7 +24,6 @@
 #include "engine/Updateable.h"
 
 #include "graphics/ForgeRenderer.h"
-#include "graphics/RendererDeferred2.h"
 #include "system/LowLevelSystem.h"
 #include "system/String.h"
 #include "system/Platform.h"
@@ -150,7 +149,7 @@ namespace hpl {
 
 			mvRenderers.resize(2, NULL);
             m_debug = std::make_shared<DebugDraw>(Interface<ForgeRenderer>::Get());
-		    mvRenderers[eRenderer_Main] = new cRendererDeferred2(this, apResources, m_debug);
+		    mvRenderers[eRenderer_Main] = new cRendererDeferred(this, apResources, m_debug);
 		    mvRenderers[eRenderer_WireFrame] = new cRendererWireFrame(this, apResources, m_debug);
 		}
 		else

@@ -157,9 +157,6 @@ namespace hpl
         bool abSendFrameBufferToPostEffects,
         bool abAtStartOfRendering)
     {
-        //////////////////////////////////////////
-        // Set up variables
-        mfCurrentFrameTime = afFrameTime;
         mpCurrentSettings = apSettings;
     }
 

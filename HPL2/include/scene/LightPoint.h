@@ -17,20 +17,14 @@
  * along with Amnesia: The Dark Descent.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef HPL_LIGHT_POINT_H
-#define HPL_LIGHT_POINT_H
+#pragma once
 
 #include "scene/Light.h"
 
 namespace hpl {
 
-	//------------------------------------------
-
 	class cLightPoint : public iLight
 	{
-	#ifdef __GNUC__
-		typedef iLight __super;
-	#endif
 	public:
 		cLightPoint(tString asName, cResources *apResources);
 
@@ -39,4 +33,3 @@ namespace hpl {
 	};
 
 };
-#endif // HPL_LIGHT_POINT_H

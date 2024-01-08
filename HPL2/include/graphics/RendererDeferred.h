@@ -20,8 +20,15 @@
 
 #include "engine/RTTI.h"
 
+#include "graphics/CommandBufferPool.h"
+#include "graphics/CopyTextureSubpass4.h"
+#include "graphics/DrawPacket.h"
+#include "graphics/GraphicsTypes.h"
+#include "graphics/ImageBindlessPool.h"
 #include "graphics/SceneResource.h"
 #include "graphics/ScopedBarrier.h"
+#include "graphics/ShadowCache.h"
+#include "graphics/BindlessDescriptorPool.h"
 #include "scene/Viewport.h"
 #include "scene/World.h"
 #include "windowing/NativeWindow.h"
@@ -35,6 +42,7 @@
 #include <graphics/RenderTarget.h>
 #include <graphics/Renderable.h>
 #include <graphics/Renderer.h>
+#include <graphics/Frame.h>
 #include <math/MathTypes.h>
 
 #include <Common_3/Graphics/Interfaces/IGraphics.h>
@@ -47,8 +55,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <unordered_map>
-#include <vector>
 
 namespace hpl {
 
@@ -72,270 +78,118 @@ namespace hpl {
     };
 
     class cRendererDeferred : public iRenderer {
-        HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{A3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
+        HPL_RTTI_IMPL_CLASS(iRenderer, cRendererDeferred, "{B3E5E5A1-1F9C-4F5C-9B9B-5B9B9B5B9B9B}")
     public:
-        static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT_S8_UINT;
+        // variables that are persistent for the frame
+        struct TransientFrameVars {
+        public:
+            folly::F14ValueMap<iRenderable*, uint32_t> m_objectSlotIndex;
+            uint32_t m_objectIndex = 0;
+            uint32_t m_indirectIndex = 0;
+            uint32_t m_particleIndex = 0;
+            uint32_t m_viewportIndex = 0;
+        };
+        class ShadowMapInfo {
+        public:
+            union {
+                struct {
+
+                } m_spotLight;
+                struct {
+
+                } m_pointlight;
+            };
+            uint32_t m_transformCount = 0;
+            float m_fov = 0.0f;
+            float m_aspect = 0.0f;
+
+            iLight* m_light = nullptr;
+        };
+        struct DiffuseResult {
+            uint32_t m_slot;
+            DrawPacket m_packet;
+        };
+        struct RangeSubsetAlloc {
+        public:
+
+            struct RangeSubset {
+                uint32_t m_start = 0;
+                uint32_t m_end = 0;
+                inline uint32_t size() {
+                    return m_end - m_start;
+                }
+            };
+            RangeSubsetAlloc(uint32_t& index)
+                : m_index(index)
+                , m_start(index) {
+            }
+            uint32_t Increment() {
+                return (m_index++);
+            }
+            RangeSubset End() {
+                uint32_t start = m_start;
+                m_start = m_index;
+                return RangeSubset{ start, m_index };
+            }
+        private:
+            uint32_t& m_index;
+            uint32_t m_start;
+        };
+
+        static constexpr TinyImageFormat DepthBufferFormat = TinyImageFormat_D32_SFLOAT;
         static constexpr TinyImageFormat NormalBufferFormat = TinyImageFormat_R16G16B16A16_SFLOAT;
         static constexpr TinyImageFormat PositionBufferFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
 
-        static constexpr uint32_t MaxReflectionBuffers = 4;
-        static constexpr uint32_t MaxObjectUniforms = 4096;
-        static constexpr uint32_t MaxLightUniforms = 1024;
-        static constexpr uint32_t MaxHiZMipLevels = 10;
-        static constexpr uint32_t MaxViewportFrameDescriptors = 256;
-        static constexpr uint32_t MaxObjectTest = 32768;
-        static constexpr uint32_t MaxOcclusionDescSize = 4096;
-        static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
-
-        static constexpr uint32_t TranslucencyBlendModeMask = 0xf;
-
-        static constexpr uint32_t TranslucencyReflectionBufferMask = 0x7;
-        static constexpr uint32_t TranslucencyReflectionBufferOffset = 4;
-
         static constexpr float ShadowDistanceMedium = 10;
         static constexpr float ShadowDistanceLow = 20;
         static constexpr float ShadowDistanceNone = 40;
-        enum LightConfiguration { HasGoboMap = 0x1, HasShadowMap = 0x2 };
 
-        enum LightPipelineVariants {
-            LightPipelineVariant_CW = 0x0,
-            LightPipelineVariant_CCW = 0x1,
-            LightPipelineVariant_StencilTest = 0x2,
-            LightPipelineVariant_Size = 4,
-        };
+        static constexpr uint32_t LightClusterWidth = 16;
+        static constexpr uint32_t LightClusterHeight = 9;
+        static constexpr uint32_t LightClusterSlices = 24;
+        static constexpr uint32_t TransientImagePoolCount = 256;
 
-        enum TranslucencyFlags {
-            UseIlluminationTrans = (1 << 7),
-            UseReflectionTrans = (1 << 8),
-            UseRefractionTrans = (1 << 9),
-            UseFog = (1 << 10),
-        };
-        struct MaterialRootConstant {
-            uint32_t objectId;
-            uint32_t m_options;
-            float m_sceneAlpha;
-        };
-        union UniformLightData {
-            struct LightUniformCommon {
-                mat4 m_mvp;
+        static constexpr uint32_t ViewportRingBufferSize = 128 * sizeof(resource::ViewportInfo);
+        static constexpr uint32_t ScenePerDescriptorBatchSize = 32;
 
-                uint32_t m_config;
-            } m_common;
-            struct {
-                mat4 m_mvp;
+        static constexpr uint32_t IndirectArgumentSize = 8 * sizeof(uint32_t);
 
-                uint32_t m_config;
-                uint32_t m_pad[3];
-
-                mat4 m_invViewRotation;
-
-                float3 m_lightPos;
-                float m_radius;
-
-                float4 m_lightColor;
-
-            } m_pointLight;
-            struct {
-                mat4 m_mvp;
-
-                uint32_t m_config;
-                uint32_t m_pad[3];
-
-                float3 m_forward;
-                float m_oneMinusCosHalfSpotFOV;
-
-                mat4 m_spotViewProj;
-
-                float4 m_color;
-
-                float3 m_pos;
-                float m_radius;
-            } m_spotLight;
-            struct {
-                mat4 m_mvp;
-
-                uint32_t m_config;
-                uint32_t m_pad[3];
-
-                float4 m_lightColor;
-            } m_boxLight;
-        };
-
-        struct UniformObject {
-            float m_dissolveAmount;
-            uint m_materialIndex;
-            float m_lightLevel;
-            uint pad;
-            mat4 m_modelMat;
-            mat4 m_invModelMat;
-            mat4 m_uvMat;
-        };
-
-        struct UniformPerFrameData {
-            mat4 m_invViewRotation;
-            mat4 m_viewMatrix;
-            mat4 m_invViewMatrix;
-            mat4 m_projectionMatrix;
-            mat4 m_viewProjectionMatrix;
-
-            float worldFogStart;
-            float worldFogLength;
-            float oneMinusFogAlpha;
-            float fogFalloffExp;
-            float4 fogColor;
-
-            float2 viewTexel;
-            float2 viewportSize;
-            float afT;
-        };
-        struct UniformFogData {
-            mat4 m_mvp;
-            mat4 m_mv;
-            mat4 m_invModelRotation;
-            float4 m_color;
-            float4 m_rayCastStart;
-            float4 m_fogNegPlaneDistNeg;
-            float4 m_fogNegPlaneDistPos;
-            float m_start;
-            float m_length;
-            float m_falloffExp;
-            uint32_t m_flags;
-        };
-
-        struct UniformFullscreenFogData {
-            float4 m_color;
-            float m_fogStart;
-            float m_fogLength;
-            float m_fogFalloffExp;
-        };
-
-        class ShadowMapData {
-        public:
-            SharedRenderTarget m_target;
-            uint32_t m_transformCount = 0;
-            uint32_t m_frameCount = 0;
-            float m_radius = 0.0f;
-            float m_fov = 0.0f;
-            float m_aspect = 0.0f;
-
-            iLight* m_light = nullptr;
-            SharedCmdPool m_pool;
-            SharedCmd m_cmd;
-            SharedFence m_shadowFence;
-        };
-
-        struct FogRendererData {
-            cFogArea* m_fogArea;
-            bool m_insideNearFrustum;
-            cVector3f m_boxSpaceFrustumOrigin;
-            cMatrixf m_mtxInvBoxSpace;
-        };
-
-        struct GBuffer {
-        public:
-            GBuffer() = default;
-            GBuffer(const GBuffer&) = delete;
-            GBuffer(GBuffer&& buffer)
-                : m_colorBuffer(std::move(buffer.m_colorBuffer))
-                , m_normalBuffer(std::move(buffer.m_normalBuffer))
-                , m_positionBuffer(std::move(buffer.m_positionBuffer))
-                , m_specularBuffer(std::move(buffer.m_specularBuffer))
-                , m_depthBuffer(std::move(buffer.m_depthBuffer))
-                , m_outputBuffer(std::move(buffer.m_outputBuffer))
-                , m_refractionImage(std::move(buffer.m_refractionImage))
-                , m_hizDepthBuffer(std::move(buffer.m_hizDepthBuffer))
-                , m_preZPassRenderables(std::move(buffer.m_preZPassRenderables))
-                 {
-            }
-            void operator=(GBuffer&& buffer) {
-                m_colorBuffer = std::move(buffer.m_colorBuffer);
-                m_normalBuffer = std::move(buffer.m_normalBuffer);
-                m_positionBuffer = std::move(buffer.m_positionBuffer);
-                m_specularBuffer = std::move(buffer.m_specularBuffer);
-                m_depthBuffer = std::move(buffer.m_depthBuffer);
-                m_outputBuffer = std::move(buffer.m_outputBuffer);
-                m_refractionImage = std::move(buffer.m_refractionImage);
-                m_hizDepthBuffer = std::move(buffer.m_hizDepthBuffer);
-                m_preZPassRenderables = std::move(buffer.m_preZPassRenderables);
-            }
-            std::set<iRenderable*> m_preZPassRenderables;
-
-            SharedTexture m_refractionImage;
-            SharedRenderTarget m_hizDepthBuffer;
-
-            SharedRenderTarget m_colorBuffer;
-            SharedRenderTarget m_normalBuffer;
-            SharedRenderTarget m_positionBuffer;
-            SharedRenderTarget m_specularBuffer;
-            SharedRenderTarget m_depthBuffer;
-            SharedRenderTarget m_outputBuffer;
-
-            bool isValid() {
-                return m_refractionImage.IsValid()
-                    && m_hizDepthBuffer.IsValid()
-                    && m_colorBuffer.IsValid()
-                    && m_normalBuffer.IsValid()
-                    && m_positionBuffer.IsValid()
-                    && m_specularBuffer.IsValid()
-                    && m_depthBuffer.IsValid()
-                    && m_outputBuffer.IsValid();
-            }
-        };
-
-        struct ReflectionGBuffer {
-            iRenderable* m_target = nullptr;
-
-            uint32_t m_frameCount = 0;
-            GBuffer m_buffer;
-            SharedCmdPool m_pool;
-            SharedCmd m_cmd;
-            SharedFence m_fence;
-
-            ReflectionGBuffer() = default;
-            ReflectionGBuffer(ReflectionGBuffer&& buffer):
-                m_pool(std::move(buffer.m_pool)),
-                m_cmd(std::move(buffer.m_cmd)),
-                m_fence(std::move(buffer.m_fence)),
-                m_buffer(std::move(buffer.m_buffer)),
-                m_frameCount(buffer.m_frameCount){
-            }
-            void operator=(ReflectionGBuffer&& buffer) {
-                m_pool = std::move(buffer.m_pool);
-                m_cmd = std::move(buffer.m_cmd);
-                m_fence = std::move(buffer.m_fence);
-                m_buffer = std::move(buffer.m_buffer);
-                m_frameCount= buffer.m_frameCount;
-            }
+        struct RootConstantDrawIndexArguments {
+            uint32_t mDrawId;
+            uint32_t mIndexCount;
+            uint32_t mInstanceCount;
+            uint32_t mStartIndex;
+            uint32_t mVertexOffset;
+            uint32_t mStartInstance;
         };
 
         struct ViewportData {
         public:
             ViewportData() = default;
             ViewportData(const ViewportData&) = delete;
-            ViewportData(ViewportData&& buffer)
-                : m_size(buffer.m_size)
-                , m_refractionImage(std::move(buffer.m_refractionImage))
-                , m_gBuffer(std::move(buffer.m_gBuffer))
-                , m_reflectionBuffer(std::move(buffer.m_reflectionBuffer)) {
-            }
-
+            ViewportData(ViewportData&& buffer)= default;
+            ViewportData& operator=(ViewportData&& buffer) = default;
             ViewportData& operator=(const ViewportData&) = delete;
 
-            void operator=(ViewportData&& buffer) {
-                m_size = buffer.m_size;
-                m_refractionImage = std::move(buffer.m_refractionImage);
-                m_gBuffer = std::move(buffer.m_gBuffer);
-                m_reflectionBuffer = std::move(buffer.m_reflectionBuffer);
-            }
+            uint2 m_size = uint2(0, 0);
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_outputBuffer;
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_depthBuffer;
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_albedoBuffer; // this is used for the adding decals to albedo
+            std::array<SharedTexture, ForgeRenderer::SwapChainLength> m_refractionImage;
 
-            cVector2l m_size = cVector2l(0, 0);
-            std::array<GBuffer, ForgeRenderer::SwapChainLength> m_gBuffer;
-            std::array<ReflectionGBuffer, MaxReflectionBuffers> m_reflectionBuffer;
-            std::shared_ptr<Image> m_refractionImage;
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_testBuffer; //encodes the parallax
+            std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_visiblityBuffer;
         };
+
+         struct FogRendererData {
+            cFogArea* m_fogArea;
+            bool m_insideNearFrustum;
+            cVector3f m_boxSpaceFrustumOrigin;
+            cMatrixf m_mtxInvBoxSpace;
+         };
 
         cRendererDeferred(
             cGraphics* apGraphics,
@@ -343,18 +197,7 @@ namespace hpl {
             std::shared_ptr<DebugDraw> debug);
         virtual ~cRendererDeferred();
 
-        inline ViewportData* GetSharedData(cViewport& viewport) {
-            return m_boundViewportData.resolve(viewport);
-        }
-        virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override {
-            auto sharedData = m_boundViewportData.resolve(viewport);
-            if (!sharedData) {
-                return SharedRenderTarget();
-            }
-            return sharedData->m_gBuffer[frameIndex].m_outputBuffer;
-        }
-
-
+        virtual SharedRenderTarget GetOutputImage(uint32_t frameIndex, cViewport& viewport) override;
         virtual void Draw(
             Cmd* cmd,
             ForgeRenderer::Frame& frame,
@@ -364,349 +207,174 @@ namespace hpl {
             cWorld* apWorld,
             cRenderSettings* apSettings) override;
 
+        inline ViewportData* GetSharedData(cViewport& viewport) {
+            return m_boundViewportData.resolve(viewport);
+        }
+
     private:
-        iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
-        struct PerObjectOption {
-            std::optional<cMatrixf> m_modelMatrix = std::nullopt;
-        };
-        struct PerFrameOption {
-            float2 m_size;
-            cMatrixf m_viewMat;
-            cMatrixf m_projectionMat;
-        };
-        void RebuildGBuffer(ForgeRenderer& renderer,GBuffer& buffer, uint32_t width, uint32_t height);
-        struct AdditionalGbufferPassOptions {
-            bool m_invert = false;
+        void setIndirectDrawArg(const ForgeRenderer::Frame& frame, uint32_t drawArgIndex, uint32_t slot, DrawPacket& packet);
 
+        enum MaterialSetType {
+            PrimarySet = 0,
+            ParticleSet = 1
         };
 
-        void cmdBuildPrimaryGBuffer(const ForgeRenderer::Frame& frame, Cmd* cmd,
-            uint32_t frameDescriptorIndex,
-            cRenderList& renderList,
-            RenderTarget* colorBuffer,
-            RenderTarget* normalBuffer,
-            RenderTarget* positionBuffer,
-            RenderTarget* specularBuffer,
-            RenderTarget* depthBuffer,
-            AdditionalGbufferPassOptions options
-        );
-
-        struct AdditionalLightPassOptions {
-            bool m_invert = false;
-            Vector4 m_clearColor = Vector4(0.0f,0.0f,0.0f,0.0f);
+        struct MaterialSet {
+            MaterialSetType m_type;
+            IndexPoolHandle m_slot;
         };
-        void cmdLightPass(Cmd* cmd,
-            const ForgeRenderer::Frame& frame,
-            cWorld* apWorld,
-            cFrustum* apFrustum,
-            cRenderList& renderList,
-            uint32_t frameDescriptorIndex,
-            RenderTarget* colorBuffer,
-            RenderTarget* normalBuffer,
-            RenderTarget* positionBuffer,
-            RenderTarget* specularBuffer,
-            RenderTarget* depthBuffer,
-            RenderTarget* outputBuffer,
-            cMatrixf viewMat,
-            cMatrixf invViewMat,
-            cMatrixf projectionMat,
-            AdditionalLightPassOptions options);
 
-        struct AdditionalIlluminationPassOptions {
-            bool m_invert = false;
+        struct ResourceMaterial {
+        public:
+            ResourceMaterial();
+            void* m_material = nullptr;
+            uint32_t m_version = 0;
+            folly::small_vector<MaterialSet, 2> m_sets;
+            std::array<uint32_t, eMaterialTexture_LastEnum> m_textureHandles;
+            MaterialSet& resolveSet(MaterialSetType set);
         };
-        void cmdIlluminationPass(Cmd* cmd,
-            const ForgeRenderer::Frame& frame,
-            cRenderList& renderList,
-            uint32_t frameDescriptorIndex,
-            RenderTarget* depthBuffer,
-            RenderTarget* outputBuffer,
-            AdditionalIlluminationPassOptions options
-        );
-
-        struct AdditionalZPassOptions {
-            tRenderableFlag objectVisibilityFlags = eRenderableFlag_VisibleInNonReflection;
-            std::span<cPlanef> clipPlanes = {};
-            bool m_invert = false;
-            bool m_disableOcclusionQueries = false;
-        };
-        void cmdPreAndPostZ(
-            Cmd* cmd,
-            cWorld* apWorld,
-            std::set<iRenderable*>& prePassRenderables,
-            const ForgeRenderer::Frame& frame,
-            cRenderList& renderList,
-            float frameTime,
-            RenderTarget* depthBuffer,
-            RenderTarget* hiZBuffer,
-            cFrustum* apFrustum,
-            uint32_t frameDescriptorIndex,
-            cMatrixf viewMat,
-            cMatrixf projectionMat,
-            AdditionalZPassOptions flags);
-
-        uint32_t updateFrameDescriptor(const ForgeRenderer::Frame& frame,Cmd* cmd, cWorld* apWorld,const PerFrameOption& options);
-        uint32_t cmdBindMaterialAndObject(Cmd* cmd,
-            const ForgeRenderer::Frame& frame,
-            cMaterial* apMaterial,
-            iRenderable* apObject,
-            std::optional<cMatrixf> modelMatrix = std::nullopt);
-
-        std::array<std::unique_ptr<iVertexBuffer>, eDeferredShapeQuality_LastEnum> m_shapeSphere;
-        std::unique_ptr<iVertexBuffer> m_shapePyramid;
-        std::unique_ptr<iVertexBuffer> m_box;
-        std::array<folly::small_vector<ShadowMapData, 32>, eShadowMapResolution_LastEnum> m_shadowMapData;
+        std::optional<DiffuseResult> fetchDiffuseRenderableDraw(
+            ForgeRenderer::Frame& frame, TransientFrameVars& frameVars, iRenderable* renderable);
+        ResourceMaterial& resolveResourceMaterial(cMaterial* material);
 
         UniqueViewportData<ViewportData> m_boundViewportData;
 
-        SharedTexture m_shadowJitterTexture;
-        SharedTexture m_ssaoScatterDiskTexture;
-
-        Image* m_dissolveImage;
-        std::array<SharedBuffer, MaxViewportFrameDescriptors> m_perFrameBuffer;
-
-        // decal pass
-        std::array<SharedPipeline, eMaterialBlendMode_LastEnum> m_decalPipeline;
-        std::array<SharedPipeline, eMaterialBlendMode_LastEnum> m_decalPipelineCW;
-        SharedShader m_decalShader;
-
-        struct Fog {
-            static constexpr uint32_t MaxFogCount = 128;
-
-            enum FogVariant {
-                EmptyVariant = 0x0,
-                UseBackSide = 0x1,
-                UseOutsideBox = 0x2,
-            };
-
-            enum PipelineVariant {
-                PipelineVariantEmpty = 0x0,
-                PipelineUseBackSide = 0x1,
-                PipelineUseOutsideBox = 0x2,
-            };
-
-            std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perFrameSet{};
-
-            std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_fogUniformBuffer;
-            std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_fogFullscreenUniformBuffer;
-            uint32_t m_fogIndex = 0;
-            SharedRootSignature m_fogRootSignature;
-            SharedShader m_shader;
-            SharedPipeline m_pipeline;
-            SharedPipeline m_pipelineInsideNearFrustum;
-
-            SharedShader m_fullScreenShader;
-            SharedPipeline m_fullScreenPipeline;
-        } m_fogPass;
-
-        SharedRootSignature m_materialRootSignature;
-        // diffuse solid
-        struct MaterialSolid {
-            SharedShader m_solidDiffuseShader;
-            SharedShader m_solidDiffuseParallaxShader;
-            SharedPipeline m_solidDiffusePipeline;
-            SharedPipeline m_solidDiffuseParallaxPipeline;
-
-            SharedPipeline m_solidDiffusePipelineCW;
-            SharedPipeline m_solidDiffuseParallaxPipelineCW;
-        } m_materialSolidPass;
-
-        // illumination pass
-        SharedShader m_solidIlluminationShader;
-        SharedPipeline m_solidIlluminationPipelineCCW;
-        SharedPipeline m_solidIlluminationPipelineCW;
-
-        // translucency pass
-        struct TranslucencyPipeline {
-            enum TranslucencyShaderVariant {
-                TranslucencyShaderVariantEmpty = 0x0,
-                TranslucencyShaderVariantFog = 0x1,
-                TranslucencyRefraction = 0x2,
-                TranslucencyVariantCount = 4
-            };
-
-            enum TranslucencyWaterShaderVariant {
-                TranslucencyWaterShaderVariantEmpty = 0x0,
-                TranslucencyWaterShaderVariantFog = 0x1,
-                TranslucencyWaterRefraction = 0x2,
-                TranslucencyWaterReflection = 0x4,
-                TranslucencyWaterVariantCount = 8
-            };
-
-            enum TranslucencyParticleShaderVariant {
-                TranslucencyParticleShaderVariantEmpty = 0x0,
-                TranslucencyParticleShaderVariantFog = 0x1,
-                TranslucencyParticleVariantCount = 2
-            };
-            enum TranslucencyBlend : uint8_t {
-                BlendAdd,
-                BlendMul,
-                BlendMulX2,
-                BlendAlpha,
-                BlendPremulAlpha,
-                BlendModeCount };
-
-            // 3 bit key for pipeline variant
-            union TranslucencyKey {
-                uint8_t m_id;
-                struct {
-                    uint8_t m_hasDepthTest : 1;
-                } m_field;
-                static constexpr size_t NumOfVariants = 2;
-            };
-            union TranslucencyWaterKey {
-                uint8_t m_id;
-                struct {
-                    uint8_t m_hasDepthTest : 1;
-                } m_field;
-                static constexpr size_t NumOfVariants = 2;
-            };
-            SharedRootSignature m_refractionCopyRootSignature;
-            std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_refractionPerFrameSet;
-            SharedPipeline m_refractionCopyPipeline;
-            SharedShader m_copyRefraction;
-
-            SharedShader m_shader{};
-            SharedShader m_particleShader{};
-            SharedShader m_waterShader{};
-
-            std::array<std::array<SharedPipeline, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_pipelines;
-            std::array<SharedPipeline, TranslucencyWaterKey::NumOfVariants> m_waterPipeline;
-            std::array<SharedPipeline, TranslucencyKey::NumOfVariants> m_refractionPipeline;
-            std::array<std::array<SharedPipeline, TranslucencyKey::NumOfVariants>, TranslucencyBlend::BlendModeCount> m_particlePipelines;
-
-        } m_materialTranslucencyPass;
-
-        // post processing
-        struct ObjectSamplerKey {
-            union {
-                uint8_t m_id;
-                struct {
-                    AddressMode m_addressMode : 2;
-                } m_field;
-            };
-            static constexpr size_t NumOfVariants = 4;
-        };
-        struct LightResourceEntry {
-            SharedTexture m_goboCubeMap;
-            SharedTexture m_goboMap;
-            SharedTexture m_falloffMap;
-            SharedTexture m_attenuationLightMap;
-        };
-        folly::F14ValueMap<iRenderable*, uint32_t> m_lightDescriptorLookup;
-        std::array<std::array<LightResourceEntry, MaxLightUniforms>, ForgeRenderer::SwapChainLength> m_lightResources{};
-        // z pass
-        SharedShader m_zPassShadowShader;
-        SharedShader m_zPassShader;
-        SharedPipeline m_zPassPipelineCCW;
-        SharedPipeline m_zPassPipelineCW;
-
-        SharedPipeline m_zPassShadowPipelineCW;
-        SharedPipeline m_zPassShadowPipelineCCW;
-
-        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
-        struct MaterialPassDescriptorSet {
-            std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_frameSet;
-            std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perBatchSet;
-            std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perObjectSet;
-            folly::F14ValueMap<iRenderable*, uint32_t> m_objectDescriptorLookup;
-            uint32_t m_frameIndex = 0;
-            uint32_t m_objectIndex = 0;
-
-            // Material
-            struct MaterialInfo {
-                struct MaterialDescInfo {
-                    void* m_material = nullptr; // void* to avoid accessing the material
-                    uint32_t m_version = 0; // version of the material
-                    std::array<SharedTexture, eMaterialTexture_LastEnum> m_textureHandles{}; // handles to keep textures alive for the descriptor
-                } m_materialDescInfo[ForgeRenderer::SwapChainLength];
-            };
-
-            std::array<MaterialInfo, cMaterial::MaxMaterialID> m_materialInfo;
-            std::array<SharedSampler, hpl::resource::MaterialSceneSamplersCount> m_samplers;
-            SharedDescriptorSet m_materialConstSet;
-            SharedBuffer m_materialUniformBuffer;
-        } m_materialSet;
-
-        uint32_t m_activeFrame = 0; // tracks the active frame if differnt then we need to reset some state
-        SharedCmdPool m_prePassPool;
-        SharedCmd m_prePassCmd;
-        SharedFence m_prePassFence;
-
-        SharedRootSignature m_rootSignatureHIZOcclusion;
-        SharedShader m_ShaderHIZGenerate;
-        SharedShader m_shaderTestOcclusion;
-        SharedDescriptorSet m_descriptorSetHIZGenerate;
-        SharedPipeline m_pipelineHIZGenerate;
-
-        SharedRootSignature m_rootSignatureCopyDepth;
-        SharedDescriptorSet m_descriptorCopyDepth;
-        SharedDescriptorSet m_descriptorAABBOcclusionTest;
-        SharedPipeline m_pipelineCopyDepth;
-        SharedPipeline m_pipelineAABBOcclusionTest;
-        SharedShader m_copyDepthShader;
-        SharedBuffer m_hiZOcclusionUniformBuffer;
-        SharedBuffer m_hiZBoundBoxBuffer;
-        SharedBuffer m_occlusionTestBuffer;
-
-        struct OcclusionQueryAlpha {
-            iRenderable* m_renderable = nullptr;
-            uint32_t m_maxQueryIndex = 0;
-            uint32_t m_queryIndex = 0;
-        };
-
-        SharedQueryPool m_occlusionQuery;
-        uint32_t m_occlusionIndex = 0;
-        SharedBuffer m_occlusionUniformBuffer;
-        SharedRootSignature m_rootSignatureOcclusuion;
-        SharedDescriptorSet m_descriptorOcclusionConstSet;
-        SharedBuffer m_occlusionReadBackBuffer;
-        SharedShader m_shaderOcclusionQuery;
-        SharedPipeline m_pipelineMaxOcclusionQuery;
-        SharedPipeline m_pipelineOcclusionQuery;
-
-        struct UniformTest {
-            bool m_preZPass = false;
-            iRenderable* m_renderable = nullptr;
-        };
-
-        struct UniformPropBlock {
-            uint2 depthDim;
-            uint32_t numObjects;
-            uint32_t maxMipLevel;
-        };
-
-        // light pass
-        struct UniformLightPerFrameSet {
-            float gamma;
-            float3 pad;
-        };
-        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightPassBuffer;
-
-        SharedRootSignature m_lightPassRootSignature;
-        SharedPipeline m_lightStencilPipelineCCW;
-        SharedPipeline m_lightStencilPipelineCW;
-        std::array<SharedPipeline, LightPipelineVariant_Size> m_pointLightPipeline;
-        std::array<SharedPipeline, LightPipelineVariant_Size> m_boxLightPipeline;
-        std::array<SharedPipeline, LightPipelineVariant_Size> m_spotLightPipeline;
-        SharedShader m_pointLightShader;
-        SharedShader m_spotLightShader;
-        SharedShader m_stencilLightShader;
-        SharedShader m_boxLightShader;
-        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightPerLightSet;
-        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightPerFrameSet;
-        uint32_t m_lightIndex = 0;
-
-        SharedSampler m_shadowCmpSampler;
-        SharedSampler m_samplerPointClampToBorder;
-        SharedSampler m_samplerPointClampToEdge;
+        SharedSampler m_samplerNearEdgeClamp;
         SharedSampler m_samplerPointWrap;
-        SharedSampler m_goboSampler;
-        SharedSampler m_bilinearSampler;
+        SharedSampler m_samplerPointClampToBorder;
+        SharedSampler m_samplerMaterial;
+        SharedSampler m_samplerLinearClampToBorder;
+        SharedSampler m_shadowCmpSampler;
+        std::array<ResourceMaterial, cMaterial::MaxMaterialID> m_sharedMaterial;
+        BindlessDescriptorPool m_sceneTexture2DPool;
+        BindlessDescriptorPool m_sceneTextureCubePool;
+        ImageBindlessPool m_sceneTransientImage2DPool;
+        CommandSignature* m_cmdSignatureVBPass = NULL;
+
+        // diffuse
+        IndexPool m_diffuseIndexPool;
+        IndexPool m_translucencyIndexPool;
+        IndexPool m_waterIndexPool;
+
+        SharedRootSignature m_sceneRootSignature;
+        SharedDescriptorSet m_sceneDescriptorConstSet;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_sceneDescriptorPerFrameSet;
+
+        SharedShader m_visibilityBufferPassShader;
+        SharedShader m_visibilityBufferAlphaPassShader;
+        SharedShader m_visibilityBufferEmitPassShader;
+        SharedShader m_visibilityShadePassShader;
+
+        SharedPipeline m_visibilityBufferPass;
+        SharedPipeline m_visbilityAlphaBufferPass;
+        SharedPipeline m_visbilityEmitBufferPass;
+        SharedPipeline m_visiblityShadePass;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_objectUniformBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_perSceneInfoBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_indirectDrawArgsBuffer;
+        SharedPipeline m_depthBufferPass;
+        SharedRenderTarget m_shadowTarget;
+
+        SharedRootSignature m_depthClearRootSignature;
+        SharedPipeline m_depthClearPass;
+
+        SharedTexture m_emptyTexture2D;
+        SharedTexture m_emptyTextureCube;
+        Image* m_dissolveImage;
 
         cRenderList m_rendererList;
-        cRenderList m_reflectionRendererList;
-        std::unique_ptr<renderer::PassHBAOPlus> m_hbaoPlusPipeline;
-        std::shared_ptr<DebugDraw> m_debug;
+
+        GPURingBuffer m_viewportUniformBuffer{};
+        GpuCmdRing m_shadowCmdRing;
+
+        SharedRootSignature m_lightClusterRootSignature;
+        std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightDescriptorPerFrameSet;
+        SharedShader m_lightClusterShader;
+        SharedShader m_clearLightClusterShader;
+        SharedPipeline m_lightClusterPipeline;
+        SharedPipeline m_clearClusterPipeline;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClustersBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClusterCountBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_particleBuffer;
+        std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_decalBuffer;
+        SharedBuffer m_translucencyMatBuffer;
+        SharedBuffer m_waterMatBuffer;
+        SharedBuffer m_diffuseMatUniformBuffer;
+        SharedShader m_depthShader;
+        SharedShader m_depthClearShader;
+
+        SharedShader m_particleShaderAdd;
+        SharedShader m_particleShaderMul;
+        SharedShader m_particleShaderMulX2;
+        SharedShader m_particleShaderAlpha;
+        SharedShader m_particleShaderPremulAlpha;
+
+        SharedShader m_translucencyShaderAdd;
+        SharedShader m_translucencyShaderMul;
+        SharedShader m_translucencyShaderMulX2;
+        SharedShader m_translucencyShaderAlpha;
+        SharedShader m_translucencyShaderPremulAlpha;
+
+        SharedShader m_translucencyRefractionShaderAdd;
+        SharedShader m_translucencyRefractionShaderMul;
+        SharedShader m_translucencyRefractionShaderMulX2;
+        SharedShader m_translucencyRefractionShaderAlpha;
+        SharedShader m_translucencyRefractionShaderPremulAlpha;
+
+        SharedShader m_translucencyIlluminationShaderAdd;
+        SharedShader m_translucencyWaterShader;
+
+        struct BlendPipelines {
+            SharedPipeline m_pipelineBlendAdd;
+            SharedPipeline m_pipelineBlendMul;
+            SharedPipeline m_pipelineBlendMulX2;
+            SharedPipeline m_pipelineBlendAlpha;
+            SharedPipeline m_pipelineBlendPremulAlpha;
+            SharedPipeline& getPipelineByBlendMode(eMaterialBlendMode mode) {
+                switch (mode) {
+                case eMaterialBlendMode_None:
+                case eMaterialBlendMode_Add:
+                    return m_pipelineBlendAdd;
+                case eMaterialBlendMode_Mul:
+                    return m_pipelineBlendMul;
+                case eMaterialBlendMode_MulX2:
+                    return m_pipelineBlendMulX2;
+                case eMaterialBlendMode_Alpha:
+                    return m_pipelineBlendAlpha;
+                case eMaterialBlendMode_PremulAlpha:
+                    return m_pipelineBlendPremulAlpha;
+                default:
+                    break;
+                }
+                return m_pipelineBlendAdd;
+            }
+        };
+        BlendPipelines m_particlePipeline;
+        BlendPipelines m_particlePipelineNoDepth;
+
+        SharedShader m_decalShader;
+        BlendPipelines m_decalPipelines;
+
+        BlendPipelines m_translucencyPipline;
+        BlendPipelines m_translucencyPiplineNoDepth;
+
+        BlendPipelines m_translucencyRefractionPipline;
+        BlendPipelines m_translucencyRefractionPiplineNoDepth;
+
+        SharedPipeline m_translucencyIlluminationPipline;
+        SharedPipeline m_translucencyIlluminationPiplineNoDepth;
+        SharedPipeline m_translucencyWaterPipeline;
+        SharedPipeline m_translucencyWaterPipelineNoDepth;
+
+        ShadowCache<ShadowMapInfo> m_shadowCache;
+        CopyTextureSubpass4 m_copySubpass;
+
+        ResetFrameHandler m_resetHandler;
+        TransientFrameVariable<TransientFrameVars> m_variables;
+
+        bool m_supportIndirectRootConstant = false;
+
     };
 }; // namespace hpl
+

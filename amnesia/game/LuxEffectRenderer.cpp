@@ -629,9 +629,9 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
     cRendererDeferred* pRendererDeferred = static_cast<cRendererDeferred*>(pGraphics->GetRenderer(eRenderer_Main));
     auto sharedData = pRendererDeferred->GetSharedData(*input.m_viewport);
     auto& frame = input.m_frame;
-    cRendererDeferred::GBuffer& currentGBuffer = sharedData->m_gBuffer[input.m_frame->m_frameIndex];
-    if(!currentGBuffer.m_depthBuffer.IsValid() ||
-        !currentGBuffer.m_outputBuffer.IsValid()) {
+    //cRendererDeferred::GBuffer& currentGBuffer = sharedData->m_gBuffer[input.m_frame->m_frameIndex];
+    if(!sharedData->m_depthBuffer[frame->m_frameIndex].IsValid() ||
+        !sharedData->m_outputBuffer[frame->m_frameIndex].IsValid()) {
         return;
     }
 
@@ -649,7 +649,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         loadActions.mLoadActionStencil = LOAD_ACTION_DONTCARE;
         loadActions.mClearDepth = {.depth = 1.0f, .stencil = 0};
 
-        cmdBindRenderTargets(input.m_frame->m_cmd, 1, &currentGBuffer.m_outputBuffer.m_handle, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
+        cmdBindRenderTargets(input.m_frame->m_cmd, 1, &sharedData->m_outputBuffer[frame->m_frameIndex].m_handle, sharedData->m_depthBuffer[frame->m_frameIndex].m_handle, &loadActions, NULL, NULL, -1, -1);
         cmdSetViewport(input.m_frame->m_cmd, 0.0f, 0.0f, (float)sharedData->m_size.x, (float)sharedData->m_size.y, 0.0f, 1.0f);
         cmdSetScissor(input.m_frame->m_cmd, 0, 0, sharedData->m_size.x, sharedData->m_size.y);
     }
@@ -764,7 +764,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
         loadActions.mLoadActionStencil = LOAD_ACTION_CLEAR;
         loadActions.mClearColorValues[0] = { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
-        cmdBindRenderTargets(frame->m_cmd, 1, &postEffectData->m_outlineBuffer.m_handle, currentGBuffer.m_depthBuffer.m_handle, &loadActions, NULL, NULL, -1, -1);
+        cmdBindRenderTargets(frame->m_cmd, 1, &postEffectData->m_outlineBuffer.m_handle, sharedData->m_depthBuffer[frame->m_frameIndex].m_handle, &loadActions, NULL, NULL, -1, -1);
 
         cmdBeginDebugMarker(input.m_frame->m_cmd, 0, 0, 0, "DDS Outline Stencil");
         cmdBindPipeline(frame->m_cmd, m_outlineStencilPipeline);
@@ -968,7 +968,7 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
             LoadActionsDesc loadActions = {};
             loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
             loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-            cmdBindRenderTargets(input.m_frame->m_cmd, 1, &currentGBuffer.m_outputBuffer.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(input.m_frame->m_cmd, 1, &sharedData->m_outputBuffer[frame->m_frameIndex].m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
         }
         {
             std::array<DescriptorData, 1> params = {};
@@ -979,8 +979,8 @@ void cLuxEffectRenderer::RenderTrans(cViewport::PostTranslucenceDrawPacket&  inp
         }
 
         cmdBeginDebugMarker(input.m_frame->m_cmd, 0, 0, 0, "DDS Outline Combine");
-        cmdSetViewport(frame->m_cmd, 0.0f, 0.0f, static_cast<float>(currentGBuffer.m_outputBuffer.m_handle->mWidth), static_cast<float>(currentGBuffer.m_outputBuffer.m_handle->mHeight), 0.0f, 1.0f);
-        cmdSetScissor(frame->m_cmd, 0, 0, static_cast<float>(currentGBuffer.m_outputBuffer.m_handle->mWidth), static_cast<float>(currentGBuffer.m_outputBuffer.m_handle->mHeight));
+        cmdSetViewport(frame->m_cmd, 0.0f, 0.0f, static_cast<float>(sharedData->m_outputBuffer[frame->m_frameIndex].m_handle->mWidth), static_cast<float>(sharedData->m_outputBuffer[frame->m_frameIndex].m_handle->mHeight), 0.0f, 1.0f);
+        cmdSetScissor(frame->m_cmd, 0, 0, static_cast<float>(sharedData->m_outputBuffer[frame->m_frameIndex].m_handle->mWidth), static_cast<float>(sharedData->m_outputBuffer[frame->m_frameIndex].m_handle->mHeight));
         cmdBindPipeline(frame->m_cmd, m_combineOutlineAddPipeline.m_handle);
 
         cmdBindDescriptorSet(frame->m_cmd, postProcessingIndex++, m_outlinePostprocessingDescriptorSet[frame->m_frameIndex]);

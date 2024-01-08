@@ -79,9 +79,6 @@ namespace hpl {
 
 	class iLight : public iRenderable
 	{
-	#ifdef __GNUC__
-		typedef iRenderable __super;
-	#endif
 	public:
 		iLight(tString asName, cResources *apResources);
 		virtual ~iLight();

@@ -65,29 +65,6 @@ namespace hpl {
     class RenderCallbackMessage;
     class iRenderer;
 
-    namespace rendering::detail {
-
-
-       // bool IsRenderableNodeIsVisible(iRenderableContainerNode* apNode, std::span<cPlanef> clipPlanes);
-       // bool IsObjectIsVisible(iRenderable* object, tRenderableFlag neededFlags, std::span<cPlanef> clipPlanes = {});
-
-       // void WalkAndPrepareRenderList(iRenderableContainer* container,cFrustum* frustum, std::function<void(iRenderable*)> handler, tRenderableFlag renderableFlag);
-
-       // void UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-       //     cRenderList* apRenderList,
-       //     cFrustum* frustum,
-       //     iRenderableContainerNode* apNode,
-       //     std::span<cPlanef> clipPlanes,
-       //     tRenderableFlag neededFlags);
-
-       // void UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-       //     cRenderList* apRenderList,
-       //     cFrustum* frustum,
-       //     iRenderableContainer* apContainer,
-       //     std::span<cPlanef> clipPlanes,
-       //     tRenderableFlag neededFlags);
-    }
-
     class cRenderSettings
     {
     public:
@@ -187,7 +164,6 @@ namespace hpl {
                             bool abSendFrameBufferToPostEffects, bool abAtStartOfRendering=true);
         cResources* mpResources;
 
-        float mfCurrentFrameTime;
         cRenderSettings *mpCurrentSettings;
 
         static int mlRenderFrameCount;
