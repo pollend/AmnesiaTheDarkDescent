@@ -25,12 +25,11 @@ float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     
     float diffuseAlpha = 1.0;
     float4 value;
-    if(SampleSceneTextureFloat4(material.alphaTextureIndex,Get(sceneSampler), In.uv, value)) {
-        if((material.config & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) {
-            diffuseAlpha = value.r;
-        } else {
-            diffuseAlpha = value.a;
-        }
+    const uint alphaTextureIndex = material.alphaTextureIndex;
+    if(isTextureIndexValid(alphaTextureIndex)) {
+        BeginNonUniformResourceIndex(alphaTextureIndex);
+            diffuseAlpha = ((material.config & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) ? SampleTex2D(Get(sceneTextures)[alphaTextureIndex], Get(sceneSampler), In.uv.xy).r : SampleTex2D(Get(sceneTextures)[alphaTextureIndex], Get(sceneSampler), In.uv.xy).a;
+	    EndNonUniformResourceIndex();
     }
 
     if(diffuseAlpha < 0.5) {

@@ -113,8 +113,8 @@ float4 PS_MAIN(PsIn In)
   float4 diffuseColor = float4(0,0,0,0);
   float3 shadedColor = f3(0.0f);
   
-  if(isTextureIndexValid(material.diffuseTextureIndex)) {
-    const uint diffuseTextureIdx = material.diffuseTextureIndex;
+  const uint diffuseTextureIdx = material.diffuseTextureIndex;
+  if(isTextureIndexValid(diffuseTextureIdx)) {
     BeginNonUniformResourceIndex(diffuseTextureIdx);
 	    diffuseColor = SampleGradTex2D(Get(sceneTextures)[diffuseTextureIdx], Get(sceneSampler), texCoord, texCoordDX, texCoordDY);
     EndNonUniformResourceIndex(); 

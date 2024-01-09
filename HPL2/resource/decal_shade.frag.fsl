@@ -21,8 +21,11 @@ float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
         const Decal decal = Get(decals)[Get(indirectDrawId)];
     #endif
 
-    float4 diffuseColor;
-    SampleSceneTextureFloat4(decal.diffuseTextureIndex, Get(sceneSampler), In.uv, diffuseColor);
+    float4 diffuseColor  = float4(0,0,0,0); 
+    const uint diffuseTextureIndex = decal.diffuseTextureIndex;
+    BeginNonUniformResourceIndex(diffuseTextureIndex);
+      diffuseColor = SampleTex2D(Get(sceneTextures)[diffuseTextureIndex], Get(sceneSampler), In.uv);
+    EndNonUniformResourceIndex(); 
     if(diffuseColor.w < 0.01 ) {
         discard;
     }

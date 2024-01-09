@@ -25,8 +25,10 @@ float4 PS_MAIN(PsIn In)
     #endif
 
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
-    SampleSceneTextureFloat4(particle.diffuseTextureIndex, Get(sceneSampler), In.uv, finalColor);
-    finalColor *= In.color;
+    const uint diffuseTextureIndex = particle.diffuseTextureIndex;
+    BeginNonUniformResourceIndex(diffuseTextureIndex);
+      finalColor = SampleTex2D(Get(sceneTextures)[diffuseTextureIndex], Get(sceneSampler), In.uv) * In.color;
+    EndNonUniformResourceIndex(); 
 
     float finalAlpha = particle.sceneAlpha;
     if ((Get(worldInfo).worldFlags & WORLD_FLAG_IS_FOG_ENABLED) > 0) {

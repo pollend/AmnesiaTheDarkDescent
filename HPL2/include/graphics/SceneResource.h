@@ -147,7 +147,7 @@ namespace hpl::resource {
         uint m_alphaTextureIndex;
         uint m_specularTextureIndex;
         uint m_heightTextureIndex;
-        uint m_illuminiationTextureIndex;
+        uint m_illuminationTextureIndex;
         uint m_dissolveAlphaTextureIndex;
         uint m_materialConfig;
         float m_heightMapScale;
@@ -162,7 +162,7 @@ namespace hpl::resource {
         uint32_t m_alphaTextureIndex;
         uint32_t m_specularTextureIndex;
         uint32_t m_heightTextureIndex;
-        uint32_t m_illuminiationTextureIndex;
+        uint32_t m_illuminationTextureIndex;
         uint32_t m_dissolveAlphaTextureIndex;
         uint32_t m_cubeMapTextureIndex;
         uint32_t m_cubeMapAlphaTextureIndex;

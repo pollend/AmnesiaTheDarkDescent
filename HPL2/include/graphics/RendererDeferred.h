@@ -289,6 +289,7 @@ namespace hpl {
 
         SharedRootSignature m_lightClusterRootSignature;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_lightDescriptorPerFrameSet;
+        SharedDescriptorSet m_lightDescriptorConstSet;
         SharedShader m_lightClusterShader;
         SharedShader m_clearLightClusterShader;
         SharedPipeline m_lightClusterPipeline;

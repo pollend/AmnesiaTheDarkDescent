@@ -183,13 +183,21 @@ float4 PS_MAIN(PsIn In)
   float4 normalSample = float4(0,0,0,0);
   float3 shadedColor = float3(0.0,0.0,0.0);  
 
-  if (SampleSceneTextureGradFloat4(material.normalTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, normalSample)) {
+  const uint normalTextureIndex = material.normalTextureIndex;
+  if (isTextureIndexValid(normalTextureIndex)) {
+      BeginNonUniformResourceIndex(normalTextureIndex);
+	      normalSample = SampleGradTex2D(Get(sceneTextures)[normalTextureIndex], Get(sceneSampler), texCoord, texCoordDX, texCoordDY);
+      EndNonUniformResourceIndex(); 
+      
       normalSample -=  0.5;
       worldNormal = normalize(normalSample.x * worldTangent + normalSample.y * worldBitangent+ normalSample.z * worldNormal);
   } 
   float4 illuminationSample = float4(0,0,0,0);
-  if(obj.illuminationAmount > 0 && SampleSceneTextureGradFloat4(material.illuminiationTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, illuminationSample)) {
-     shadedColor += (obj.illuminationAmount * illuminationSample.xyz); 
+  const uint illuminationTextureIndex = material.illuminationTextureIndex;
+  if(obj.illuminationAmount > 0 && isTextureIndexValid(illuminationTextureIndex) ) {
+      BeginNonUniformResourceIndex(illuminationTextureIndex);
+	      shadedColor  += obj.illuminationAmount * SampleGradTex2D(Get(sceneTextures)[illuminationTextureIndex], Get(sceneSampler), texCoord, texCoordDX, texCoordDY).xyz;
+      EndNonUniformResourceIndex(); 
   }
 
   float2 texelPos = (In.position.xy / viewInfo.rect.zw);
@@ -198,7 +206,12 @@ float4 PS_MAIN(PsIn In)
   
   const uint lightClusterCount = LoadByte(Get(lightClustersCount), LIGHT_FROXEL_COUNT_POS(clusterCoords.x, clusterCoords.y, slice) << 2);
   float4 specular = float4(0,0,0,0);	
-  SampleSceneTextureGradFloat4(material.specularTextureIndex, Get(sceneSampler), texCoord, texCoordDX, texCoordDY, specular);
+  const uint specularTextureIndex = material.specularTextureIndex;
+  if(isTextureIndexValid(specularTextureIndex )) {
+    BeginNonUniformResourceIndex(specularTextureIndex);
+	    specular = SampleGradTex2D(Get(sceneTextures)[specularTextureIndex], Get(sceneSampler), texCoord, texCoordDX, texCoordDY);
+    EndNonUniformResourceIndex(); 
+  }
   for(uint j = 0; j < lightClusterCount; ++j) {
       const uint index = LoadByte(Get(lightClusters), LIGHT_FROXEL_DATA_POS(clusterCoords.x, clusterCoords.y, slice, j) << 2);
       const Light light = Get(lights)[index];

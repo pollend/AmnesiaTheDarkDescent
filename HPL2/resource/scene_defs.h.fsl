@@ -18,7 +18,7 @@
 #define LIGHT_CLUSTER_DATA_POS(il, ix, iy) ( LIGHT_CLUSTER_COUNT_POS(ix, iy)*LIGHT_CLUSTER_COUNT + (il) )
 
 #define PRIMARY_VIEWPORT_INDEX 0
-#define SCENE_MAX_REFLECTION_COUNT 10000 
+#define SCENE_MAX_REFLECTION_COUNT 4 
 #define SCENE_MAX_TEXTURE_COUNT 10000 
 #define SCENE_MAX_TEXTURE_CUBE_COUNT 5000 
 
@@ -28,7 +28,7 @@ STRUCT(TranslucentMaterial) {
     DATA(uint, alphaTextureIndex, None);
     DATA(uint, specularTextureIndex, None);
     DATA(uint, heightTextureIndex, None);
-    DATA(uint, illuminiationTextureIndex, None);
+    DATA(uint, illuminationTextureIndex, None);
     DATA(uint, dissolveAlphaTextureIndex, None);
     DATA(uint, cubeMapTextureIndex, None);
     DATA(uint, cubeMapAlphaTextureIndex, None);
@@ -67,7 +67,7 @@ STRUCT(DiffuseMaterial) {
     DATA(uint, alphaTextureIndex, None);
     DATA(uint, specularTextureIndex, None);
     DATA(uint, heightTextureIndex, None);
-    DATA(uint, illuminiationTextureIndex, None);
+    DATA(uint, illuminationTextureIndex, None);
     DATA(uint, dissolveAlphaTextureIndex, None);
     DATA(uint, config, None);
 

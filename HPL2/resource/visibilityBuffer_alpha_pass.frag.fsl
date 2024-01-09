@@ -46,24 +46,25 @@ float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     }
 
 
-    float4 value; 
-    if(SampleSceneTextureFloat4(material.alphaTextureIndex,Get(sceneSampler), texCoord, value)) {
-        if((material.config & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) {
-            diffuseAlpha = value.r;
-        } else {
-            diffuseAlpha = value.a;
-        }
+    const uint alphaTextureIndex = material.alphaTextureIndex;
+    if(isTextureIndexValid(alphaTextureIndex)) {
+        BeginNonUniformResourceIndex(alphaTextureIndex);
+            diffuseAlpha = ((material.config & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) ? SampleTex2D(Get(sceneTextures)[alphaTextureIndex], Get(sceneSampler), In.uv.xy).r : SampleTex2D(Get(sceneTextures)[alphaTextureIndex], Get(sceneSampler), In.uv.xy).a;
+	    EndNonUniformResourceIndex();
     }
 
     if(obj.dissolveAmount < 1.0 || isTextureIndexValid(material.alphaTextureIndex) || (material.config & MATERIAL_USE_ALPHA_DISSOLVE_FILTER) > 0) {
         const float2 dissolveCoord = In.Position.xy * (1.0/128.0); //128 = size of dissolve texture.
         float fDissolve = SampleTex2D(Get(dissolveTexture), Get(nearPointWrapSampler), dissolveCoord).x;
         
-        float4 alphaValue;
-        if(SampleSceneTextureFloat4(material.dissolveAlphaTextureIndex, Get(sceneSampler), texCoord, alphaValue)) {
+        const uint dissolveAlphaTextureIndex = material.dissolveAlphaTextureIndex;
+        if(isTextureIndexValid(dissolveAlphaTextureIndex)) {
+            float fDissolveAlpha = 0.0f;
             //Get in 0.75 - 1 range
             fDissolve = fDissolve * 0.25 + 0.75;
-            float fDissolveAlpha = ((material.config & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) ? alphaValue.r : alphaValue.a;
+            BeginNonUniformResourceIndex(dissolveAlphaTextureIndex);
+              fDissolveAlpha = ((material.config & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) ? SampleTex2D(Get(sceneTextures)[dissolveAlphaTextureIndex], Get(sceneSampler), texCoord).r : SampleTex2D(Get(sceneTextures)[dissolveAlphaTextureIndex], Get(sceneSampler), texCoord).a;
+            EndNonUniformResourceIndex(); 
             fDissolve -= (0.25 - fDissolveAlpha * 0.25);
         } else {
             //Get in 0.5 - 1 range.

@@ -9,7 +9,7 @@ void CS_MAIN(SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId)
 	const float invClusterWidth  = 1.0f / float(LIGHT_CLUSTER_WIDTH);
 	const float invClusterHeight = 1.0f / float(LIGHT_CLUSTER_HEIGHT);
   
-    ViewportInfo viewInfo = Get(viewports)[PRIMARY_VIEWPORT_INDEX];
+    ViewportInfo viewInfo = Get(viewport);
     float2 screenDim = viewInfo.rect.zw;
 
     //Near and far values of the cluster in view space
