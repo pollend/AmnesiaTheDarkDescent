@@ -96,11 +96,13 @@ namespace hpl {
 		flushResourceUpdates(&flushUpdateDesc);
         endCmd(m_frame.cmd());
 
-        std::array waitSemaphores = {flushUpdateDesc.pOutSubmittedSemaphore, m_imageAcquiredSemaphore};
+        m_frame.m_waitSemaphores.push_back(flushUpdateDesc.pOutSubmittedSemaphore);
+        m_frame.m_waitSemaphores.push_back(m_imageAcquiredSemaphore);
+
 
         QueueSubmitDesc submitDesc = {};
-        submitDesc.mWaitSemaphoreCount = waitSemaphores.size();
-        submitDesc.ppWaitSemaphores = waitSemaphores.data();
+        submitDesc.mWaitSemaphoreCount = m_frame.m_waitSemaphores.size();
+        submitDesc.ppWaitSemaphores = m_frame.m_waitSemaphores.data();
         submitDesc.mCmdCount = 1;
         submitDesc.ppCmds = m_frame.RingElement().pCmds;
         submitDesc.mSignalSemaphoreCount = 1;
@@ -116,6 +118,7 @@ namespace hpl {
         presentDesc.mSubmitDone = true;
         queuePresent(m_graphicsQueue, &presentDesc);
 
+        m_frame.m_waitSemaphores.clear();
         m_frame.m_isFinished = true;
     }
 

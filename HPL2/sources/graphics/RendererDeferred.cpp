@@ -2450,9 +2450,8 @@ namespace hpl {
                                     if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
                                         waitForFences(forgeRenderer->Rend(), 1, &ringShadowElement.pFence);
                                     }
-
+                                    resetCmdPool(forgeRenderer->Rend(), ringShadowElement.pCmdPool);
                                     beginCmd(shadowCmd);
-
                                     {
                                         cmdBindRenderTargets(shadowCmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                                         std::array rtBarriers = {
@@ -2531,6 +2530,8 @@ namespace hpl {
 		                            flushResourceUpdates(&flushUpdateDesc);
                                     std::array waitSemaphores = {flushUpdateDesc.pOutSubmittedSemaphore};
 
+
+                                    frame.m_waitSemaphores.push_back(ringShadowElement.pSemaphore);
                                     QueueSubmitDesc submitDesc = {};
                                     submitDesc.mCmdCount = 1;
                                     submitDesc.mWaitSemaphoreCount = waitSemaphores.size();
