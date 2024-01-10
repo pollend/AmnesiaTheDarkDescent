@@ -59,13 +59,13 @@ float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
         
         const uint dissolveAlphaTextureIndex = material.dissolveAlphaTextureIndex;
         if(isTextureIndexValid(dissolveAlphaTextureIndex)) {
-            float fDissolveAlpha = 0.0f;
             //Get in 0.75 - 1 range
             fDissolve = fDissolve * 0.25 + 0.75;
+            float4 dissolveSample = f4(0.0f);
             BeginNonUniformResourceIndex(dissolveAlphaTextureIndex);
-              fDissolveAlpha = ((material.config & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) ? SampleTex2D(Get(sceneTextures)[dissolveAlphaTextureIndex], Get(sceneSampler), texCoord).r : SampleTex2D(Get(sceneTextures)[dissolveAlphaTextureIndex], Get(sceneSampler), texCoord).a;
+                dissolveSample = SampleTex2D(Get(sceneTextures)[dissolveAlphaTextureIndex], Get(sceneSampler), texCoord);
             EndNonUniformResourceIndex(); 
-            fDissolve -= (0.25 - fDissolveAlpha * 0.25);
+            fDissolve -= (0.25 - (((material.config & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) ? dissolveSample.r : dissolveSample.a) * 0.25);
         } else {
             //Get in 0.5 - 1 range.
             fDissolve = fDissolve*0.5 + 0.5;

@@ -19,8 +19,8 @@
 
 #define PRIMARY_VIEWPORT_INDEX 0
 #define SCENE_MAX_REFLECTION_COUNT 4 
-#define SCENE_MAX_TEXTURE_COUNT 10000 
-#define SCENE_MAX_TEXTURE_CUBE_COUNT 5000 
+#define SCENE_MAX_TEXTURE_COUNT 4096 
+#define SCENE_MAX_TEXTURE_CUBE_COUNT 1024 
 
 STRUCT(TranslucentMaterial) {
     DATA(uint, diffuseTextureIndex, None);
@@ -96,11 +96,11 @@ STRUCT(Particle) {
     DATA(float4x4, uvMat, None);
 };
 
-bool isTextureIndexValid(uint index) {
+INLINE bool isTextureIndexValid(uint index) {
     return index < SCENE_MAX_TEXTURE_COUNT;
 }
 
-bool isTextureCubeIndexValid(uint index) {
+INLINE bool isTextureCubeIndexValid(uint index) {
     return index < SCENE_MAX_TEXTURE_CUBE_COUNT;
 }
 

@@ -18,6 +18,11 @@ namespace hpl {
         void dispose(uint32_t slot);
     private:
 
+        struct SlotInfo {
+            SharedTexture m_texture;
+            uint8_t m_count = 0;
+        };
+
         struct RingEntry {
             Action m_action;
             uint32_t slot;
@@ -26,7 +31,7 @@ namespace hpl {
         uint32_t m_index = 0;
         IndexPool m_pool;
         folly::small_vector<std::vector<RingEntry>> m_ring;
-        std::vector<SharedTexture> m_slot;
+        std::vector<SlotInfo> m_slot;
         DescriptorHandler m_actionHandler;
     };
 } // namespace hpl
