@@ -1,11 +1,10 @@
 #include "scene_defs.h.fsl"
 
-CBUFFER(sceneInfo, UPDATE_FREQ_PER_FRAME, b0, binding = 0) {
-  DATA(WorldInfo, worldInfo, None);
-  DATA(ViewportInfo, viewports[64], None);
+CBUFFER(uniformBlock_rootcbv, UPDATE_FREQ_NONE, b2, binding = 1) {
+  DATA(ViewportInfo, viewport, None);
 };
 
-RES(Buffer(Light),     lights,         UPDATE_FREQ_PER_FRAME, t0, binding = 1);
-RES(RWBuffer(atomic_uint), lightClustersCount, UPDATE_FREQ_PER_FRAME, u0, binding = 2);
-RES(RWBuffer(atomic_uint), lightClusters,      UPDATE_FREQ_PER_FRAME, u1, binding = 3);
+RES(Buffer(Light),     lights,         UPDATE_FREQ_PER_FRAME, t0, binding = 2);
+RES(RWBuffer(atomic_uint), lightClustersCount, UPDATE_FREQ_PER_FRAME, u0, binding = 3);
+RES(RWBuffer(atomic_uint), lightClusters,      UPDATE_FREQ_PER_FRAME, u1, binding = 4);
 

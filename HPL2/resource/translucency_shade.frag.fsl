@@ -36,8 +36,10 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     float4 finalColor = float4(0.0, 0.0 ,0.0, 1.0);
 
 #ifndef USE_ILLUMINATION  
-    SampleSceneTextureFloat4(material.diffuseTextureIndex, Get(sceneSampler), In.uv.xy, finalColor);
-    finalColor *= In.Color;
+    const uint diffuseTextureIndex = material.diffuseTextureIndex; 
+    BeginNonUniformResourceIndex(diffuseTextureIndex);
+        finalColor  = SampleTex2D(Get(sceneTextures)[diffuseTextureIndex], Get(sceneSampler), In.uv.xy) * In.Color;
+	EndNonUniformResourceIndex();
 #endif
 
     float finalAlpha = obj.alphaAmount;
@@ -71,8 +73,13 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     float3 mapNormal = float3(0,0,0);
     float3 screenNormal = float3(0,0,0);
 
-    float4 normalSample;
-    if(SampleSceneTextureFloat4(material.normalTextureIndex, Get(sceneSampler), In.uv, normalSample)) {
+    float4 normalSample = float4(0,0,0,0);
+    const uint normalTextureIndex = material.normalTextureIndex;
+    if(isTextureIndexValid(normalTextureIndex)) {
+        BeginNonUniformResourceIndex(normalTextureIndex);
+            normalSample = SampleTex2D(Get(sceneTextures)[normalTextureIndex], Get(sceneSampler), In.uv.xy);
+	    EndNonUniformResourceIndex();
+
         mapNormal = normalSample.xyz * 2.0 - 1.0;
         screenNormal = normalize(mapNormal.x * In.tangent + mapNormal.y * In.bitangent + mapNormal.z * In.normal);
     } else {
@@ -118,15 +125,22 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
       viewInfo.viewMat[0].xyz,
       viewInfo.viewMat[1].xyz,
       viewInfo.viewMat[2].xyz)), vEnvUv);
-    float4 reflectionColor;
-    if(SampleSceneCubeTextureFloat4(material.cubeMapTextureIndex, Get(sceneSampler), vEnvUv, reflectionColor)) {
+    const uint cubeMapTextureIndex = material.cubeMapTextureIndex;
+    if(isTextureCubeIndexValid(cubeMapTextureIndex)) {
         float afEDotN = max(dot(-eyeVec, screenNormal),0.0);
         float fFresnel = Fresnel(afEDotN, material.frenselBias, material.frenselPos);
 
+        float4 reflectionColor = f4(0.0);
+        BeginNonUniformResourceIndex(cubeMapTextureIndex);
+            reflectionColor = SampleTexCube(Get(sceneCubeTextures)[cubeMapTextureIndex], Get(sceneSampler), vEnvUv);
+	    EndNonUniformResourceIndex();
+        
         //Alpha for environment map
-        float4 specular;
-        if(SampleSceneTextureFloat4(material.cubeMapAlphaTextureIndex, Get(sceneSampler), In.uv.xy, specular)) {
-            reflectionColor *= specular.w;
+        const uint cubeMapAlphaTextureIndex = material.cubeMapAlphaTextureIndex;  
+        if(isTextureIndexValid(cubeMapAlphaTextureIndex)) {
+            BeginNonUniformResourceIndex(cubeMapAlphaTextureIndex);
+                reflectionColor *= SampleTex2D(Get(sceneTextures)[cubeMapAlphaTextureIndex], Get(sceneSampler), In.uv.xy).w;
+	        EndNonUniformResourceIndex();
         }
 
         finalColor.xyz += reflectionColor.xyz * fFresnel * finalAlpha * obj.lightLevel;

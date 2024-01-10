@@ -63,8 +63,8 @@ PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
     float3 vFinalNormal = normalize(vNormal1*0.7 + vNormal2*0.3);
 
     //Get the diffuse color
-    const uint diffuseTextureIndex = material.normalTextureIndex;
-    float4 surfaceColor; //= SampleTex2D(Get(diffuseMap), Get(materialSampler), vUv1);
+    const uint diffuseTextureIndex = material.diffuseTextureIndex;
+    float4 surfaceColor = float4(0,0,0,0); 
     BeginNonUniformResourceIndex(diffuseTextureIndex);
       surfaceColor = SampleTex2D(Get(sceneTextures)[diffuseTextureIndex], Get(sceneSampler), vUv1);
     EndNonUniformResourceIndex(); 

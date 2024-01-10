@@ -123,7 +123,7 @@ namespace hpl {
             Semaphore* m_renderCompleteSemaphore = nullptr;
             CommandResourcePool* m_resourcePool = nullptr;
             RenderTarget* m_finalRenderTarget = nullptr;
-
+            std::vector<Semaphore*> m_waitSemaphores = {};
 
             template<typename T>
             inline void pushResource(const T& ele) {

@@ -388,7 +388,7 @@ namespace hpl {
                 { eMaterialTexture_Alpha, &diffuseMaterial.m_alphaTextureIndex },
                 { eMaterialTexture_Specular, &diffuseMaterial.m_specularTextureIndex },
                 { eMaterialTexture_Height, &diffuseMaterial.m_heightTextureIndex },
-                { eMaterialTexture_Illumination, &diffuseMaterial.m_illuminiationTextureIndex },
+                { eMaterialTexture_Illumination, &diffuseMaterial.m_illuminationTextureIndex },
                 { eMaterialTexture_DissolveAlpha, &diffuseMaterial.m_dissolveAlphaTextureIndex },
             };
             for (auto& tex : textures) {
@@ -1646,6 +1646,13 @@ namespace hpl {
             addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
             return true;
         });
+
+        m_lightDescriptorConstSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
+            DescriptorSetDesc descriptorSetDesc{ m_lightClusterRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_NONE, 1 };
+            addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
+            return true;
+        });
+
         // update descriptorSet
         for (size_t swapchainIndex = 0; swapchainIndex < ForgeRenderer::SwapChainLength; swapchainIndex++) {
             m_sceneDescriptorPerFrameSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
@@ -1653,11 +1660,6 @@ namespace hpl {
                 addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
                 return true;
             });
-           // m_sceneDescriptorPerBatchSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
-           //     DescriptorSetDesc descriptorSetDesc{ m_sceneRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, ScenePerDescriptorBatchSize  };
-           //     addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
-           //     return true;
-           // });
             m_lightDescriptorPerFrameSet[swapchainIndex].Load(forgeRenderer->Rend(), [&](DescriptorSet** descSet) {
                 DescriptorSetDesc descriptorSetDesc{ m_lightClusterRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
                 addDescriptorSet(forgeRenderer->Rend(), &descriptorSetDesc, descSet);
@@ -1681,7 +1683,6 @@ namespace hpl {
                     DescriptorData{ .pName = "lights", .ppBuffers = &m_lightBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "lightClustersCount", .ppBuffers = &m_lightClusterCountBuffer[swapchainIndex].m_handle },
                     DescriptorData{ .pName = "lightClusters", .ppBuffers = &m_lightClustersBuffer[swapchainIndex].m_handle },
-                    DescriptorData{ .pName = "sceneInfo", .ppBuffers = &m_perSceneInfoBuffer[swapchainIndex].m_handle },
                 };
                 updateDescriptorSet(
                     forgeRenderer->Rend(), 0, m_lightDescriptorPerFrameSet[swapchainIndex].m_handle, params.size(), params.data());
@@ -1740,6 +1741,7 @@ namespace hpl {
         auto& sharedMat = m_sharedMaterial[material->Index()];
         if (sharedMat.m_material != material || sharedMat.m_version != material->Generation()) {
             sharedMat.m_material = material;
+            sharedMat.m_version = material->Generation();
 
             for (uint32_t slot = 0; slot < eMaterialTexture_LastEnum; slot++) {
                 eMaterialTexture textureType = static_cast<eMaterialTexture>(slot);
@@ -2170,7 +2172,7 @@ namespace hpl {
                                 { eMaterialTexture_Alpha, &translucenctMaterial.m_alphaTextureIndex },
                                 { eMaterialTexture_Specular, &translucenctMaterial.m_specularTextureIndex },
                                 { eMaterialTexture_Height, &translucenctMaterial.m_heightTextureIndex },
-                                { eMaterialTexture_Illumination, &translucenctMaterial.m_illuminiationTextureIndex },
+                                { eMaterialTexture_Illumination, &translucenctMaterial.m_illuminationTextureIndex },
                                 { eMaterialTexture_DissolveAlpha, &translucenctMaterial.m_dissolveAlphaTextureIndex },
                                 { eMaterialTexture_CubeMap, &translucenctMaterial.m_cubeMapTextureIndex },
                                 { eMaterialTexture_CubeMapAlpha, &translucenctMaterial.m_cubeMapAlphaTextureIndex },
@@ -2399,6 +2401,7 @@ namespace hpl {
                     }
                 case eLightType_Spot:
                     {
+
                         cLightSpot* pLightSpot = static_cast<cLightSpot*>(light);
                         const float fFarHeight = pLightSpot->GetTanHalfFOV() * pLightSpot->GetRadius() * 2.0f;
                         // Note: Aspect might be wonky if there is no gobo.
@@ -2447,9 +2450,8 @@ namespace hpl {
                                     if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
                                         waitForFences(forgeRenderer->Rend(), 1, &ringShadowElement.pFence);
                                     }
-
+                                    resetCmdPool(forgeRenderer->Rend(), ringShadowElement.pCmdPool);
                                     beginCmd(shadowCmd);
-
                                     {
                                         cmdBindRenderTargets(shadowCmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
                                         std::array rtBarriers = {
@@ -2528,6 +2530,8 @@ namespace hpl {
 		                            flushResourceUpdates(&flushUpdateDesc);
                                     std::array waitSemaphores = {flushUpdateDesc.pOutSubmittedSemaphore};
 
+
+                                    frame.m_waitSemaphores.push_back(ringShadowElement.pSemaphore);
                                     QueueSubmitDesc submitDesc = {};
                                     submitDesc.mCmdCount = 1;
                                     submitDesc.mWaitSemaphoreCount = waitSemaphores.size();
@@ -2580,6 +2584,7 @@ namespace hpl {
                 cmdResourceBarrier(cmd, barriers.size(), barriers.data(), 0, nullptr, 0, nullptr);
             }
             cmdBindPipeline(cmd, m_lightClusterPipeline.m_handle);
+            cmdBindDescriptorSetWithRootCbvs(cmd, 0,  m_lightDescriptorConstSet.m_handle, mainViewportParams.size(), mainViewportParams.data());
             cmdBindDescriptorSet(cmd, 0, m_lightDescriptorPerFrameSet[frame.m_frameIndex].m_handle);
             cmdDispatch(cmd, lightCount, 1, LightClusterSlices);
             {

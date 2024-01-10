@@ -53,6 +53,7 @@ float4 PS_MAIN(PsIn In)
   const float4 clipPos1 = mul(mvp, float4(v1pos, 1.0f));
   const float4 clipPos2 = mul(mvp, float4(v2pos, 1.0f));
   BarycentricDeriv derivativesOut = CalcFullBary(clipPos0, clipPos1, clipPos2, In.screenPos, twoOverWindowSize);
+  
   // TEXTURE COORD INTERPOLATION
   GradientInterpolationResults results = Interpolate2DWithDeriv(derivativesOut, make_f3x2_cols(
           asfloat(LoadByte4(Get(vtxOpaqueUv), vtxIndex0 * 8)).xy, // LoadByte2 is not avaliable 
@@ -79,7 +80,8 @@ float4 PS_MAIN(PsIn In)
   const float w = dot(float3(clipPos0.w, clipPos1.w, clipPos2.w), derivativesOut.m_lambda);
 
   // Reconstruct the Z value at this screen point performing only the necessary matrix * vector multiplication operations that involve computing Z
-  const float z = ((w * (viewInfo.zFar + viewInfo.zNear)) / (viewInfo.zFar - viewInfo.zNear)) - ((2.0 * viewInfo.zNear * viewInfo.zFar) / (viewInfo.zFar - viewInfo.zNear));
+  //const float z = ((w * (viewInfo.zFar + viewInfo.zNear)) / (viewInfo.zFar - viewInfo.zNear)) - ((2.0 * viewInfo.zNear * viewInfo.zFar) / (viewInfo.zFar - viewInfo.zNear));
+  const float z = -w * getElem(viewInfo.projMat, 2, 2) + getElem(viewInfo.projMat, 3, 2);
    
   // Calculate the world position coordinates:
   // First the projected coordinates at this point are calculated using In.screenPos and the computed Z value at this point.
@@ -111,11 +113,9 @@ float4 PS_MAIN(PsIn In)
           (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
   }
   float4 diffuseColor = float4(0,0,0,0);
-  float3 shadedColor = f3(0.0f);
-  
-  if(isTextureIndexValid(material.diffuseTextureIndex)) {
-    const uint diffuseTextureIdx = material.diffuseTextureIndex;
-    BeginNonUniformResourceIndex(diffuseTextureIdx);
+  uint diffuseTextureIdx = material.diffuseTextureIndex;
+  if(isTextureIndexValid(diffuseTextureIdx)) {
+    BeginNonUniformResourceIndex(diffuseTextureIdx, SCENE_MAX_TEXTURE_COUNT);
 	    diffuseColor = SampleGradTex2D(Get(sceneTextures)[diffuseTextureIdx], Get(sceneSampler), texCoord, texCoordDX, texCoordDY);
     EndNonUniformResourceIndex(); 
   }
