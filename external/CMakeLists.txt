@@ -148,7 +148,7 @@ file(GLOB THE_FORGE_SOURCES
     ${THE_FORGE_DIR}/Common_3/Application/*.cpp
     ${THE_FORGE_DIR}/Common_3/Application/Profiler/*.cpp
     ${THE_FORGE_DIR}/Common_3/Application/Fonts/FontSystem.cpp
-    # ${THE_FORGE_DIR}/Common_3/Application/UI/UI.cpp
+    ${THE_FORGE_DIR}/Common_3/Application/UI/UI.cpp
     ${THE_FORGE_DIR}/Common_3/Application/Profiler/*.cpp
     ${THE_FORGE_DIR}/Common_3/OS/WindowSystem/*.cpp
     ${THE_FORGE_DIR}/Common_3/OS/*.cpp
@@ -166,7 +166,7 @@ file(GLOB THE_FORGE_SOURCES
     ${THE_FORGE_DIR}/Common_3/Renderer/ShaderServer/Network.c
     ${THE_FORGE_DIR}/Common_3/Renderer/ShaderServer/ShaderServer.cpp
 
-   # ${THE_FORGE_DIR}/Common_3/Application/InputSystem.cpp
+    ${THE_FORGE_DIR}/Common_3/Application/InputSystem.cpp
 
    # ${THE_FORGE_DIR}/Common_3/Game/Scripting/*.cpp
 )
