@@ -714,8 +714,9 @@ namespace hpl {
 		gDebugColor = aColor;
 
 		cCollideShapeNewton *pNewtonShape = static_cast<cCollideShapeNewton*>(apShape);
+    auto transpose = a_mtxTransform.GetTranspose();
 		NewtonCollisionForEachPolygonDo (	pNewtonShape->GetNewtonCollision(), 
-											&(a_mtxTransform.GetTranspose().m[0][0]), 
+							&transpose.m[0][0],
 											RenderDebugPolygon,
 											NULL);
 	}

@@ -1,0 +1,3 @@
+add_subdirectory(OALWrapper)
+add_subdirectory(Newton)
+add_subdirectory(AngelScript)
