@@ -36,7 +36,6 @@
 
 #ifdef __linux__
 #include <FL/fl_ask.H>
-#include "binreloc.h"
 
 #include <sys/types.h>
 #endif
@@ -319,25 +318,17 @@ namespace hpl {
 	}
 
 	//-----------------------------------------------------------------------
-#ifdef __linux__
+	//-----------------------------------------------------------------------
     tString cPlatform::GetDataDir()
-    {
-        tString temp;
-        BrInitError error;
-		if (!br_init (&error)) {
-			// Log non-fatal error
-			printf("*** BinReloc failed to initialize. Error: %d\n", error);
-		} else {
-			char *exedir;
-			exedir = br_find_exe_dir(NULL);
-			if (exedir) {
-				temp = exedir;
-				free(exedir);
-			}
-		}
-        return temp;
-    }
+	{
+#if defined(SYSTEMWIDE_RESOURCES)
+		return SYSTEMWIDE_RESOURCES_LOCATION;
+#else
+		char buff[MAXPATHLEN];
+		getcwd(buff, MAXPATHLEN);
+		return tString(buff);
 #endif
+	}
 
 	//-----------------------------------------------------------------------
 
