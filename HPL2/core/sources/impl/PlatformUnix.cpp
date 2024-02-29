@@ -35,7 +35,6 @@
 #endif
 
 #ifdef __linux__
-#include <FL/fl_ask.H>
 
 #include <sys/types.h>
 #endif
