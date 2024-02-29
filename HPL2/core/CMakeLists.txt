@@ -193,11 +193,11 @@ source_group("Platform" REGULAR_EXPRESSION "\\/impl\\/Platform.+")
 
 set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(OpenGL REQUIRED)
+find_package(GLEW REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
 find_package(unofficial-theora CONFIG REQUIRED)
 find_package(DevIL REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(GLEW REQUIRED)
 
 # setup HPL2 compile target
 
@@ -213,7 +213,6 @@ set(HPL2_INCLUDES
     PRIVATE ${OALWRAPPER_INCLUDE_DIR}
     PRIVATE ${THEORA_INCLUDE_DIR}
     PRIVATE ${DEVIL_INCLUDE_DIR}
-    PRIVATE ${GLEW_INCLUDE_DIRS}
     PRIVATE ${OPENGL_INCLUDE_DIR}
 )
 
@@ -232,7 +231,7 @@ target_link_libraries(HPL2
 OALWrapper # also pulls in ogg,vorbis,SDL
   AngelScript
   Newton
-  ${GLEW_LIBRARIES}
+  GLEW::GLEW
   ${OPENGL_gl_LIBRARY}
   ${OPENGL_glu_LIBRARY}
   ${THEORA_LIBRARY}
