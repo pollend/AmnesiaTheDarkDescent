@@ -170,45 +170,45 @@ typedef enum
 
 // Effect slots
 
-extern LPALGENAUXILIARYEFFECTSLOTS alGenAuxiliaryEffectSlots;
-extern LPALDELETEAUXILIARYEFFECTSLOTS alDeleteAuxiliaryEffectSlots;
-extern LPALISAUXILIARYEFFECTSLOT alIsAuxiliaryEffectSlot;
-extern LPALAUXILIARYEFFECTSLOTI alAuxiliaryEffectSloti;
-extern LPALAUXILIARYEFFECTSLOTIV alAuxiliaryEffectSlotiv;
-extern LPALAUXILIARYEFFECTSLOTF alAuxiliaryEffectSlotf;
-extern LPALAUXILIARYEFFECTSLOTFV alAuxiliaryEffectSlotfv;
-extern LPALGETAUXILIARYEFFECTSLOTI alGetAuxiliaryEffectSloti;
-extern LPALGETAUXILIARYEFFECTSLOTIV alGetAuxiliaryEffectSlotiv;
-extern LPALGETAUXILIARYEFFECTSLOTF alGetAuxiliaryEffectSlotf;
-extern LPALGETAUXILIARYEFFECTSLOTFV alGetAuxiliaryEffectSlotfv;
+extern LPALGENAUXILIARYEFFECTSLOTS OAL_GenAuxiliaryEffectSlots;
+extern LPALDELETEAUXILIARYEFFECTSLOTS OAL_DeleteAuxiliaryEffectSlots;
+extern LPALISAUXILIARYEFFECTSLOT OAL_IsAuxiliaryEffectSlot;
+extern LPALAUXILIARYEFFECTSLOTI OAL_AuxiliaryEffectSloti;
+extern LPALAUXILIARYEFFECTSLOTIV OAL_AuxiliaryEffectSlotiv;
+extern LPALAUXILIARYEFFECTSLOTF OAL_AuxiliaryEffectSlotf;
+extern LPALAUXILIARYEFFECTSLOTFV OAL_AuxiliaryEffectSlotfv;
+extern LPALGETAUXILIARYEFFECTSLOTI OAL_GetAuxiliaryEffectSloti;
+extern LPALGETAUXILIARYEFFECTSLOTIV OAL_GetAuxiliaryEffectSlotiv;
+extern LPALGETAUXILIARYEFFECTSLOTF OAL_GetAuxiliaryEffectSlotf;
+extern LPALGETAUXILIARYEFFECTSLOTFV OAL_GetAuxiliaryEffectSlotfv;
 
 // Effects
 
-extern LPALGENEFFECTS alGenEffects;
-extern LPALDELETEEFFECTS alDeleteEffects;
-extern LPALISEFFECT alIsEffect;
-extern LPALEFFECTI alEffecti;
-extern LPALEFFECTIV alEffectiv;
-extern LPALEFFECTF alEffectf;
-extern LPALEFFECTFV alEffectfv;
-extern LPALGETEFFECTI alGetEffecti;
-extern LPALGETEFFECTIV alGetEffectiv;
-extern LPALGETEFFECTF alGetEffectf;
-extern LPALGETEFFECTFV alGetEffectfv;
+extern LPALGENEFFECTS OAL_GenEffects;
+extern LPALDELETEEFFECTS OAL_DeleteEffects;
+extern LPALISEFFECT OAL_IsEffect;
+extern LPALEFFECTI OAL_Effecti;
+extern LPALEFFECTIV OAL_Effectiv;
+extern LPALEFFECTF OAL_Effectf;
+extern LPALEFFECTFV OAL_Effectfv;
+extern LPALGETEFFECTI OAL_GetEffecti;
+extern LPALGETEFFECTIV OAL_GetEffectiv;
+extern LPALGETEFFECTF OAL_GetEffectf;
+extern LPALGETEFFECTFV OAL_GetEffectfv;
 
 // Filters
 
-extern LPALGENFILTERS alGenFilters;
-extern LPALDELETEFILTERS alDeleteFilters;
-extern LPALISFILTER alIsFilter;
-extern LPALFILTERI alFilteri;
-extern LPALFILTERIV alFilteriv;
-extern LPALFILTERF alFilterf;
-extern LPALFILTERFV alFilterfv;
-extern LPALGETFILTERI alGetFilteri;
-extern LPALGETFILTERIV alGetFilteriv;
-extern LPALGETFILTERF alGetFilterf;
-extern LPALGETFILTERFV alGetFilterfv;
+extern LPALGENFILTERS OAL_GenFilters;
+extern LPALDELETEFILTERS OAL_DeleteFilters;
+extern LPALISFILTER OAL_IsFilter;
+extern LPALFILTERI OAL_Filteri;
+extern LPALFILTERIV OAL_Filteriv;
+extern LPALFILTERF OAL_Filterf;
+extern LPALFILTERFV OAL_Filterfv;
+extern LPALGETFILTERI OAL_GetFilteri;
+extern LPALGETFILTERIV OAL_GetFilteriv;
+extern LPALGETFILTERF OAL_GetFilterf;
+extern LPALGETFILTERFV OAL_GetFilterfv;
 
 
 typedef enum _eOALFilterType

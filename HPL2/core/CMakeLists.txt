@@ -187,8 +187,10 @@ source_group("Platform" REGULAR_EXPRESSION "\\/impl\\/Platform.+")
 
 set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(OpenGL REQUIRED)
-find_package(Theora REQUIRED)
-find_package(Devil REQUIRED)
+find_package(SDL2 CONFIG REQUIRED)
+find_package(unofficial-theora CONFIG REQUIRED)
+find_package(DevIL REQUIRED)
+find_package(ZLIB REQUIRED)
 find_package(GLEW REQUIRED)
 
 # setup HPL2 compile target
@@ -221,14 +223,18 @@ if(LINUX)
 endif()
 
 target_link_libraries(HPL2
-  OALWrapper # also pulls in ogg,vorbis,SDL
+OALWrapper # also pulls in ogg,vorbis,SDL
   AngelScript
   Newton
   ${GLEW_LIBRARIES}
   ${OPENGL_gl_LIBRARY}
   ${OPENGL_glu_LIBRARY}
   ${THEORA_LIBRARY}
-  ${DEVIL_LIBRARY}
   z
+  $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+  $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+  ZLIB::ZLIB
+  ${IL_LIBRARIES}
   ${PLATFORM_LIBS}
+  unofficial::theora::theora
   )

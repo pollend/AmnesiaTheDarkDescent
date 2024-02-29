@@ -51,14 +51,14 @@ public:
 
 		if ( !abForceEFXReverb )
 		{
-			RUN_AL_FUNC( alEffecti(mlEffectId, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB) );
+			RUN_AL_FUNC( OAL_Effecti(mlEffectId, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB) );
 			mbEAXReverb = !AL_ERROR_OCCURED;
 			mbStatus = !AL_ERROR_OCCURED;
 		}
 
 		if ( abForceEFXReverb || !mbEAXReverb )
 		{
-			RUN_AL_FUNC ( alEffecti ( mlEffectId, AL_EFFECT_TYPE, AL_EFFECT_REVERB) );
+			RUN_AL_FUNC ( OAL_Effecti ( mlEffectId, AL_EFFECT_TYPE, AL_EFFECT_REVERB) );
 			mbStatus = !AL_ERROR_OCCURED;
 		}
 	}
