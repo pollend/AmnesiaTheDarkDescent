@@ -10,7 +10,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-fno-strict-aliasing")
 if(LINUX)
     set(AMNESIA_GAME_DIRECTORY "$ENV{HOME}/.local/share/Steam/steamapps/common/Amnesia The Dark Descent" CACHE PATH "game path")
 else()
-    set(AMNESIA_GAME_DIRECTORY "" CACHE PATH)
+    set(AMNESIA_GAME_DIRECTORY "" CACHE PATH "game path")
 endif()
 
 
