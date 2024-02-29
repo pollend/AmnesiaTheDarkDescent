@@ -8,7 +8,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/core)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/physics)
 
-set(CMAKE_CXX_FLAGS "-Wno-extern-c-compat")
+#set(CMAKE_CXX_FLAGS "-Wno-extern-c-compat")
 
 add_library(Newton STATIC
   core/dg.cpp
