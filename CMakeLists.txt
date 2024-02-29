@@ -7,10 +7,16 @@ if(NOT APPLE AND UNIX)
     set(LINUX TRUE)
 ENDIF()
 
+# Hack to correctly compile on windows ...
+if(WIN32)
+    add_compile_definitions("NOMINMAX=1")
+endif()
+
 include("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
 option(COPY_GAME_ASSETS "copy games assets into output directory" ON)
 option(WITH_TOOLS "build HPL2 with tools" ON)
+
 
 add_subdirectory(HPL2)
 add_subdirectory(amnesia/src)

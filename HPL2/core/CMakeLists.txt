@@ -114,6 +114,10 @@ IF(APPLE)
             SDLMain.h
         )
     ENDIF()
+ELSEIF(WIN32)
+    LIST(APPEND impl_sources
+        sources/impl/PlatformWin32.cpp
+    )
 ELSEIF(LINUX)
     LIST(APPEND impl_sources
         sources/impl/PlatformUnix.cpp
@@ -127,6 +131,8 @@ IF(APPLE)
     SET(BUILDID_SUFFIX MacOSX)
 ELSEIF(LINUX)
     SET(BUILDID_SUFFIX Linux)
+ELSEIF(WIN32)
+    SET(BUILDID_SUFFIX Win32)
 ELSE()
     message(FATAL_ERROR "Unknown platform")
 ENDIF()
