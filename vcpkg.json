@@ -11,6 +11,7 @@
       "name": "sdl2",
       "platform": "windows"
     },
+    "glew",
     "libogg",
     "libtheora",
     "openal-soft",
