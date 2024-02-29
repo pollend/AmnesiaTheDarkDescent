@@ -10,6 +10,7 @@ ENDIF()
 # Hack to correctly compile on windows ...
 if(WIN32)
     add_compile_definitions("NOMINMAX=1")
+    list(APPEND CMAKE_PREFIX_PATH "C:/workspace/vcpkg/packages/glew_x64-windows")
 endif()
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
