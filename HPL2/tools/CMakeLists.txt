@@ -18,6 +18,7 @@ function(AddToolTarget target)
             MACOSX_BUNDLE_DISPLAY_NAME "${target}"
             MACOSX_BUNDLE_BUNDLE_NAME "HPL2: ${target}"
             )
+    hpl_set_output_dir(${target} "") 
 
     if(APPLE)
         PostBuildMacBundle(${target} "${HPL2_FRAMEWORKS}" "${HPL2_LIBRARIES}")
@@ -63,13 +64,14 @@ AddToolTarget(ParticleViewer
 add_executable(MshConverter
         mshconverter/MshConverter.cpp
         )
+hpl_set_output_dir(MshConverter "") 
 
 # Hack to copy resources for tools
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/resources/"
-        DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
-        FILES_MATCHING
-        PATTERN "*"
-        )
+#install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/resources/"
+#        DESTINATION  ${INSTALL_OUTPUT_PATH}/Amnesia
+#        FILES_MATCHING
+#        PATTERN "*"
+#        )
 
 target_link_libraries(MshConverter HPL2)
 

@@ -353,3 +353,6 @@ MigrationBackup/
 # HPL2 Specific
 BuildID_*.cpp
 BuildID_*.h
+CMakeCache.txt
+vcpkg_installed/
+CMakeFiles/

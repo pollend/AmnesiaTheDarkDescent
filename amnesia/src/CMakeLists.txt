@@ -80,58 +80,6 @@ add_custom_target(GameRelease DEPENDS Amnesia)
 set(AMNESIA_EXECUTABLE_OUTPUT_PATH  ${INSTALL_OUTPUT_PATH}/Amnesia)
 install(DIRECTORY DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
 
-if(WITH_TOOLS)
-    add_custom_command (TARGET Amnesia POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:MapViewer> $<TARGET_FILE_DIR:Amnesia>
-        DEPENDS MapViewer
-    )
-    add_custom_command (TARGET Amnesia POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:ModelViewer> $<TARGET_FILE_DIR:Amnesia>
-        DEPENDS ModelViewer
-    )
-    add_custom_command (TARGET Amnesia POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:MshConverter> $<TARGET_FILE_DIR:Amnesia>
-        DEPENDS MshConverter
-    )
-    add_custom_command (TARGET Amnesia POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:LevelEditor> $<TARGET_FILE_DIR:Amnesia>
-        DEPENDS LevelEditor
-    )
-    add_custom_command (TARGET Amnesia POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:ParticleEditor> $<TARGET_FILE_DIR:Amnesia>
-        DEPENDS ParticleEditor
-    )
-    add_custom_command (TARGET Amnesia POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:ModelEditor> $<TARGET_FILE_DIR:Amnesia>
-        DEPENDS ModelEditor
-    )
-    # add_custom_command ( TARGET Amnesia POST_BUILD
-    #     COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory
-    #     ${_HPL_TOOL_RESOURCE_PATH_} $<TARGET_FILE_DIR:Amnesia>
-    # )
-endif()
-
-if(WIN32)
-    # add_custom_command ( TARGET Amnesia POST_BUILD
-    #     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    #     $<TARGET_FILE:WinPixEventRuntime> $<TARGET_FILE_DIR:Amnesia>
-    # )
-    # add_custom_command ( TARGET Amnesia POST_BUILD
-    #     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    #     $<TARGET_FILE:ags> $<TARGET_FILE_DIR:Amnesia>
-    # )
-    # add_custom_command ( TARGET Amnesia POST_BUILD
-    #     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    #     $<TARGET_FILE:DirectXShaderCompiler> $<TARGET_FILE_DIR:Amnesia>
-    # )
-endif()
-
 ##add_custom_command(
 ##    TARGET Amnesia POST_BUILD
 ##    COMMAND ${CMAKE_COMMAND} 
@@ -144,6 +92,7 @@ endif()
 ##    ARGS -E copy_directory  "${_HPL2_COMPILEDSHADER_}" "$<TARGET_FILE_DIR:Amnesia>/CompiledShaders"
 ##)
 
+hpl_set_output_dir(Amnesia "") 
 target_compile_definitions(Amnesia PUBLIC AMNESIA_TDD_VERSION="${AMNESIA_TDD_VERSION}")
 target_compile_definitions(Amnesia PUBLIC AMNESIA_TDD_TAG="${AMNESIA_TDD_TAG}")
 
@@ -152,5 +101,5 @@ if((NOT ${AMNESIA_GAME_DIRECTORY} STREQUAL "") AND COPY_GAME_ASSETS)
         -DAMNESIA_GAME_DIRECTORY=${AMNESIA_GAME_DIRECTORY}
         -DAMNESIA_EXECUTABLE_OUTPUT_PATH="$<TARGET_FILE_DIR:Amnesia>"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/copy_game_directory.cmake
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+      WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}/build/)
 endif()

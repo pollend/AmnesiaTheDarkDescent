@@ -21,12 +21,21 @@ jobs:
           sudo apt-get install ninja-build cmake libdevil-dev mesa-common-dev libglew-dev libxmu-dev libfltk1.3-dev libxi-dev libgl-dev libx11-dev libxft-dev libxext-dev libwayland-dev libxkbcommon-dev libegl1-mesa-dev libglu1-mesa-dev libgtk-3-dev libvulkan-dev vulkan-tools glslang-tools
       - name: Configure
         run: |
-          mkdir ${{ github.workspace }}/build && cd ${{ github.workspace }}/build
+          cd ${{ github.workspace }}
           cmake ${{ github.workspace }} -DVCPKG_INSTALL_OPTIONS="--binarysource=clear\;x-gha,readwrite" -G Ninja
       - name: Build
         run: |
-          cd ${{ github.workspace }}/build
+          cd ${{ github.workspace }}
           ninja
+      - name: Package Amnesia
+        working-directory: .${{ github.workspace }}/build
+        run: tar -czvf ../Amnesia-x86-64-Debug.tar.gz * --exclude *.a
+      - name: Upload warfork artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: amnesia-x86-64-debug
+          path: Amnesia-x86-64-Debug.tar.gz
+
   windows:
     runs-on: windows-latest
     steps:
@@ -50,4 +59,14 @@ jobs:
       - name: Build
         run: |
           cd ${{ github.workspace }}\build
-          msbuild ALL_BUILD.vcxproj /property:Configuration=Release
+          msbuild ALL_BUILD.vcxproj /property:Configuration=Debug
+
+      - name: Package Amnesia
+        working-directory: ./build
+          run: 7z a ..\win-x86-64-Debug.zip * '-xr!*.exp' '-xr!*.lib'
+
+      - name: Upload warfork artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: win-x86-64-Debug
+          path: win-x86-64-Debug.zip
