@@ -23,7 +23,7 @@ if(UNIX)
 endif()
 include("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
-option(COPY_GAME_ASSETS "copy games assets into output directory" ON)
+option(COPY_GAME_ASSETS "copy games assets into output directory" OFF)
 option(WITH_TOOLS "build HPL2 with tools" ON)
 
 add_subdirectory(HPL2)
