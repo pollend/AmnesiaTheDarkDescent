@@ -60,11 +60,9 @@ jobs:
         run: |
           cd ${{ github.workspace }}\build
           msbuild ALL_BUILD.vcxproj /property:Configuration=Debug
-
       - name: Package Amnesia
         working-directory: ./build
-          run: 7z a ..\win-x86-64-Debug.zip * '-xr!*.exp' '-xr!*.lib'
-
+        run: 7z a ..\win-x86-64-Debug.zip * '-xr!*.exp' '-xr!*.lib'
       - name: Upload warfork artifact
         uses: actions/upload-artifact@v3
         with:
