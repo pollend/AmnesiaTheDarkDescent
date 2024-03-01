@@ -1,28 +1,28 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
 #if !defined(AFX_DGCOLLISION_H__57E159CE_6B6F_42DE_891C_1F6C38EB9D29__INCLUDED_)
 #define AFX_DGCOLLISION_H__57E159CE_6B6F_42DE_891C_1F6C38EB9D29__INCLUDED_
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (WIN32) || defined(_WIN32))
 //	#define DG_INLINE_FUNTION inline
 #define DG_INLINE_FUNTION DG_INLINE
 //	#define DG_INLINE_FUNTION __forceinline
@@ -47,13 +47,13 @@ class dgPolygonSoupRayHitDesc;
 typedef dgInt32 (*dgCollisionCompoundBreakableCallback) (dgMeshEffect* const solid, void* userData, dgMatrix& planeMatrixOut);
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 //	#define DG_DEBUG_AABB
 #endif
 
 //#define SERIALIZE_END	'dne '
 #define SERIALIZE_END   0x646e6520
-#define PREFILTER_RAYCAST(filter,body,collision,userData) (filter && !filter(body,collision,userData))
+#define PREFILTER_RAYCAST(filter,body,collision,userData) (filter && !filter(body,collision,userData)) 
 
 enum dgCollisionID
 {
@@ -73,11 +73,11 @@ enum dgCollisionID
 	m_sceneCollision,
 	m_compoundBreakable,
 
-
+	
 	m_polygonCollision,
 	m_ellipseCollision,
 	m_convexConvexIntance,
-
+	
 };
 
 
@@ -171,7 +171,7 @@ class dgCollisionInfo
 	dgInt32 m_collisionType;
 	dgInt32 m_refCount;
 	dgInt32 m_userDadaID;
-	union
+	union 
 	{
 		dgBoxData m_box;
 		dgConeData m_cone;
@@ -225,7 +225,7 @@ class dgCollision//: public dgRef
 		dgCollisionConvexPolygon_RTTI	= 1<<10,
 		dgConvexCollision_RTTI			= 1<<11,
 		dgCollisionCompound_RTTI		= 1<<12,
-
+		
 		dgCollisionBVH_RTTI				= 1<<13,
 		dgCollisionMesh_RTTI			= 1<<14,
 		dgCollisionUserMesh_RTTI		= 1<<15,
@@ -233,7 +233,7 @@ class dgCollision//: public dgRef
 		dgCollisionScene_RTTI			= 1<<17,
 		dgCollisionCompoundBreakable_RTTI = 1<<18,
 	};
-
+	
 	DG_CLASS_ALLOCATOR(allocator)
 
 	const dgMatrix& GetOffsetMatrix () const;
@@ -246,7 +246,7 @@ class dgCollision//: public dgRef
 	dgUnsigned32 SetUserDataID () const;
 	void SetUserDataID (dgUnsigned32 userData);
 
-	dgInt32 IsType (RTTI type) const
+	dgInt32 IsType (RTTI type) const 
 	{
 		return type & m_rtti;
 	}
@@ -259,28 +259,28 @@ class dgCollision//: public dgRef
 	virtual void CalcAABB (const dgMatrix& matrix, dgVector& p0, dgVector& p1) const = 0;
 	virtual void CalcAABBSimd (const dgMatrix& matrix, dgVector& p0, dgVector& p1) const = 0;
 
-	virtual bool OOBBTest (const dgMatrix& matrix, const dgCollisionConvex* const shape, void* const cacheOrder) const = 0;
+	virtual bool OOBBTest (const dgMatrix& matrix, const dgCollisionConvex* const shape, void* const cacheOrder) const = 0; 
 
 
 	virtual void DebugCollision (const dgMatrix& matrix, OnDebugCollisionMeshCallback callback, void* const userData) const = 0;
 	virtual dgFloat32 RayCast (const dgVector& localP0, const dgVector& localP1, dgContactPoint& contactOut, OnRayPrecastAction preFilter, const dgBody* const body, void* const userData) const = 0;
-	virtual dgFloat32 RayCastSimd (const dgVector& localP0, const dgVector& localP1, dgContactPoint& contactOut, OnRayPrecastAction preFilter, const dgBody* const body, void* const userData) const{_ASSERTE (0); return 0;};
+	virtual dgFloat32 RayCastSimd (const dgVector& localP0, const dgVector& localP1, dgContactPoint& contactOut, OnRayPrecastAction preFilter, const dgBody* const body, void* const userData) const{_DG_ASSERTE (0); return 0;};
 	virtual dgFloat32 GetVolume () const = 0;
 
-	virtual dgFloat32 GetBoxMinRadius () const = 0;
-	virtual dgFloat32 GetBoxMaxRadius () const = 0;
+	virtual dgFloat32 GetBoxMinRadius () const = 0; 
+	virtual dgFloat32 GetBoxMaxRadius () const = 0; 
 	virtual void CalculateInertia (dgVector& inertia, dgVector& origin) const = 0;
 	virtual dgVector CalculateVolumeIntegral (const dgMatrix& globalMatrix, GetBuoyancyPlane bouyancyPlane, void* const context) const = 0;
 	virtual void Serialize(dgSerialize callback, void* const userData) const = 0;
 
 	virtual void GetCollisionInfo(dgCollisionInfo* info) const;
 	virtual void SerializeLow(dgSerialize callback, void* const userData) const;
-
+	
 	dgUnsigned32 GetSignature () const;
 
-	// interface for the convex hull modifier
+	// interface for the convex hull modifier 
 	virtual dgMatrix ModifierGetMatrix() const;
-	virtual void ModifierSetMatrix(const dgMatrix& matrix);
+	virtual void ModifierSetMatrix(const dgMatrix& matrix); 
 
 	virtual bool IsTriggerVolume() const;
 	virtual void SetAsTriggerVolume(bool mode);
@@ -298,10 +298,10 @@ class dgCollision//: public dgRef
 	dgCollision (dgMemoryAllocator* const allocator, dgUnsigned32 signature, const dgMatrix& matrix, dgCollisionID id);
 	dgCollision (dgWorld* const world, dgDeserialize deserialization, void* const userData);
 	virtual ~dgCollision();
-
+	
 	void SetSignature (dgInt32 signature);
 	virtual dgInt32 CalculateSignature () const = 0;
-
+	
 
 	dgMatrix m_offset;
 	dgMemoryAllocator* m_allocator;
@@ -314,7 +314,7 @@ class dgCollision//: public dgRef
 
 
 
-//	dgAddRtti(dgRef);
+//	dgAddRtti(dgRef);	 
 
 	friend class dgBody;
 	friend class dgWorld;
@@ -348,7 +348,7 @@ inline dgMatrix dgCollision::ModifierGetMatrix() const
 	return dgGetIdentityMatrix();
 }
 
-inline void dgCollision::ModifierSetMatrix(const dgMatrix& matrix)
+inline void dgCollision::ModifierSetMatrix(const dgMatrix& matrix) 
 {
 }
 
@@ -372,7 +372,7 @@ inline void dgCollision::SetUserDataID (dgUnsigned32 userData)
 }
 
 
-inline dgCollision* dgCollision::AddRef ()
+inline dgCollision* dgCollision::AddRef () 
 {
 	m_refCount ++;
 	return this;
@@ -407,6 +407,6 @@ inline dgMemoryAllocator* dgCollision::GetAllocator() const
 	return m_allocator;
 }
 
-#endif
+#endif 
 
 

@@ -33,16 +33,16 @@
 	#endif
 #endif
 
-
-#ifdef _NEWTON_USE_LIB
+// this probably can be fixed without commenting this out ...
+//#ifdef _NEWTON_USE_LIB
 	#define NEWTON_API
-#else
-	#ifdef _NEWTON_BUILD_DLL
-		#define NEWTON_API __declspec(dllexport)
-	#else
-		#define NEWTON_API __declspec(dllimport)
-	#endif
-#endif
+//#else
+//	#ifdef _NEWTON_BUILD_DLL
+//		#define NEWTON_API __declspec(dllexport)
+//	#else
+//		#define NEWTON_API __declspec(dllimport)
+//	#endif
+//#endif
 
 
 #ifdef __USE_DOUBLE_PRECISION__

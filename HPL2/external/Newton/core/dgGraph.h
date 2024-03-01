@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -49,12 +49,12 @@ class dgGraph: public dgList<dgGraphNode<dgNodeData, dgEdgeData> >
 
 	void Trace () const;
 
-	#ifdef _DEBUG
+	#ifdef _DG_DEBUG
 	dgInt32 m_counter;
 	#endif
 };
 
-template<class dgNodeData, class dgEdgeData>
+template<class dgNodeData, class dgEdgeData> 
 class dgGraphNode: public dgList<dgGraphEdge<dgNodeData, dgEdgeData> >
 {
 	public:
@@ -67,14 +67,14 @@ class dgGraphNode: public dgList<dgGraphEdge<dgNodeData, dgEdgeData> >
 
 	void Trace () const;
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	dgInt32 m_index;
 #endif
 
 	dgNodeData m_nodeData;
 };
 
-template<class dgNodeData, class dgEdgeData>
+template<class dgNodeData, class dgEdgeData> 
 class dgGraphEdge
 {
 	public:
@@ -88,27 +88,27 @@ class dgGraphEdge
 
 /*
 template<class dgNodeData, class dgEdgeData>
-dgGraph<dgNodeData, dgEdgeData>::dgGraph ()
+dgGraph<dgNodeData, dgEdgeData>::dgGraph () 
 	:dgList<dgGraphNode<dgNodeData, dgEdgeData> >()
 {
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	m_counter = 0;
 #endif
 }
 */
 
 template<class dgNodeData, class dgEdgeData>
-dgGraph<dgNodeData, dgEdgeData>::dgGraph (dgMemoryAllocator* const allocator)
+dgGraph<dgNodeData, dgEdgeData>::dgGraph (dgMemoryAllocator* const allocator) 
 	:dgList<dgGraphNode<dgNodeData, dgEdgeData> >(allocator)
 {
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	m_counter = 0;
 #endif
 }
 
 
 template<class dgNodeData, class dgEdgeData>
-dgGraph<dgNodeData, dgEdgeData>::~dgGraph ()
+dgGraph<dgNodeData, dgEdgeData>::~dgGraph () 
 {
 }
 
@@ -118,7 +118,7 @@ typename dgGraph<dgNodeData, dgEdgeData>::dgListNode* dgGraph<dgNodeData, dgEdge
 	typename dgGraph<dgNodeData, dgEdgeData>::dgListNode* const node = dgGraph<dgNodeData, dgEdgeData>::Append();
 
 	node->GetInfo().SetAllocator(dgGraph<dgNodeData, dgEdgeData>::GetAllocator());
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	node->GetInfo().m_index = m_counter;
 	m_counter ++;
 #endif
@@ -129,9 +129,9 @@ typename dgGraph<dgNodeData, dgEdgeData>::dgListNode* dgGraph<dgNodeData, dgEdge
 template<class dgNodeData, class dgEdgeData>
 void dgGraph<dgNodeData, dgEdgeData>::DeleteNode (typename dgGraph<dgNodeData, dgEdgeData>::dgListNode* const node)
 {
-	for (typename dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* link = node->GetInfo().GetFirst(); link; link = link->GetNext()) {
+	for (typename dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* link = node->GetInfo().GetFirst(); link; link = link->GetNext()) {	
 		typename dgGraph<dgNodeData, dgEdgeData>::dgListNode* const twinNode = link->GetInfo().m_node;
-		for (typename dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* link1 = twinNode->GetInfo().GetFirst(); link1; link1 = link1->GetNext()) {
+		for (typename dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* link1 = twinNode->GetInfo().GetFirst(); link1; link1 = link1->GetNext()) {	
 			if (link1->GetInfo().m_node == node) {
 				twinNode->GetInfo().Remove (link1);
 				break;
@@ -144,10 +144,10 @@ void dgGraph<dgNodeData, dgEdgeData>::DeleteNode (typename dgGraph<dgNodeData, d
 template<class dgNodeData, class dgEdgeData>
 void dgGraph<dgNodeData, dgEdgeData>::Trace () const
 {
-	/*for (typename dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* link = dgGraphNode<dgNodeData, dgEdgeData>::GetFirst(); link; link = link->GetNext()) {
+	/*for (typename dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* link = dgGraphNode<dgNodeData, dgEdgeData>::GetFirst(); link; link = link->GetNext()) {	
 		link->GetInfo().Trace ();
 //		dgTrace (("%d: ", link->GetInfo().m_index));
-//		for (dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* edge = link->GetInfo().GetFirst(); edge; edge = edge->GetNext()) {
+//		for (dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* edge = link->GetInfo().GetFirst(); edge; edge = edge->GetNext()) {	
 //			dgListNode* node;
 //			node = edge->GetInfo().m_node;
 //			dgTrace (("%d ", node->GetInfo().m_index));
@@ -158,21 +158,21 @@ void dgGraph<dgNodeData, dgEdgeData>::Trace () const
 }
 
 
-template<class dgNodeData, class dgEdgeData>
-dgGraphNode<dgNodeData, dgEdgeData>::dgGraphNode()
+template<class dgNodeData, class dgEdgeData> 
+dgGraphNode<dgNodeData, dgEdgeData>::dgGraphNode() 
 	:dgList<dgGraphEdge<dgNodeData, dgEdgeData> >(NULL)
 {
 
 }
 
 
-template<class dgNodeData, class dgEdgeData>
-dgGraphNode<dgNodeData, dgEdgeData>::~dgGraphNode()
+template<class dgNodeData, class dgEdgeData> 
+dgGraphNode<dgNodeData, dgEdgeData>::~dgGraphNode() 
 {
 
 }
 
-template<class dgNodeData, class dgEdgeData>
+template<class dgNodeData, class dgEdgeData> 
 typename dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* dgGraphNode<dgNodeData, dgEdgeData>::AddEdge (typename dgGraph<dgNodeData, dgEdgeData>::dgListNode* const node)
 {
 	typename dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* edge = dgGraphNode<dgNodeData, dgEdgeData>::Append();
@@ -187,12 +187,12 @@ void dgGraphNode<dgNodeData, dgEdgeData>::DeleteHalfEdge(typename dgGraphNode<dg
 	dgList<dgGraphEdge<dgNodeData, dgEdgeData> >::Remove(edge);
 }
 
-template<class dgNodeData, class dgEdgeData>
+template<class dgNodeData, class dgEdgeData> 
 void dgGraphNode<dgNodeData, dgEdgeData>::DeleteEdge(typename dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* const edge)
 {
 	typename dgGraph<dgNodeData, dgEdgeData>::dgListNode* const node = edge->GetInfo().m_node;
-
-	for (typename dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* twinEdge = node->GetInfo().GetFirst(); twinEdge; twinEdge = twinEdge->GetNext()) {
+	
+	for (typename dgGraphNode<dgNodeData, dgEdgeData>::dgListNode* twinEdge = node->GetInfo().GetFirst(); twinEdge; twinEdge = twinEdge->GetNext()) {	
 		if (&twinEdge->GetInfo().m_node->GetInfo() == this) {
 			node->GetInfo().DeleteHalfEdge(twinEdge);
 			break;
@@ -200,13 +200,13 @@ void dgGraphNode<dgNodeData, dgEdgeData>::DeleteEdge(typename dgGraphNode<dgNode
 	}
 
 	DeleteHalfEdge(edge);
-}
+}	
 
-template<class dgNodeData, class dgEdgeData>
+template<class dgNodeData, class dgEdgeData> 
 void dgGraphNode<dgNodeData, dgEdgeData>::Trace () const
 {
 	dgTrace (("%d: ", m_index));
-	for (typename dgGraph<dgNodeData, dgEdgeData>::dgListNode* edge = typename dgGraph<dgNodeData, dgEdgeData>::GetFirst(); edge; edge = edge->GetNext()) {
+	for (typename dgGraph<dgNodeData, dgEdgeData>::dgListNode* edge = typename dgGraph<dgNodeData, dgEdgeData>::GetFirst(); edge; edge = edge->GetNext()) {	
 		typename dgGraph<dgNodeData, dgEdgeData>::dgListNode* const node;
 		node = edge->GetInfo().m_node;
 		dgTrace (("%d ", node->GetInfo().m_index));
@@ -216,14 +216,14 @@ void dgGraphNode<dgNodeData, dgEdgeData>::Trace () const
 }
 
 
-template<class dgNodeData, class dgEdgeData>
-dgGraphEdge<dgNodeData, dgEdgeData>::dgGraphEdge()
+template<class dgNodeData, class dgEdgeData> 
+dgGraphEdge<dgNodeData, dgEdgeData>::dgGraphEdge() 
 {
 
 }
 
-template<class dgNodeData, class dgEdgeData>
-dgGraphEdge<dgNodeData, dgEdgeData>::~dgGraphEdge()
+template<class dgNodeData, class dgEdgeData> 
+dgGraphEdge<dgNodeData, dgEdgeData>::~dgGraphEdge() 
 {
 
 }

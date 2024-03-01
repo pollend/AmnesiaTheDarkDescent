@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -41,7 +41,7 @@ public:
 	}
 
 	void ProjectionIntegrals(
-		dgInt32 indexCount,
+		dgInt32 indexCount, 
 		const dgVector* faceVertex)
 	{
 		dgInt32 i0;
@@ -76,28 +76,28 @@ public:
 
 			a1 = faceVertex[i1][m_A];
 			b1 = faceVertex[i1][m_B];
-			i0 = i1;
+			i0 = i1;			
 
 			da = a1 - a0;
 			db = b1 - b0;
 
-			a0_2 = a0 * a0;
-			a0_3 = a0_2 * a0;
+			a0_2 = a0 * a0; 
+			a0_3 = a0_2 * a0; 
 
 
-			b0_2 = b0 * b0;
-			b0_3 = b0_2 * b0;
+			b0_2 = b0 * b0; 
+			b0_3 = b0_2 * b0; 
 
-			a1_2 = a1 * a1;
+			a1_2 = a1 * a1; 
 
 			C1 = a1 + a0;
-			Ca = a1 * C1 + a0_2;
-			Caa = a1*Ca + a0_3;
+			Ca = a1 * C1 + a0_2; 
+			Caa = a1*Ca + a0_3; 
 
-			Cb = b1 * (b1 + b0) + b0_2;
-			Cbb = b1*Cb + b0_3;
+			Cb = b1 * (b1 + b0) + b0_2; 
+			Cbb = b1*Cb + b0_3; 
 
-			Cab = dgFloat32 (3.0f) * a1_2 + dgFloat32 (2.0f) * a1 * a0 + a0_2;
+			Cab = dgFloat32 (3.0f) * a1_2 + dgFloat32 (2.0f) * a1 * a0 + a0_2; 
 			Kab = a1_2 + dgFloat32 (2.0f) * a1 * a0 + dgFloat32 (3.0f) * a0_2;
 
 			m_P1 += db * C1;
@@ -107,7 +107,7 @@ public:
 			m_Pb += da * Cb;
 			m_Pbb += da * Cbb;
 			m_Pab += db * (b1 * Cab + b0 * Kab);
-		}
+		} 
 
 		m_P1 *= dgFloat32 (0.5f);
 		m_Pa *= dgFloat32 ( 1.0f / 6.0f);
@@ -119,8 +119,8 @@ public:
 
 
 	void FaceIntegrals (
-		dgInt32 count,
-		const dgPlane& plane,
+		dgInt32 count, 
+		const dgPlane& plane, 
 		const dgVector* faceVertex)
 	{
 
@@ -128,9 +128,9 @@ public:
 
 		ProjectionIntegrals (count, faceVertex);
 
-		k1 = dgFloat32 (1.0f) / plane[m_C];
-		k2 = k1 * k1;
-		k3 = k2 * k1;
+		k1 = dgFloat32 (1.0f) / plane[m_C]; 
+		k2 = k1 * k1; 
+		k3 = k2 * k1; 
 		k4 = k3 * k1;
 
 		m_Fa = k1 * m_Pa;
@@ -139,14 +139,14 @@ public:
 
 		m_Faa = k1 * m_Paa;
 		m_Fbb = k1 * m_Pbb;
-		m_Fcc = k3 * (SQR(plane[m_A]) * m_Paa + dgFloat32 (2.0f) * plane[m_A] * plane[m_B] * m_Pab +
+		m_Fcc = k3 * (SQR(plane[m_A]) * m_Paa + dgFloat32 (2.0f) * plane[m_A] * plane[m_B] * m_Pab + 
 			SQR(plane[m_B]) * m_Pbb + plane[3] * (dgFloat32 (2.0f) *(plane[m_A] * m_Pa + plane[m_B] * m_Pb) + plane[3] * m_P1));
 	}
 
 
 	void VolumeIntegrals(
-		dgInt32 indexCount,
-		const dgPlane& plane,
+		dgInt32 indexCount, 
+		const dgPlane& plane, 
 		const dgVector* faceVertex)
 	{
 		dgFloat32 mag2;
@@ -244,39 +244,39 @@ public:
 						a1 = faceVertex[i1 * 3 + m_A];
 						b1 = faceVertex[i1 * 3 + m_B];
 
-						i0 = i1;
+						i0 = i1;			
 
 						da = a1 - a0;
 						db = b1 - b0;
 
-						a0_2 = a0 * a0;
-						a0_3 = a0_2 * a0;
+						a0_2 = a0 * a0; 
+						a0_3 = a0_2 * a0; 
 						a0_4 = a0_3 * a0;
 
-						b0_2 = b0 * b0;
-						b0_3 = b0_2 * b0;
+						b0_2 = b0 * b0; 
+						b0_3 = b0_2 * b0; 
 						b0_4 = b0_3 * b0;
 
-						a1_2 = a1 * a1;
-						a1_3 = a1_2 * a1;
+						a1_2 = a1 * a1; 
+						a1_3 = a1_2 * a1; 
 
-						b1_2 = b1 * b1;
+						b1_2 = b1 * b1; 
 						b1_3 = b1_2 * b1;
 
 						C1 = a1 + a0;
 
-						Ca = a1 * C1 + a0_2;
-						Caa = a1 * Ca + a0_3;
+						Ca = a1 * C1 + a0_2; 
+						Caa = a1 * Ca + a0_3; 
 						Caaa = a1 * Caa + a0_4;
 
-						Cb = b1 * (b1 + b0) + b0_2;
+						Cb = b1 * (b1 + b0) + b0_2; 
 						Cbb = b1 * Cb + b0_3;
 						Cbbb = b1 * Cbb + b0_4;
 
-						Cab = dgFloat32 (3.0f) * a1_2 + dgFloat32 (2.0f) * a1 * a0 + a0_2;
+						Cab = dgFloat32 (3.0f) * a1_2 + dgFloat32 (2.0f) * a1 * a0 + a0_2; 
 						Kab = a1_2 + dgFloat32 (2.0f) * a1 * a0 + dgFloat32 (3.0f) * a0_2;
 
-						Caab = a0 * Cab + dgFloat32 (4.0f) * a1_3;
+						Caab = a0 * Cab + dgFloat32 (4.0f) * a1_3; 
 						Kaab = a1 * Kab + dgFloat32 (4.0f) * a0_3;
 						Cabb = dgFloat32 (4.0f) * b1_3 + dgFloat32 (3.0f) * b1_2 * b0 + dgFloat32 (2.0f) * b1 * b0_2 + b0_3;
 						Kabb = b1_3 + dgFloat32 (2.0f) * b1_2 * b0 + dgFloat32 (3.0f) * b1 * b0_2 + dgFloat32 (4.0f) * b0_3;
@@ -293,7 +293,7 @@ public:
 						m_Pbbb += (da * Cbbb);
 						m_Paab += (db * (b1 * Caab + b0 * Kaab));
 						m_Pabb += (da * (a1 * Cabb + a0 * Kabb));
-					}
+					} 
 
 					m_P1 *= dgFloat32 (0.5f);
 					m_Pa *= dgFloat32 ( 1.0f / 6.0f);
@@ -308,9 +308,9 @@ public:
 					m_Pabb *= dgFloat32 (-1.0f / 60.0);
 				}
 
-				k1 = dgFloat32 (1.0f) / plane[m_C];
-				k2 = k1 * k1;
-				k3 = k2 * k1;
+				k1 = dgFloat32 (1.0f) / plane[m_C]; 
+				k2 = k1 * k1; 
+				k3 = k2 * k1; 
 				k4 = k3 * k1;
 
 				m_Fa = k1 * m_Pa;
@@ -319,12 +319,12 @@ public:
 
 				m_Faa = k1 * m_Paa;
 				m_Fbb = k1 * m_Pbb;
-				m_Fcc = k3 * (SQR(plane[m_A]) * m_Paa + dgFloat32 (2.0f) * plane[m_A] * plane[m_B] * m_Pab +
+				m_Fcc = k3 * (SQR(plane[m_A]) * m_Paa + dgFloat32 (2.0f) * plane[m_A] * plane[m_B] * m_Pab + 
 					SQR(plane[m_B]) * m_Pbb + plane[3] * (dgFloat32 (2.0f) *(plane[m_A] * m_Pa + plane[m_B] * m_Pb) + plane[3] * m_P1));
 
 				m_Faaa = k1 * m_Paaa;
 				m_Fbbb = k1 * m_Pbbb;
-				m_Fccc = -k4 * (CUBE(plane[m_A]) * m_Paaa +
+				m_Fccc = -k4 * (CUBE(plane[m_A]) * m_Paaa + 
 					dgFloat32(3.0f) * SQR(plane[m_A]) * plane[m_B] * m_Paab +
 					dgFloat32(3.0f) * plane[m_A] * SQR(plane[m_B]) * m_Pabb + CUBE(plane[m_B]) * m_Pbbb +
 					dgFloat32(3.0f) * plane[3]  * (SQR(plane[m_A]) * m_Paa + dgFloat32 (2.0f) * plane[m_A] * plane[m_B] * m_Pab + SQR(plane[m_B]) * m_Pbb) +
@@ -353,9 +353,9 @@ public:
 	}
 
 
-	dgInt32 m_A;   // alpha
-	dgInt32 m_B;   // beta
-	dgInt32 m_C;   // gamma
+	dgInt32 m_A;   // alpha 
+	dgInt32 m_B;   // beta 
+	dgInt32 m_C;   // gamma 
 
 	dgFloat32 m_T0;
 	dgFloat32 m_T1[3];
@@ -411,7 +411,7 @@ void dgPolyhedraMassProperties::AddCGFace (dgInt32 indexCount, const dgVector* f
 		temp0 = w0 + w1; \
 		f1 = temp0 + w2; \
 		f2 = w0 * w0 + w1 * temp0 + w2 * f1; \
-	}
+	}					
 
 	const dgVector& p0 = faceVertex[0];
 	dgVector p1 (faceVertex[1]);
@@ -430,8 +430,8 @@ void dgPolyhedraMassProperties::AddCGFace (dgInt32 indexCount, const dgVector* f
 		// update integrals
 		intg[0] += d[0] * f1.m_x;
 
-		intg[1] += d[0] * f2.m_x;
-		intg[2] += d[1] * f2.m_y;
+		intg[1] += d[0] * f2.m_x; 
+		intg[2] += d[1] * f2.m_y; 
 		intg[3] += d[2] * f2.m_z;
 
 		p1 = p2;
@@ -476,12 +476,12 @@ void dgPolyhedraMassProperties::AddInertiaFace (dgInt32 indexCount, const dgFloa
 		// update integrals
 		intg[0] += d[0] * f1.m_x;
 
-		intg[1] += d[0] * f2.m_x;
-		intg[2] += d[1] * f2.m_y;
+		intg[1] += d[0] * f2.m_x; 
+		intg[2] += d[1] * f2.m_y; 
 		intg[3] += d[2] * f2.m_z;
 
-		intg[4] += d[0] * f3.m_x;
-		intg[5] += d[1] * f3.m_y;
+		intg[4] += d[0] * f3.m_x; 
+		intg[5] += d[1] * f3.m_y; 
 		intg[6] += d[2] * f3.m_z;
 
 		p1 = p2;
@@ -532,12 +532,12 @@ void dgPolyhedraMassProperties::AddInertiaAndCrossFace (dgInt32 indexCount, cons
 		// update integrals
 		intg[0] += d[0] * f1.m_x;
 
-		intg[1] += d[0] * f2.m_x;
-		intg[2] += d[1] * f2.m_y;
+		intg[1] += d[0] * f2.m_x; 
+		intg[2] += d[1] * f2.m_y; 
 		intg[3] += d[2] * f2.m_z;
 
-		intg[4] += d[0] * f3.m_x;
-		intg[5] += d[1] * f3.m_y;
+		intg[4] += d[0] * f3.m_x; 
+		intg[5] += d[1] * f3.m_y; 
 		intg[6] += d[2] * f3.m_z;
 
 		intg[7] += d[0] * (p0.m_y * g0.m_x + p1.m_y * g1.m_x + p2.m_y * g2.m_x);
@@ -574,7 +574,7 @@ dgFloat32 dgPolyhedraMassProperties::MassProperties (dgVector& cg, dgVector& ine
 }
 
 
-dgFloat32 dgPolyhedraMassProperties::mult[10] = {dgFloat32 (1.0f/6.0f),
+dgFloat32 dgPolyhedraMassProperties::mult[10] = {dgFloat32 (1.0f/6.0f), 
 										dgFloat32 (1.0f/24.0f), dgFloat32 (1.0f/24.0f), dgFloat32 (1.0f/24.0f),
 										dgFloat32 (1.0f/60.0f), dgFloat32 (1.0f/60.0f), dgFloat32 (1.0f/60.0f),
 										dgFloat32 (1.0f/120.0f), dgFloat32 (1.0f/120.0f), dgFloat32 (1.0f/120.0f)};

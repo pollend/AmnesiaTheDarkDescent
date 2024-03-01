@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -49,7 +49,7 @@ dgCollisionScene::dgNode::dgNode (dgNode* const sibling, dgNode* const myNode)
 		if (m_parent->m_left == sibling) {
 			m_parent->m_left = this;
 		} else {
-			_ASSERTE (m_parent->m_right == sibling);
+			_DG_ASSERTE (m_parent->m_right == sibling);
 			m_parent->m_right = this;
 		}
 	}
@@ -93,14 +93,14 @@ dgCollisionScene::dgProxy::dgProxy (dgCollision* m_shape, /*const dgMatrix& matr
 	dgVector p0 (boxP0.CompProduct(dgVector (DG_SCENE_AABB_SCALE, DG_SCENE_AABB_SCALE, DG_SCENE_AABB_SCALE, dgFloat32 (0.0f))));
 	dgVector p1 (boxP1.CompProduct(dgVector (DG_SCENE_AABB_SCALE, DG_SCENE_AABB_SCALE, DG_SCENE_AABB_SCALE, dgFloat32 (0.0f))));
 
-	m_minBox.m_x = dgFloor (p0.m_x) * DG_SCENE_AABB_INV_SCALE;
-	m_minBox.m_y = dgFloor (p0.m_y) * DG_SCENE_AABB_INV_SCALE;
-	m_minBox.m_z = dgFloor (p0.m_z) * DG_SCENE_AABB_INV_SCALE;
+	m_minBox.m_x = dgFloor (p0.m_x) * DG_SCENE_AABB_INV_SCALE; 
+	m_minBox.m_y = dgFloor (p0.m_y) * DG_SCENE_AABB_INV_SCALE;  
+	m_minBox.m_z = dgFloor (p0.m_z) * DG_SCENE_AABB_INV_SCALE;  
 	m_minBox.m_w = dgFloat32 (0.0f);
 
-	m_maxBox.m_x = dgFloor (p1.m_x + dgFloat32 (1.0f)) * DG_SCENE_AABB_INV_SCALE;
-	m_maxBox.m_y = dgFloor (p1.m_y + dgFloat32 (1.0f)) * DG_SCENE_AABB_INV_SCALE;
-	m_maxBox.m_z = dgFloor (p1.m_z + dgFloat32 (1.0f)) * DG_SCENE_AABB_INV_SCALE;
+	m_maxBox.m_x = dgFloor (p1.m_x + dgFloat32 (1.0f)) * DG_SCENE_AABB_INV_SCALE;  
+	m_maxBox.m_y = dgFloor (p1.m_y + dgFloat32 (1.0f)) * DG_SCENE_AABB_INV_SCALE;  
+	m_maxBox.m_z = dgFloor (p1.m_z + dgFloat32 (1.0f)) * DG_SCENE_AABB_INV_SCALE;  
 	m_maxBox.m_w = dgFloat32 (0.0f);
 
 	dgVector side0 (m_maxBox - m_minBox);
@@ -134,7 +134,7 @@ dgCollisionScene::dgCollisionScene (dgWorld* const world, dgDeserialize deserial
 	,m_list(world->GetAllocator())
 	,m_fitnessList(world->GetAllocator())
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 /*
 	dgInt32 stack;
 	dgInt32 nodeCount;
@@ -148,7 +148,7 @@ dgCollisionScene::dgCollisionScene (dgWorld* const world, dgDeserialize deserial
 	dgStack<dgList<dgProxy>::dgListNode*> array(data[0]);
 
 	for (dgInt32 i = 0; i < data[0]; i ++) {
-
+		
 		dgVector p0;
 		dgVector p1;
 		dgMatrix matrix;
@@ -202,8 +202,8 @@ dgCollisionScene::dgCollisionScene (dgWorld* const world, dgDeserialize deserial
 			dgNode* const child = new (m_allocator) dgNode;
 			child->m_parent = node;
 			node->m_rightNode = child;
-			_ASSERTE (node->m_rightIsProxy == false);
-			_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+			_DG_ASSERTE (node->m_rightIsProxy == false);
+			_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 			stackPool[stack] = node->m_rightNode;
 			stack++;
 		}
@@ -217,8 +217,8 @@ dgCollisionScene::dgCollisionScene (dgWorld* const world, dgDeserialize deserial
 			dgNode* const child = new (m_allocator) dgNode;
 			child->m_parent = node;
 			node->m_leftNode = child;
-			_ASSERTE (node->m_leftIsProxy == false);
-			_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+			_DG_ASSERTE (node->m_leftIsProxy == false);
+			_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 			stackPool[stack] = node->m_leftNode;
 			stack++;
 		}
@@ -237,7 +237,7 @@ dgCollisionScene::~dgCollisionScene(void)
 
 void dgCollisionScene::Serialize(dgSerialize callback, void* const userData) const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 /*
 	dgInt32 index;
 	dgInt32 stack;
@@ -255,7 +255,7 @@ void dgCollisionScene::Serialize(dgSerialize callback, void* const userData) con
 	index = 0;
 	for (dgList<dgProxy>::dgListNode* node = m_list.GetFirst(); node; node = node->GetNext()) {
 		dgProxy& proxy = node->GetInfo();
-		proxy.m_boxP0.m_w = dgFloat32 (index);
+		proxy.m_boxP0.m_w = dgFloat32 (index); 
 		index ++;
 
 		callback (userData, &proxy.m_matrix, sizeof (dgMatrix));
@@ -264,7 +264,7 @@ void dgCollisionScene::Serialize(dgSerialize callback, void* const userData) con
 		m_world->Serialize (proxy.m_shape, callback, userData);
 	}
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	index = 0;
 	stack = 1;
 	stackPool[0] = m_rootNode;
@@ -274,20 +274,20 @@ void dgCollisionScene::Serialize(dgSerialize callback, void* const userData) con
 		index ++;
 
 		if (node->m_rightIsProxy == false) {
-			_ASSERTE (node->m_rightNode);
-			_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+			_DG_ASSERTE (node->m_rightNode);
+			_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 			stackPool[stack] = node->m_rightNode;
 			stack++;
 		}
-
+	
 		if (node->m_leftIsProxy == false) {
-			_ASSERTE (node->m_leftNode);
-			_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+			_DG_ASSERTE (node->m_leftNode);
+			_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 			stackPool[stack] = node->m_leftNode;
 			stack++;
 		}
 	}
-	_ASSERTE (index == (m_list.GetCount() - 1));
+	_DG_ASSERTE (index == (m_list.GetCount() - 1));
 #endif
 
 	index = m_list.GetCount() - 1;
@@ -312,9 +312,9 @@ void dgCollisionScene::Serialize(dgSerialize callback, void* const userData) con
 			proxyIndex = dgInt32 (sceneProxy.m_boxP0.m_w);
 			callback (userData, &proxyIndex, sizeof (dgInt32));
 		} else {
-			_ASSERTE (node->m_rightNode);
-			_ASSERTE (node->m_rightIsProxy == false);
-			_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+			_DG_ASSERTE (node->m_rightNode);
+			_DG_ASSERTE (node->m_rightIsProxy == false);
+			_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 			stackPool[stack] = node->m_rightNode;
 			stack++;
 		}
@@ -326,9 +326,9 @@ void dgCollisionScene::Serialize(dgSerialize callback, void* const userData) con
 			callback (userData, &proxyIndex, sizeof (dgInt32));
 
 		} else {
-			_ASSERTE (node->m_leftNode);
-			_ASSERTE (node->m_leftIsProxy == false);
-			_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+			_DG_ASSERTE (node->m_leftNode);
+			_DG_ASSERTE (node->m_leftIsProxy == false);
+			_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 			stackPool[stack] = node->m_leftNode;
 			stack++;
 		}
@@ -356,13 +356,13 @@ void dgCollisionScene::SetProxyMatrix (void* proxy, const dgMatrix& matrix)
 	dgVector p0 (boxP0.CompProduct(dgVector (DG_SCENE_AABB_SCALE, DG_SCENE_AABB_SCALE, DG_SCENE_AABB_SCALE, dgFloat32 (0.0f))));
 	dgVector p1 (boxP1.CompProduct(dgVector (DG_SCENE_AABB_SCALE, DG_SCENE_AABB_SCALE, DG_SCENE_AABB_SCALE, dgFloat32 (0.0f))));
 
-	p0.m_x = dgFloor (p0.m_x) * DG_SCENE_AABB_INV_SCALE;
-	p0.m_y = dgFloor (p0.m_y) * DG_SCENE_AABB_INV_SCALE;
-	p0.m_z = dgFloor (p0.m_z) * DG_SCENE_AABB_INV_SCALE;
+	p0.m_x = dgFloor (p0.m_x) * DG_SCENE_AABB_INV_SCALE; 
+	p0.m_y = dgFloor (p0.m_y) * DG_SCENE_AABB_INV_SCALE;  
+	p0.m_z = dgFloor (p0.m_z) * DG_SCENE_AABB_INV_SCALE;  
 
-	p1.m_x = dgFloor (p1.m_x + dgFloat32 (1.0f)) * DG_SCENE_AABB_INV_SCALE;
-	p1.m_y = dgFloor (p1.m_y + dgFloat32 (1.0f)) * DG_SCENE_AABB_INV_SCALE;
-	p1.m_z = dgFloor (p1.m_z + dgFloat32 (1.0f)) * DG_SCENE_AABB_INV_SCALE;
+	p1.m_x = dgFloor (p1.m_x + dgFloat32 (1.0f)) * DG_SCENE_AABB_INV_SCALE;  
+	p1.m_y = dgFloor (p1.m_y + dgFloat32 (1.0f)) * DG_SCENE_AABB_INV_SCALE;  
+	p1.m_z = dgFloor (p1.m_z + dgFloat32 (1.0f)) * DG_SCENE_AABB_INV_SCALE;  
 
 	entry->m_minBox = p0;
 	entry->m_maxBox = p1;
@@ -397,7 +397,7 @@ dgMatrix dgCollisionScene::GetProxyMatrix (void* const proxy)
 
 void dgCollisionScene::SetCollisionCallback (dgCollisionMeshCollisionCallback debugCallback)
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 /*
 	for (dgList<dgProxy>::dgListNode* node = m_list.GetFirst(); node; node = node->GetNext()) {
 		const dgCollisionScene::dgProxy& entry = node->GetInfo();
@@ -416,8 +416,8 @@ _ASSERTE (0);
 void dgCollisionScene::CalcAABB (const dgMatrix& matrix, dgVector& p0, dgVector& p1) const
 {
 	dgVector origin (matrix.TransformVector(m_boxOrigin));
-	dgVector size (m_boxSize.m_x * dgAbsf(matrix[0][0]) + m_boxSize.m_y * dgAbsf(matrix[1][0]) + m_boxSize.m_z * dgAbsf(matrix[2][0]) + DG_MAX_COLLISION_PADDING,
-				   m_boxSize.m_x * dgAbsf(matrix[0][1]) + m_boxSize.m_y * dgAbsf(matrix[1][1]) + m_boxSize.m_z * dgAbsf(matrix[2][1]) + DG_MAX_COLLISION_PADDING,
+	dgVector size (m_boxSize.m_x * dgAbsf(matrix[0][0]) + m_boxSize.m_y * dgAbsf(matrix[1][0]) + m_boxSize.m_z * dgAbsf(matrix[2][0]) + DG_MAX_COLLISION_PADDING,  
+				   m_boxSize.m_x * dgAbsf(matrix[0][1]) + m_boxSize.m_y * dgAbsf(matrix[1][1]) + m_boxSize.m_z * dgAbsf(matrix[2][1]) + DG_MAX_COLLISION_PADDING,  
 				   m_boxSize.m_x * dgAbsf(matrix[0][2]) + m_boxSize.m_y * dgAbsf(matrix[1][2]) + m_boxSize.m_z * dgAbsf(matrix[2][2]) + DG_MAX_COLLISION_PADDING,
 				   dgFloat32 (0.0f));
 
@@ -436,10 +436,10 @@ void dgCollisionScene::CalcAABB (const dgMatrix& matrix, dgVector& p0, dgVector&
 
 	dgVector err0 (p0 - q0);
 	dgVector err1 (p1 - q1);
-	dgFloat32 err;
-	err = GetMax (size.m_x, size.m_y, size.m_z) * 0.5f;
-	_ASSERTE ((err0 % err0) < err);
-	_ASSERTE ((err1 % err1) < err);
+	dgFloat32 err; 
+	err = GetMax (size.m_x, size.m_y, size.m_z) * 0.5f; 
+	_DG_ASSERTE ((err0 % err0) < err);
+	_DG_ASSERTE ((err1 % err1) < err);
 #endif
 }
 
@@ -466,35 +466,35 @@ void dgCollisionScene::DebugCollision (const dgMatrix& matrix, OnDebugCollisionM
 
 dgFloat32 dgCollisionScene::GetVolume () const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return dgFloat32 (0.0f);
 }
 
 
 dgInt32 dgCollisionScene::CalculateSignature () const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return 0;
 }
 
-dgFloat32 dgCollisionScene::GetBoxMinRadius () const
+dgFloat32 dgCollisionScene::GetBoxMinRadius () const 
 {
 	return dgFloat32 (0.0f);
 }
 
-dgFloat32 dgCollisionScene::GetBoxMaxRadius () const
+dgFloat32 dgCollisionScene::GetBoxMaxRadius () const 
 {
 	return dgFloat32 (0.0f);
 }
 
 void dgCollisionScene::SetCollisionBBox (const dgVector& p0, const dgVector& p1)
 {
-	_ASSERTE (p0.m_x <= p1.m_x);
-	_ASSERTE (p0.m_y <= p1.m_y);
-	_ASSERTE (p0.m_z <= p1.m_z);
+	_DG_ASSERTE (p0.m_x <= p1.m_x);
+	_DG_ASSERTE (p0.m_y <= p1.m_y);
+	_DG_ASSERTE (p0.m_z <= p1.m_z);
 
-	m_boxSize = (p1 - p0).Scale (dgFloat32 (0.5f));
-	m_boxOrigin = (p1 + p0).Scale (dgFloat32 (0.5f));
+	m_boxSize = (p1 - p0).Scale (dgFloat32 (0.5f)); 
+	m_boxOrigin = (p1 + p0).Scale (dgFloat32 (0.5f)); 
 }
 
 void dgCollisionScene::CalculateInertia (dgVector& inertia, dgVector& origin) const
@@ -510,7 +510,7 @@ void dgCollisionScene::CalculateInertia (dgVector& inertia, dgVector& origin) co
 
 dgVector dgCollisionScene::CalculateVolumeIntegral (const dgMatrix& globalMatrix, GetBuoyancyPlane bouyancyPlane, void* const context) const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
 }
 
@@ -525,7 +525,7 @@ void dgCollisionScene::GetCollisionInfo(dgCollisionInfo* info) const
 
 bool dgCollisionScene::OOBBTest (const dgMatrix& matrix, const dgCollisionConvex* const shape, void* const cacheOrder) const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return true;
 }
 
@@ -533,7 +533,7 @@ bool dgCollisionScene::OOBBTest (const dgMatrix& matrix, const dgCollisionConvex
 
 dgFloat32 dgCollisionScene::RayCastSimd (const dgVector& localP0, const dgVector& localP1, dgContactPoint& contactOut, OnRayPrecastAction preFilter, const dgBody* const body, void* const userData) const
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 return 0;
 /*
 	dgInt32 stack;
@@ -545,8 +545,8 @@ return 0;
 		return dgFloat32 (1.2f);
 	}
 
-
-
+	
+	
 	stack = 1;
 	stackPool[0] = m_rootNode;
 	maxParam = dgFloat32 (1.2f);
@@ -565,7 +565,7 @@ return 0;
 					dgVector l0 (proxy.m_matrix.UntransformVector (localP0));
 					dgVector l1 (proxy.m_matrix.UntransformVector (localP1));
 					param = proxy.m_shape->RayCastSimd (l0, l1, tmpContactOut, preFilter, body, userData);
-					_ASSERTE (param >= dgFloat32 (0.0f));
+					_DG_ASSERTE (param >= dgFloat32 (0.0f));
 					if (param < maxParam) {
 						contactOut.m_normal = proxy.m_matrix.RotateVector(tmpContactOut.m_normal);
 						maxParam = param;
@@ -573,8 +573,8 @@ return 0;
 					}
 				}
 			} else {
-				_ASSERTE (me->m_leftIsProxy == false);
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+				_DG_ASSERTE (me->m_leftIsProxy == false);
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 				stackPool[stack] = me->m_leftNode;
 				stack++;
 			}
@@ -586,7 +586,7 @@ return 0;
 					dgVector l0 (proxy.m_matrix.UntransformVector (localP0));
 					dgVector l1 (proxy.m_matrix.UntransformVector (localP1));
 					param = proxy.m_shape->RayCastSimd (l0, l1, tmpContactOut, preFilter, body, userData);
-					_ASSERTE (param >= dgFloat32 (0.0f));
+					_DG_ASSERTE (param >= dgFloat32 (0.0f));
 					if (param < maxParam) {
 						contactOut.m_normal = proxy.m_matrix.RotateVector(tmpContactOut.m_normal);
 						maxParam = param;
@@ -595,8 +595,8 @@ return 0;
 				}
 
 			} else {
-				_ASSERTE (me->m_rightIsProxy == false);
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+				_DG_ASSERTE (me->m_rightIsProxy == false);
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 				stackPool[stack] = me->m_rightNode;
 				stack++;
 			}
@@ -609,7 +609,7 @@ return 0;
 
 dgVector dgCollisionScene::SupportVertex (const dgVector& dir) const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return dgVector (0, 0, 0, 0);
 }
 
@@ -617,7 +617,7 @@ dgVector dgCollisionScene::SupportVertex (const dgVector& dir) const
 
 dgFloat32 dgCollisionScene::RayCast (const dgVector& localP0, const dgVector& localP1, dgContactPoint& contactOut, OnRayPrecastAction preFilter, const dgBody* const body, void* const userData) const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return 0;
 /*
 	dgInt32 stack;
@@ -646,7 +646,7 @@ dgFloat32 dgCollisionScene::RayCast (const dgVector& localP0, const dgVector& lo
 					dgVector l0 (proxy.m_matrix.UntransformVector (localP0));
 					dgVector l1 (proxy.m_matrix.UntransformVector (localP1));
 					param = proxy.m_shape->RayCast (l0, l1, tmpContactOut, preFilter, body, userData);
-					_ASSERTE (param >= dgFloat32 (0.0f));
+					_DG_ASSERTE (param >= dgFloat32 (0.0f));
 					if (param < maxParam) {
 						contactOut.m_normal = proxy.m_matrix.RotateVector(tmpContactOut.m_normal);
 						maxParam = param;
@@ -654,8 +654,8 @@ dgFloat32 dgCollisionScene::RayCast (const dgVector& localP0, const dgVector& lo
 					}
 				}
 			} else {
-				_ASSERTE (me->m_leftNode);
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+				_DG_ASSERTE (me->m_leftNode);
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 				stackPool[stack] = me->m_leftNode;
 				stack++;
 			}
@@ -667,7 +667,7 @@ dgFloat32 dgCollisionScene::RayCast (const dgVector& localP0, const dgVector& lo
 					dgVector l0 (proxy.m_matrix.UntransformVector (localP0));
 					dgVector l1 (proxy.m_matrix.UntransformVector (localP1));
 					param = proxy.m_shape->RayCast (l0, l1, tmpContactOut, preFilter, body, userData);
-					_ASSERTE (param >= dgFloat32 (0.0f));
+					_DG_ASSERTE (param >= dgFloat32 (0.0f));
 					if (param < maxParam) {
 						contactOut.m_normal = proxy.m_matrix.RotateVector(tmpContactOut.m_normal);
 						maxParam = param;
@@ -676,8 +676,8 @@ dgFloat32 dgCollisionScene::RayCast (const dgVector& localP0, const dgVector& lo
 				}
 
 			} else {
-				_ASSERTE (me->m_rightNode);
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+				_DG_ASSERTE (me->m_rightNode);
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 				stackPool[stack] = me->m_rightNode;
 				stack++;
 			}
@@ -689,14 +689,14 @@ dgFloat32 dgCollisionScene::RayCast (const dgVector& localP0, const dgVector& lo
 
 void dgCollisionScene::CollidePairSimd (dgCollidingPairCollector::dgPair* const pair, dgCollisionParamProxi& proxi) const
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 /*
 	dgInt32 stack;
 	dgWorld* world;
 	const dgNode *stackPool[64];
 
-	_ASSERTE (pair->m_body1->GetCollision() == this);
-	_ASSERTE (pair->m_body1->GetCollision()->IsType(dgCollision::dgCollisionScene_RTTI));
+	_DG_ASSERTE (pair->m_body1->GetCollision() == this);
+	_DG_ASSERTE (pair->m_body1->GetCollision()->IsType(dgCollision::dgCollisionScene_RTTI));
 
 	dgVector p0;
 	dgVector p1;
@@ -726,7 +726,7 @@ _ASSERTE (0);
 			}
 		}
 	} else {
-		_ASSERTE (m_rootNode->m_rightNode);
+		_DG_ASSERTE (m_rootNode->m_rightNode);
 		stackPool[stack] = m_rootNode->m_rightNode;
 		stack++;
 	}
@@ -742,8 +742,8 @@ _ASSERTE (0);
 					world->SceneContactsSimd (sceneProxy, pair, proxi);
 				}
 			} else {
-				_ASSERTE (me->m_leftNode);
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+				_DG_ASSERTE (me->m_leftNode);
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 				stackPool[stack] = me->m_leftNode;
 				stack++;
 			}
@@ -754,8 +754,8 @@ _ASSERTE (0);
 					world->SceneContactsSimd (sceneProxy, pair, proxi);
 				}
 			} else {
-				_ASSERTE (me->m_rightNode);
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+				_DG_ASSERTE (me->m_rightNode);
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 				stackPool[stack] = me->m_rightNode;
 				stack++;
 			}
@@ -766,14 +766,14 @@ _ASSERTE (0);
 
 void dgCollisionScene::CollidePair (dgCollidingPairCollector::dgPair* const pair, dgCollisionParamProxi& proxi) const
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 /*
 	dgInt32 stack;
 	dgWorld* world;
 	const dgNode *stackPool[64];
 
-	_ASSERTE (pair->m_body1->GetCollision() == this);
-	_ASSERTE (pair->m_body1->GetCollision()->IsType(dgCollision::dgCollisionScene_RTTI));
+	_DG_ASSERTE (pair->m_body1->GetCollision() == this);
+	_DG_ASSERTE (pair->m_body1->GetCollision()->IsType(dgCollision::dgCollisionScene_RTTI));
 
 	dgVector p0;
 	dgVector p1;
@@ -803,7 +803,7 @@ _ASSERTE (0);
 			}
 		}
 	} else {
-		_ASSERTE (m_rootNode->m_rightNode);
+		_DG_ASSERTE (m_rootNode->m_rightNode);
 		stackPool[stack] = m_rootNode->m_rightNode;
 		stack++;
 	}
@@ -819,8 +819,8 @@ _ASSERTE (0);
 					world->SceneContacts (sceneProxy, pair, proxi);
 				}
 			} else {
-				_ASSERTE (me->m_leftNode);
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+				_DG_ASSERTE (me->m_leftNode);
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 				stackPool[stack] = me->m_leftNode;
 				stack++;
 			}
@@ -831,8 +831,8 @@ _ASSERTE (0);
 					world->SceneContacts (sceneProxy, pair, proxi);
 				}
 			} else {
-				_ASSERTE (me->m_rightNode);
-				_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
+				_DG_ASSERTE (me->m_rightNode);
+				_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (dgNode*));
 				stackPool[stack] = me->m_rightNode;
 				stack++;
 			}
@@ -844,31 +844,31 @@ _ASSERTE (0);
 
 void dgCollisionScene::ImproveNodeFitness (dgNode* const node)
 {
-	_ASSERTE (node->m_left);
-	_ASSERTE (node->m_right);
+	_DG_ASSERTE (node->m_left);
+	_DG_ASSERTE (node->m_right);
 
 	if (node->m_parent)	{
 		if (node->m_parent->m_left == node) {
 			dgFloat32 cost0 = node->m_surfaceArea;
 
 			dgVector cost1P0;
-			dgVector cost1P1;
+			dgVector cost1P1;		
 			dgFloat32 cost1 = CalculateSurfaceArea (node->m_right, node->m_parent->m_right, cost1P0, cost1P1);
 
 			dgVector cost2P0;
-			dgVector cost2P1;
+			dgVector cost2P1;		
 			dgFloat32 cost2 = CalculateSurfaceArea (node->m_left, node->m_parent->m_right, cost2P0, cost2P1);
 
 			if ((cost1 <= cost0) && (cost1 <= cost2)) {
 				dgNode* const parent = node->m_parent;
 				node->m_minBox = parent->m_minBox;
 				node->m_maxBox = parent->m_maxBox;
-				node->m_surfaceArea = parent->m_surfaceArea;
+				node->m_surfaceArea = parent->m_surfaceArea; 
 				if (parent->m_parent) {
 					if (parent->m_parent->m_left == parent) {
 						parent->m_parent->m_left = node;
 					} else {
-						_ASSERTE (parent->m_parent->m_right == parent);
+						_DG_ASSERTE (parent->m_parent->m_right == parent);
 						parent->m_parent->m_right = node;
 					}
 				} else {
@@ -880,7 +880,7 @@ void dgCollisionScene::ImproveNodeFitness (dgNode* const node)
 				parent->m_left = node->m_right;
 				node->m_right = parent;
 				parent->m_minBox = cost1P0;
-				parent->m_maxBox = cost1P1;
+				parent->m_maxBox = cost1P1;		
 				parent->m_surfaceArea = cost1;
 
 
@@ -888,13 +888,13 @@ void dgCollisionScene::ImproveNodeFitness (dgNode* const node)
 				dgNode* const parent = node->m_parent;
 				node->m_minBox = parent->m_minBox;
 				node->m_maxBox = parent->m_maxBox;
-				node->m_surfaceArea = parent->m_surfaceArea;
+				node->m_surfaceArea = parent->m_surfaceArea; 
 
 				if (parent->m_parent) {
 					if (parent->m_parent->m_left == parent) {
 						parent->m_parent->m_left = node;
 					} else {
-						_ASSERTE (parent->m_parent->m_right == parent);
+						_DG_ASSERTE (parent->m_parent->m_right == parent);
 						parent->m_parent->m_right = node;
 					}
 				} else {
@@ -907,18 +907,18 @@ void dgCollisionScene::ImproveNodeFitness (dgNode* const node)
 				node->m_left = parent;
 
 				parent->m_minBox = cost2P0;
-				parent->m_maxBox = cost2P1;
+				parent->m_maxBox = cost2P1;		
 				parent->m_surfaceArea = cost2;
 			}
 		} else {
 			dgFloat32 cost0 = node->m_surfaceArea;
 
 			dgVector cost1P0;
-			dgVector cost1P1;
+			dgVector cost1P1;		
 			dgFloat32 cost1 = CalculateSurfaceArea (node->m_left, node->m_parent->m_left, cost1P0, cost1P1);
 
 			dgVector cost2P0;
-			dgVector cost2P1;
+			dgVector cost2P1;		
 			dgFloat32 cost2 = CalculateSurfaceArea (node->m_right, node->m_parent->m_left, cost2P0, cost2P1);
 
 
@@ -927,12 +927,12 @@ void dgCollisionScene::ImproveNodeFitness (dgNode* const node)
 				dgNode* const parent = node->m_parent;
 				node->m_minBox = parent->m_minBox;
 				node->m_maxBox = parent->m_maxBox;
-				node->m_surfaceArea = parent->m_surfaceArea;
+				node->m_surfaceArea = parent->m_surfaceArea; 
 				if (parent->m_parent) {
 					if (parent->m_parent->m_left == parent) {
 						parent->m_parent->m_left = node;
 					} else {
-						_ASSERTE (parent->m_parent->m_right == parent);
+						_DG_ASSERTE (parent->m_parent->m_right == parent);
 						parent->m_parent->m_right = node;
 					}
 				} else {
@@ -945,19 +945,19 @@ void dgCollisionScene::ImproveNodeFitness (dgNode* const node)
 				node->m_left = parent;
 
 				parent->m_minBox = cost1P0;
-				parent->m_maxBox = cost1P1;
+				parent->m_maxBox = cost1P1;		
 				parent->m_surfaceArea = cost1;
 
 			} else if ((cost2 <= cost0) && (cost2 <= cost1)) {
 				dgNode* const parent = node->m_parent;
 				node->m_minBox = parent->m_minBox;
 				node->m_maxBox = parent->m_maxBox;
-				node->m_surfaceArea = parent->m_surfaceArea;
+				node->m_surfaceArea = parent->m_surfaceArea; 
 				if (parent->m_parent) {
 					if (parent->m_parent->m_left == parent) {
 						parent->m_parent->m_left = node;
 					} else {
-						_ASSERTE (parent->m_parent->m_right == parent);
+						_DG_ASSERTE (parent->m_parent->m_right == parent);
 						parent->m_parent->m_right = node;
 					}
 				} else {
@@ -970,13 +970,13 @@ void dgCollisionScene::ImproveNodeFitness (dgNode* const node)
 				node->m_right = parent;
 
 				parent->m_minBox = cost2P0;
-				parent->m_maxBox = cost2P1;
+				parent->m_maxBox = cost2P1;		
 				parent->m_surfaceArea = cost2;
 			}
 		}
 	}
 
-	_ASSERTE (!m_rootNode->m_parent);
+	_DG_ASSERTE (!m_rootNode->m_parent);
 }
 
 
@@ -1004,7 +1004,7 @@ void dgCollisionScene::ImproveTotalFitness()
 dgFloat32 dgCollisionScene::CalculateSurfaceArea (const dgNode* const node0, const dgNode* const node1, dgVector& minBox, dgVector& maxBox) const
 {
 	minBox = dgVector (GetMin (node0->m_minBox.m_x, node1->m_minBox.m_x), GetMin (node0->m_minBox.m_y, node1->m_minBox.m_y), GetMin (node0->m_minBox.m_z, node1->m_minBox.m_z), dgFloat32 (0.0f));
-	maxBox = dgVector (GetMax (node0->m_maxBox.m_x, node1->m_maxBox.m_x), GetMax (node0->m_maxBox.m_y, node1->m_maxBox.m_y), GetMax (node0->m_maxBox.m_z, node1->m_maxBox.m_z), dgFloat32 (0.0f));
+	maxBox = dgVector (GetMax (node0->m_maxBox.m_x, node1->m_maxBox.m_x), GetMax (node0->m_maxBox.m_y, node1->m_maxBox.m_y), GetMax (node0->m_maxBox.m_z, node1->m_maxBox.m_z), dgFloat32 (0.0f));		
 	dgVector side0 (maxBox - minBox);
 	dgVector side1 (side0.m_y, side0.m_z, side0.m_x, dgFloat32 (0.0f));
 	return side0 % side1;
@@ -1033,24 +1033,24 @@ void* dgCollisionScene::AddProxy (dgCollision* const shape/*, const dgMatrix& ma
 		m_rootNode = newNode;
 	} else {
 		dgVector p0;
-		dgVector p1;
+		dgVector p1;		
 		dgNode* sibling = m_rootNode;
 		dgFloat32 surfaceArea = CalculateSurfaceArea (newNode, sibling, p0, p1);
 		while(sibling->m_left && sibling->m_right) {
 			if (surfaceArea > sibling->m_surfaceArea) {
 				break;
-			}
+			} 
 
 			sibling->m_minBox = p0;
 			sibling->m_maxBox = p1;
 			sibling->m_surfaceArea = surfaceArea;
 
 			dgVector leftP0;
-			dgVector leftP1;
+			dgVector leftP1;		
 			dgFloat32 leftSurfaceArea = CalculateSurfaceArea (newNode, sibling->m_left, leftP0, leftP1);
 
 			dgVector rightP0;
-			dgVector rightP1;
+			dgVector rightP1;		
 			dgFloat32 rightSurfaceArea = CalculateSurfaceArea (newNode, sibling->m_right, rightP0, rightP1);
 
 			if (leftSurfaceArea < rightSurfaceArea) {
@@ -1064,7 +1064,7 @@ void* dgCollisionScene::AddProxy (dgCollision* const shape/*, const dgMatrix& ma
 				p1 = rightP1;
 				surfaceArea = rightSurfaceArea;
 			}
-		}
+		} 
 
 		dgNode* const parent = new (m_world->GetAllocator()) dgNode (sibling, newNode);
 		parent->m_fitnessNode = m_fitnessList.Append (parent);
@@ -1085,7 +1085,7 @@ void dgCollisionScene::RemoveProxy (void* const proxy)
 	m_world->ReleaseCollision (treeNode->m_shape);
 
 	m_list.Remove (node);
-
+	
 	if (!treeNode->m_parent) {
 		delete (m_rootNode);
 		m_rootNode = NULL;

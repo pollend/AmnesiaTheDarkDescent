@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -57,7 +57,7 @@ class dgGeneralVector
 	T Norm2 () const;
 
 	void operator += (const dgGeneralVector &A);
-	void operator -= (const dgGeneralVector &A);
+	void operator -= (const dgGeneralVector &A); 
 
 	void Scale (T scale);
 	void LinearCombine (T scale, const dgGeneralVector &A, const dgGeneralVector &B);
@@ -91,7 +91,7 @@ class dgGeneralVector
 //
 // ***********************************************************************************************
 template<class T>
-dgGeneralVector<T>::dgGeneralVector()
+dgGeneralVector<T>::dgGeneralVector() 
 {
 	m_ownMemory = false;
 	m_colCount = 0;
@@ -101,11 +101,11 @@ dgGeneralVector<T>::dgGeneralVector()
 template<class T>
 dgGeneralVector<T>::dgGeneralVector (dgInt32 size)
 {
-	_ASSERTE  (size > 0);
+	_DG_ASSERTE  (size > 0);
 	m_ownMemory = true;
 	m_colCount = size;
 	m_columns = new T[size];
-	_ASSERTE ((((dgUnsigned32) m_columns) & 0x0f) == 0);
+	_DG_ASSERTE ((((dgUnsigned32) m_columns) & 0x0f) == 0);
 }
 
 template<class T>
@@ -114,7 +114,7 @@ dgGeneralVector<T>::dgGeneralVector (dgInt32 size, T *mem)
 	m_ownMemory = false;
 	m_colCount = size;
 	m_columns = mem;
-	_ASSERTE ((((dgUnsigned32) m_columns) & 0x0f) == 0);
+	_DG_ASSERTE ((((dgUnsigned32) m_columns) & 0x0f) == 0);
 }
 
 template<class T>
@@ -123,7 +123,7 @@ dgGeneralVector<T>::dgGeneralVector (const dgGeneralVector<T> &src)
 	m_ownMemory = true;
 	m_colCount = src.m_colCount;
 	m_columns = new T[m_colCount];
-	_ASSERTE ((((dgUnsigned32) m_columns) & 0x0f) == 0);
+	_DG_ASSERTE ((((dgUnsigned32) m_columns) & 0x0f) == 0);
 
 	Copy (src);
 }
@@ -134,7 +134,7 @@ dgGeneralVector<T>::dgGeneralVector (const dgGeneralVector<T> &src,  T *mem)
 	m_ownMemory = false;
 	m_colCount = src.m_colCount;
 	m_columns = mem;
-	_ASSERTE ((((dgUnsigned32) m_columns) & 0x0f) == 0);
+	_DG_ASSERTE ((((dgUnsigned32) m_columns) & 0x0f) == 0);
 
 	Copy (src);
 }
@@ -182,7 +182,7 @@ void dgGeneralVector<T>::Trace () const
 	dgInt32 i;
 	for (i = 0; i < m_colCount; i ++) {
 		dgTrace (("%f ", m_columns[i]));
-
+		
 	}
 	dgTrace (("\n"));
 }
@@ -192,16 +192,16 @@ void dgGeneralVector<T>::Trace () const
 template<class T>
 T& dgGeneralVector<T>::operator[] (dgInt32 i)
 {
-	_ASSERTE (i < m_colCount);
-	_ASSERTE (i >= 0);
+	_DG_ASSERTE (i < m_colCount);
+	_DG_ASSERTE (i >= 0);
 	return m_columns[i];
-}
+}	
 
 template<class T>
 const T& dgGeneralVector<T>::operator[] (dgInt32 i) const
 {
-	_ASSERTE (i < m_colCount);
-	_ASSERTE (i >= 0);
+	_DG_ASSERTE (i < m_colCount);
+	_DG_ASSERTE (i >= 0);
 	return m_columns[i];
 }
 
@@ -214,11 +214,11 @@ dgInt32 dgGeneralVector<T>::GetRowCount() const
 
 // return dot product
 template<class T>
-T dgGeneralVector<T>::DotProduct (const dgGeneralVector<T> &A) const
+T dgGeneralVector<T>::DotProduct (const dgGeneralVector<T> &A) const 
 {
 	dgInt32 i;
 
-	_ASSERTE (m_colCount == A.m_colCount);
+	_DG_ASSERTE (m_colCount == A.m_colCount);
 	T val (0.0);
 	for (i = 0; i < m_colCount; i ++) {
 		val = val + m_columns[i] * A.m_columns[i];
@@ -253,7 +253,7 @@ void dgGeneralVector<T>::Copy (const dgGeneralVector<T> &src)
 {
 	dgInt32 i;
 
-	_ASSERTE (m_colCount == src.m_colCount);
+	_DG_ASSERTE (m_colCount == src.m_colCount);
 	for (i = 0; i < m_colCount; i ++ ) {
 		m_columns[i] = src.m_columns[i];
 	}
@@ -310,9 +310,9 @@ template<class T>
 void dgGeneralVector<T>::LinearCombine (T scale, const dgGeneralVector<T> &A, const dgGeneralVector<T> &B)
 {
 	dgInt32 i;
-
-	_ASSERTE (A.m_colCount == m_colCount);
-	_ASSERTE (B.m_colCount == m_colCount);
+	
+	_DG_ASSERTE (A.m_colCount == m_colCount);
+	_DG_ASSERTE (B.m_colCount == m_colCount);
 	for (i = 0; i < m_colCount; i ++ ) {
 		m_columns[i] = A.m_columns[i] * scale + B.m_columns[i];
 	}
@@ -329,7 +329,7 @@ void dgGeneralVector<T>::operator+= (const dgGeneralVector<T> &A)
 {
 	dgInt32 i;
 
-	_ASSERTE (A.m_colCount == m_colCount);
+	_DG_ASSERTE (A.m_colCount == m_colCount);
 	for (i = 0; i < m_colCount; i ++ ) {
 		m_columns[i] += A.m_columns[i];
 	}
@@ -341,11 +341,11 @@ void dgGeneralVector<T>::operator+= (const dgGeneralVector<T> &A)
 }
 
 template<class T>
-void dgGeneralVector<T>::operator-= (const dgGeneralVector<T> &A)
+void dgGeneralVector<T>::operator-= (const dgGeneralVector<T> &A) 
 {
 	dgInt32 i;
 
-	_ASSERTE (A.m_colCount == m_colCount);
+	_DG_ASSERTE (A.m_colCount == m_colCount);
 	for (i = 0; i < m_colCount; i ++ ) {
 		m_columns[i] -= A.m_columns[i];
 	}

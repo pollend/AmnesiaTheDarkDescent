@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -72,16 +72,16 @@ dgQuaternion::dgQuaternion (const dgMatrix &matrix)
 		ptr[k] = (matrix[i][k] + matrix[k][i]) * trace;
 	}
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	dgMatrix tmp (*this, matrix.m_posit);
 	dgMatrix unitMatrix (tmp * matrix.Inverse());
 	for (dgInt32 i = 0; i < 4; i ++) {
 		dgFloat32 err = dgAbsf (unitMatrix[i][i] - dgFloat32(1.0f));
-		_ASSERTE (err < dgFloat32 (1.0e-2f));
+		_DG_ASSERTE (err < dgFloat32 (1.0e-2f));
 	}
 
 	dgFloat32 err = dgAbsf (DotProduct(*this) - dgFloat32(1.0f));
-	_ASSERTE (err < dgFloat32(dgEPSILON * 100.0f));
+	_DG_ASSERTE (err < dgFloat32(dgEPSILON * 100.0f));
 #endif
 }
 
@@ -94,10 +94,10 @@ dgQuaternion::dgQuaternion (const dgVector &unitAxis, dgFloat32 Angle)
 	m_q0 = dgCos (Angle);
 	sinAng = dgSin (Angle);
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	if (dgAbsf (Angle) > dgFloat32(dgEPSILON / 10.0f)) {
-		_ASSERTE (dgAbsf (dgFloat32(1.0f) - unitAxis % unitAxis) < dgFloat32(dgEPSILON * 10.0f));
-	}
+		_DG_ASSERTE (dgAbsf (dgFloat32(1.0f) - unitAxis % unitAxis) < dgFloat32(dgEPSILON * 10.0f));
+	} 
 #endif
 	m_q1 = unitAxis.m_x * sinAng;
 	m_q2 = unitAxis.m_y * sinAng;
@@ -108,7 +108,7 @@ dgQuaternion::dgQuaternion (const dgVector &unitAxis, dgFloat32 Angle)
 
 dgVector dgQuaternion::CalcAverageOmega (const dgQuaternion &QB, dgFloat32 dt) const
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 return dgVector (0, 0, 0, 0);
 /*
 	dgFloat32 dirMag;
@@ -116,7 +116,7 @@ return dgVector (0, 0, 0, 0);
 	dgFloat32 omegaMag;
 	dgFloat32 dirMagInv;
 
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	dgQuaternion dq (Inverse() * QB);
 //	dgQuaternion dq (QB * Inverse());
 	dgVector omegaDir (dq.m_q1, dq.m_q2, dq.m_q3, dgFloat32 (0.0f));
@@ -136,9 +136,9 @@ return dgVector (0, 0, 0, 0);
 }
 
 
-dgQuaternion dgQuaternion::Slerp (const dgQuaternion &QB, dgFloat32 t) const
+dgQuaternion dgQuaternion::Slerp (const dgQuaternion &QB, dgFloat32 t) const 
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 return dgQuaternion();
 /*
 	dgFloat32 dot;

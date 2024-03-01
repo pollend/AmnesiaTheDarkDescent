@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -56,7 +56,7 @@ class dgStack: public dgStackBase
 	~dgStack ();
 	dgInt32 GetSizeInBytes() const;
 	dgInt32 GetElementsCount() const;
-
+	
 	T& operator[] (dgInt32 entry);
 	const T& operator[] (dgInt32 entry) const;
 
@@ -87,15 +87,15 @@ dgInt32 dgStack<T>::GetSizeInBytes() const
 {
 	return dgInt32 (m_size * sizeof(T));
 }
-
+ 
 
 template<class T>
-T& dgStack<T>::operator[] (dgInt32 entry)
+T& dgStack<T>::operator[] (dgInt32 entry) 
 {
 	T *mem;
 
-	_ASSERTE (entry >= 0);
-	_ASSERTE ((entry < m_size) || ((m_size == 0) && (entry == 0)));
+	_DG_ASSERTE (entry >= 0);
+	_DG_ASSERTE ((entry < m_size) || ((m_size == 0) && (entry == 0)));
 
 	mem = (T*) m_ptr;
 	return mem[entry];
@@ -106,9 +106,9 @@ const T& dgStack<T>::operator[] (dgInt32 entry) const
 {
 	T *mem;
 
-	_ASSERTE (0);
-	_ASSERTE (entry >= 0);
-	_ASSERTE ((entry < m_size) || ((m_size == 0) && (entry == 0)));
+	_DG_ASSERTE (0);
+	_DG_ASSERTE (entry >= 0);
+	_DG_ASSERTE ((entry < m_size) || ((m_size == 0) && (entry == 0)));
 
 	mem = (T*) m_ptr;
 	return mem[entry];

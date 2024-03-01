@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -29,7 +29,7 @@
 #include "dgQuaternion.h"
 
 
-//class dgFace;
+//class dgFace; 
 class dgPlane;
 //class dgCamera;
 
@@ -55,7 +55,7 @@ class dgSphere: public dgMatrix
 	//          1 if the sphere is partially inside the viewport
 	//         -1 if the sphere is wholly outside the viewport
 //	dgInt32 VisibilityTest (const dgCamera* camera) const;
-//	dgInt32 VisibilityTest (const dgCamera* camera, const dgMatrix &worldMatrix) const;
+//	dgInt32 VisibilityTest (const dgCamera* camera, const dgMatrix &worldMatrix) const; 
 //	void Render (const dgCamera* camera, const dgMatrix &transform, unsigned rgb) const;
 
 	private:
@@ -77,7 +77,7 @@ class dgSphere: public dgMatrix
 
 	public:
 	dgVector m_size;
-}DG_GCC_VECTOR_ALIGMENT;
+}DG_GCC_VECTOR_ALIGMENT; 
 
 
 const dgSphere& GetIdentitySphere();
@@ -97,7 +97,7 @@ inline void dgSphere::SetDimensions (dgFloat32 W, dgFloat32 H, dgFloat32 B)
 	m_size = dgVector (dgAbsf(W), dgAbsf(H), dgAbsf(B), dgSqrt (W * W + H * H + B * B));
 }
 
-inline void dgSphere::Scale (dgFloat32 Ws, dgFloat32 Hs, dgFloat32 Bs)
+inline void dgSphere::Scale (dgFloat32 Ws, dgFloat32 Hs, dgFloat32 Bs) 
 {
 	SetDimensions (m_size.m_x * Ws, m_size.m_y * Hs, m_size.m_z * Bs);
 }

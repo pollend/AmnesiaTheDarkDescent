@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -30,7 +30,7 @@
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 dgCollision::dgCollision(dgMemoryAllocator* const allocator, dgUnsigned32 signature, const dgMatrix& matrix, dgCollisionID id)
-//	:dgRef()
+//	:dgRef() 
 {
 	m_rtti = 0;
 	m_refCount = 1;
@@ -48,7 +48,7 @@ dgCollision::dgCollision (dgWorld* const world, dgDeserialize deserialization, v
 	dgInt32 signature[4];
 	deserialization (userData, &signature, sizeof (signature));
 	deserialization (userData, &m_offset, sizeof (dgMatrix));
-
+	
 	m_rtti = 0;
 	m_refCount = 1;
 	m_signature = dgUnsigned32 (signature[0]);
@@ -83,11 +83,11 @@ void dgCollision::SetOffsetMatrix (const dgMatrix& matrix)
 	m_offset[2][3] = dgFloat32 (0.0f);
 	m_offset[3][3] = dgFloat32 (1.0f);
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	dgFloat32 det;
 	det = (m_offset.m_front * m_offset.m_up) % m_offset.m_right;
-	_ASSERTE (det > dgFloat32 (0.999f));
-	_ASSERTE (det < dgFloat32 (1.001f));
+	_DG_ASSERTE (det > dgFloat32 (0.999f));
+	_DG_ASSERTE (det < dgFloat32 (1.001f));
 #endif
 }
 
@@ -126,6 +126,6 @@ void dgCollision::SerializeLow (dgSerialize callback, void* const userData) cons
 /*
 void dgCollision::Serialize(dgSerialize callback, void* const userData) const
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 }
 */

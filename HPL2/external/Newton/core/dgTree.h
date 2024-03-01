@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -47,15 +47,15 @@ class dgRedBackNode
 	{
 	}
 
-//	virtual ~dgRedBackNode ()
-	~dgRedBackNode ()
+//	virtual ~dgRedBackNode () 
+	~dgRedBackNode () 
 	{
 	}
 
 	void RemoveAllLow ();
-	void RotateLeft(dgRedBackNode** const head);
-	void RotateRight(dgRedBackNode** const head);
-	void RemoveFixup (dgRedBackNode* const node, dgRedBackNode* * const head);
+	void RotateLeft(dgRedBackNode** const head); 
+	void RotateRight(dgRedBackNode** const head); 
+	void RemoveFixup (dgRedBackNode* const node, dgRedBackNode* * const head); 
 
 	dgRedBackNode* GetLeft() const;
 	dgRedBackNode* GetRight() const;
@@ -75,7 +75,7 @@ class dgRedBackNode
 	dgRedBackNode* Maximum() const;
 	void Remove (dgRedBackNode** const head);
 	void Unlink (dgRedBackNode** const head);
-	void InsertFixup(dgRedBackNode** const head);
+	void InsertFixup(dgRedBackNode** const head); 
 
 	dgRedBackNode* m_left;
 	dgRedBackNode* m_right;
@@ -86,21 +86,21 @@ class dgRedBackNode
 };
 
 template<class OBJECT, class KEY>
-class dgTree
+class dgTree 
 {
 	public:
 	class dgTreeNode: public dgRedBackNode
 	{
 		dgTreeNode (
-			const OBJECT &info,
-			const KEY &key,
+			const OBJECT &info, 
+			const KEY &key, 
 			dgTreeNode* parentNode)
 			:dgRedBackNode(parentNode), m_info (info), m_key (key)
 		{
-			_ASSERTE ((dgUnsigned64 (&m_info) & 0x0f) == 0);
+			_DG_ASSERTE ((dgUnsigned64 (&m_info) & 0x0f) == 0);
 		}
 
-		~dgTreeNode ()
+		~dgTreeNode () 
 		{
 		}
 
@@ -147,7 +147,7 @@ class dgTree
 
 		private:
 		OBJECT m_info;
-		KEY m_key;
+		KEY m_key; 
 		friend class dgTree<OBJECT, KEY>;
 
 	};
@@ -166,12 +166,12 @@ class dgTree
 		{
 		}
 
-		void Begin()
+		void Begin() 
 		{
 			m_ptr = m_tree->Minimum();
 		}
 
-		void End()
+		void End()  
 		{
 			m_ptr = m_tree->Maximum();
 		}
@@ -181,36 +181,36 @@ class dgTree
 			m_ptr = node;
 		}
 
-		operator dgInt32() const
+		operator dgInt32() const 
 		{
 			return m_ptr != NULL;
 		}
 
 		void operator++ ()
 		{
-			_ASSERTE (m_ptr);
+			_DG_ASSERTE (m_ptr);
 			m_ptr = m_ptr->Next();
 		}
 
 		void operator++ (dgInt32)
 		{
-			_ASSERTE (m_ptr);
+			_DG_ASSERTE (m_ptr);
 			m_ptr = m_ptr->Next();
 		}
 
-		void operator-- ()
+		void operator-- () 
 		{
-			_ASSERTE (m_ptr);
+			_DG_ASSERTE (m_ptr);
 			m_ptr = m_ptr->Prev();
 		}
 
-		void operator-- (dgInt32)
+		void operator-- (dgInt32) 
 		{
-			_ASSERTE (m_ptr);
+			_DG_ASSERTE (m_ptr);
 			m_ptr = m_ptr->Prev();
 		}
 
-		OBJECT &operator* () const
+		OBJECT &operator* () const 
 		{
 			return ((dgTreeNode*)m_ptr)->GetInfo();
 		}
@@ -241,11 +241,11 @@ class dgTree
 
 //	dgTree ();
 	dgTree (dgMemoryAllocator* const allocator);
-	~dgTree ();
+	~dgTree (); 
 
 	dgMemoryAllocator* GetAllocator () const;
 	void SetAllocator (dgMemoryAllocator* const allocator);
-
+	
 
 	operator dgInt32() const;
 	dgInt32 GetCount() const;
@@ -271,7 +271,7 @@ class dgTree
 
 	void Remove (KEY key);
 	void Remove (dgTreeNode* const node);
-	void RemoveAll ();
+	void RemoveAll (); 
 
 	void Unlink (dgTreeNode* const node);
 	void SwapInfo (dgTree& tree);
@@ -350,7 +350,7 @@ dgTree<OBJECT, KEY>::dgTree (dgMemoryAllocator* const allocator)
 
 
 template<class OBJECT, class KEY>
-dgTree<OBJECT, KEY>::~dgTree ()
+dgTree<OBJECT, KEY>::~dgTree () 
 {
 	RemoveAll();
 }
@@ -410,13 +410,13 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::Find (KEY key) co
 	dgTreeNode* ptr = m_head;
 	while (ptr != NULL) {
 		if (key < ptr->m_key) {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == -1) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == -1) ;
 			ptr = ptr->GetLeft();
 		} else if (key > ptr->m_key) {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == 1) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == 1) ;
 			ptr = ptr->GetRight();
 		} else {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == 0) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == 0) ;
 			break;
 		}
 	}
@@ -430,8 +430,8 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::GetNodeFromInfo (
 	dgInt64 offset = ((char*) &node->m_info) - ((char *) node);
 	dgTreeNode* const retnode = (dgTreeNode* ) (((char *) node) - offset);
 
-	_ASSERTE (retnode->IsInTree ());
-	_ASSERTE (&retnode->GetInfo () == &info);
+	_DG_ASSERTE (retnode->IsInTree ());
+	_DG_ASSERTE (&retnode->GetInfo () == &info);
 	return (retnode->IsInTree ()) ? retnode : NULL;
 
 }
@@ -451,7 +451,7 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::FindGreater (KEY 
 	dgTreeNode* ptr = m_head;
 	dgInt32 val = 0;
 	while (ptr != NULL) {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		val = CompareKeys (ptr->m_key, key);
 		if (!val) {
 			return (dgTreeNode* )ptr->Next();
@@ -466,11 +466,11 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::FindGreater (KEY 
 
 	if (val > 0) {
 		while (prev->m_parent && (prev->m_parent->m_right == prev)) {
-			prev = prev->GetParent();
+			prev = prev->GetParent(); 
 		}
-		prev = prev->GetParent();
+		prev = prev->GetParent(); 
 	}
-	return (dgTreeNode* )prev;
+	return (dgTreeNode* )prev; 
 }
 
 template<class OBJECT, class KEY>
@@ -484,7 +484,7 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::FindGreaterEqual 
 	dgTreeNode* ptr = m_head;
 	dgInt32 val = 0;
 	while (ptr != NULL) {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		val = CompareKeys (ptr->m_key, key);
 		if (!val) {
 			return ptr;
@@ -499,11 +499,11 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::FindGreaterEqual 
 
 	if (val > 0) {
 		while (prev->m_parent && (prev->m_parent->m_right == prev)) {
-			prev = prev->GetParent();
+			prev = prev->GetParent(); 
 		}
-		prev = prev->GetParent();
+		prev = prev->GetParent(); 
 	}
-	return (dgTreeNode* )prev;
+	return (dgTreeNode* )prev; 
 }
 
 template<class OBJECT, class KEY>
@@ -517,7 +517,7 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::FindLessEqual (KE
 	dgTreeNode* ptr = m_head;
 	dgInt32 val = 0;
 	while (ptr != NULL) {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		val = CompareKeys (ptr->m_key, key);
 		if (!val) {
 			return ptr;
@@ -532,11 +532,11 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::FindLessEqual (KE
 
 	if (val < 0) {
 		while (prev->m_parent && (prev->m_parent->m_left == prev)) {
-			prev = prev->GetParent();
+			prev = prev->GetParent(); 
 		}
-		prev = prev->GetParent();
+		prev = prev->GetParent(); 
 	}
-	return (dgTreeNode* )prev;
+	return (dgTreeNode* )prev; 
 }
 
 template<class OBJECT, class KEY>
@@ -561,28 +561,28 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::Insert (const OBJ
 //		}
 
 		if (key < ptr->m_key) {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == -1) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == -1) ;
 			val = -1;
 			ptr = ptr->GetLeft();
 		} else if (key > ptr->m_key) {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == 1) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == 1) ;
 			val = 1;
 			ptr = ptr->GetRight();
 		} else {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == 0) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == 0) ;
 			elementWasInTree = true;
 			return ptr;
 		}
 	}
 
 	m_count	++;
-	_ASSERTE (m_allocator);
+	_DG_ASSERTE (m_allocator);
 	ptr = new (m_allocator) dgTreeNode (element, key, parent);
 	if (!parent) {
 		m_head = ptr;
 	} else {
 		if (val < 0) {
-			parent->m_left = ptr;
+			parent->m_left = ptr; 
 		} else {
 			parent->m_right = ptr;
 		}
@@ -624,15 +624,15 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::Insert (typename 
 //		}
 
 		if (key < ptr->m_key) {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == -1) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == -1) ;
 			val = -1;
 			ptr = ptr->GetLeft();
 		} else if (key > ptr->m_key) {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == 1) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == 1) ;
 			val = 1;
 			ptr = ptr->GetRight();
 		} else {
-			_ASSERTE (CompareKeys (ptr->m_key, key) == 0) ;
+			_DG_ASSERTE (CompareKeys (ptr->m_key, key) == 0) ;
 			return NULL;
 		}
 	}
@@ -647,7 +647,7 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::Insert (typename 
 		m_head = ptr;
 	} else {
 		if (val < 0) {
-			parent->m_left = ptr;
+			parent->m_left = ptr; 
 		} else {
 			parent->m_right = ptr;
 		}
@@ -669,7 +669,7 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::Replace (OBJECT &
 	while (ptr != NULL) {
 		parent = ptr;
 
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		val = CompareKeys (ptr->m_key, key);
 		if (val == 0) {
 			ptr->m_info = element;
@@ -682,13 +682,13 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::Replace (OBJECT &
 		}
 	}
 
-	_ASSERTE (m_allocator);
+	_DG_ASSERTE (m_allocator);
 	ptr = new (m_allocator) dgTreeNode (element, key, parent);
 	if (!parent) {
 		m_head = ptr;
 	} else {
 		if (val < 0) {
-			parent->m_left = ptr;
+			parent->m_left = ptr; 
 		} else {
 			parent->m_right = ptr;
 		}
@@ -706,7 +706,7 @@ typename dgTree<OBJECT, KEY>::dgTreeNode* dgTree<OBJECT, KEY>::ReplaceKey (typen
 {
 	Unlink (node);
 	dgTreeNode* const ptr = Insert (node, key);
-	_ASSERTE (ptr);
+	_DG_ASSERTE (ptr);
 	return ptr;
 }
 
@@ -724,7 +724,7 @@ void dgTree<OBJECT, KEY>::Unlink (typename dgTree<OBJECT, KEY>::dgTreeNode* cons
 
 	dgTreeNode** const headPtr = (dgTreeNode**) &m_head;
 	node->Unlink ((dgRedBackNode**)headPtr);
-	_ASSERTE (!Find (node->GetKey()));
+	_DG_ASSERTE (!Find (node->GetKey()));
 }
 
 
@@ -737,11 +737,11 @@ void dgTree<OBJECT, KEY>::Remove (typename dgTree<OBJECT, KEY>::dgTreeNode* cons
 }
 
 template<class OBJECT, class KEY>
-void dgTree<OBJECT, KEY>::Remove (KEY key)
+void dgTree<OBJECT, KEY>::Remove (KEY key) 
 {
 	dgTreeNode* node;
 
-	// find node in tree
+	// find node in tree 
 	node = Find (key);
 	if (node == NULL) {
 		return;
@@ -750,7 +750,7 @@ void dgTree<OBJECT, KEY>::Remove (KEY key)
 }
 
 template<class OBJECT, class KEY>
-void dgTree<OBJECT, KEY>::RemoveAll ()
+void dgTree<OBJECT, KEY>::RemoveAll () 
 {
 	if (m_head) {
 		m_count	 = 0;
@@ -836,7 +836,7 @@ void dgTree<OBJECT, KEY>::SwapInfo (dgTree<OBJECT, KEY>& tree)
 {
 	Swap (m_head, tree.m_head);
 	Swap (m_count, tree.m_count);
-
+	
 }
 
 //template<class OBJECT, class KEY> dgInt32 dgTree<OBJECT,KEY>::m_size = 0;

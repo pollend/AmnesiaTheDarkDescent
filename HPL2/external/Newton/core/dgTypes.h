@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -30,12 +30,12 @@
 #include <ctype.h>
 #include <new>
 
-#define _DEBUG
+
 #if !(defined (__ppc__) || defined (__USE_DOUBLE_PRECISION__) || defined (_SCALAR_ARITHMETIC_ONLY))
 	#define DG_BUILD_SIMD_CODE
 #endif
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (WIN32) || defined(_WIN32))
 
 	#pragma warning (disable: 4324) //structure was padded due to __declspec(align())
 	#pragma warning (disable: 4100) //unreferenced formal parameter
@@ -50,14 +50,14 @@
 	#pragma warning (disable: 4191) //'type cast' : unsafe conversion from 'NewtonWorldRayFilterCallback' to 'OnRayCastAction'
 	#pragma warning (disable: 4711) //function 'float const & __thiscall dgTemplateVector<float>::operator[](int)const ' selected for automatic inline expansion
 
-	#include <io.h>
-	#include <direct.h>
+	#include <io.h> 
+	#include <direct.h> 
 	#include <malloc.h>
 	#include <float.h>
 	#include <stdarg.h>
 	#include <process.h>
 
-
+	
 
 
 	#if (_MSC_VER >= 1400)
@@ -67,22 +67,22 @@
 		#pragma warning (disable: 4514) //function '$E1' selected for automatic inline expansion
 	#endif
 
-	#ifdef _DEBUG
+	#ifdef _DG_DEBUG
 		#pragma warning (disable: 4127)	//conditional expression is constant
 	#endif
 
-	#pragma warning (push, 3)
+	#pragma warning (push, 3) 
 		#include <windows.h>
 		#include <crtdbg.h>
 //		#include <mmsystem.h>
-	#pragma warning (pop)
+	#pragma warning (pop) 
 #endif
 
 
-#if (defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+#if (defined (__MINGW32__) || defined (__MINGW64__))
 
-	#include <io.h>
-	#include <direct.h>
+	#include <io.h> 
+	#include <direct.h> 
 	#include <malloc.h>
 	#include <float.h>
 	#include <stdarg.h>
@@ -94,10 +94,10 @@
 
 #ifdef DG_BUILD_SIMD_CODE
 
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+	#if (defined (WIN32) || defined(_WIN32))
 		#if (_MSC_VER >= 1400)
 			#include <intrin.h>
-		#else
+		#else 
 			#if (_MSC_VER >= 1300)
 				#include <xmmintrin.h>
 			#endif
@@ -105,7 +105,7 @@
 	#endif
 
 
-
+	
 	#ifdef __ppc__
 		#include <vecLib/veclib.h>
 	#endif
@@ -117,32 +117,37 @@
 
 
 
-#if defined(__linux__) || defined(__FreeBSD__)
+#ifdef __linux__
 	#include <pthread.h>
 	#include <semaphore.h>
 	#include <unistd.h>
 #endif
 
-#ifdef _MAC_VER
+#ifdef __APPLE__
 	#ifndef _MAC_IPHONE
 		#include <pthread.h>
 		#include <semaphore.h>
-	#endif
+	#endif	
 
 	#include <unistd.h>
 	#include <libkern/OSAtomic.h>
 	#include <sys/sysctl.h>
 #endif
 
+#ifdef _DG_DEBUG
+//#define __ENABLE_SANITY_CHECK 
+#endif
 
 //************************************************************
-#ifdef NEWTON_DEBUG
-#include <cassert>
-#define _ASSERTE(x) assert(x)
-#define _ASSERT(x) assert(x)
+#if !(defined (WIN32) || defined(_WIN32))
+	#define _DG_ASSERTE(x)
 #else
-#define _ASSERTE(x)
-#define _ASSERT(x)
+	#ifdef _DG_DEBUG
+		#define _DG_ASSERTE(expr) _DG_ASSERTE(expr)
+	#else
+		#define _DG_ASSERTE(x)
+	#endif
+
 #endif
 
 #define __USE_CPU_FOUND__
@@ -150,25 +155,22 @@
 #define DG_MAXIMUN_THREADS  8
 
 
-#ifdef _DEBUG
-//#define __ENABLE_SANITY_CHECK
-#endif
 
 
 #ifdef DLL_DECLSPEC
 #undef DLL_DECLSPEC
 #endif
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
-	#define DG_INLINE __forceinline
-#else
-	#define DG_INLINE inline
+#if (defined (WIN32) || defined(_WIN32))
+	#define DG_INLINE __forceinline 
+#else 
+	#define DG_INLINE inline 
 #endif
 
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
+#if (defined (WIN32) || defined(_WIN32))
 	#define	DG_MSC_VECTOR_ALIGMENT	__declspec(align(16))
-	#define	DG_GCC_VECTOR_ALIGMENT
+	#define	DG_GCC_VECTOR_ALIGMENT	
 #else
 	#define	DG_MSC_VECTOR_ALIGMENT
 	#define	DG_GCC_VECTOR_ALIGMENT	__attribute__ ((aligned (16)))
@@ -226,22 +228,22 @@ class dgTriplex
 
 class dgVector;
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
-	#define dgApi __cdecl 
+#if (defined(WIN32) || defined(_WIN32))
+	#define dgApi __cdecl 	
 
-	#ifdef _WIN_64_VER
+	#ifdef _WIN64
 		#define dgNaked
 	#else
 		#define dgNaked  __declspec (naked)
 	#endif
 #else
-	#define dgApi 
-	#define dgNaked
+	#define dgApi 	
+	#define dgNaked  
 #endif
 
 
-#if (defined (_WIN_32_VER) || defined (_WIN_64_VER))
-	#ifdef _DEBUG
+#if (defined (WIN32) || defined(_WIN32))
+	#ifdef _DG_DEBUG
 		#define dgCheckFloat(x) _finite(x)
 	#else
 		#define dgCheckFloat(x) true
@@ -306,7 +308,7 @@ template <class T> DG_INLINE void Swap(T& A, T& B)
 	T tmp (A);
 	A = B;
 	B = tmp;
-}
+}	
 
 
 template <class T> DG_INLINE T GetSign(T A)
@@ -318,7 +320,7 @@ template <class T> DG_INLINE T GetSign(T A)
 	return sign;
 }
 
-template <class T>
+template <class T> 
 dgInt32 dgBinarySearch (T const* array, dgInt32 elements, dgInt32 entry)
 {
 	dgInt32 index0;
@@ -337,8 +339,8 @@ dgInt32 dgBinarySearch (T const* array, dgInt32 elements, dgInt32 entry)
       index1 = (index0 + index2) >> 1;
 		entry1 = array[index1].m_Key;
 		if (entry1 == entry) {
-			_ASSERTE (array[index1].m_Key <= entry);
-			_ASSERTE (array[index1 + 1].m_Key >= entry);
+			_DG_ASSERTE (array[index1].m_Key <= entry);
+			_DG_ASSERTE (array[index1 + 1].m_Key >= entry);
 			return index1;
 		} else if (entry < entry1) {
 			index2 = index1;
@@ -353,24 +355,24 @@ dgInt32 dgBinarySearch (T const* array, dgInt32 elements, dgInt32 entry)
 		index0 --;
 	}
 
-	_ASSERTE (array[index0].m_Key <= entry);
-	_ASSERTE (array[index0 + 1].m_Key >= entry);
+	_DG_ASSERTE (array[index0].m_Key <= entry);
+	_DG_ASSERTE (array[index0 + 1].m_Key >= entry);
 	return index0;
 }
 
 
 
 
-template <class T>
-void dgRadixSort (T* const array, T* const tmpArray, dgInt32 elements, dgInt32 radixPass,
+template <class T> 
+void dgRadixSort (T* const array, T* const tmpArray, dgInt32 elements, dgInt32 radixPass, 
 				  dgInt32 (*getRadixKey) (const T* const  A, void* const context), void* const context = NULL)
 {
-	dgInt32 scanCount[256];
+	dgInt32 scanCount[256]; 
 	dgInt32 histogram[256][4];
 
-	_ASSERTE (radixPass >= 1);
-	_ASSERTE (radixPass <= 4);
-
+	_DG_ASSERTE (radixPass >= 1);
+	_DG_ASSERTE (radixPass <= 4);
+	
 	memset (histogram, 0, sizeof (histogram));
 	for (dgInt32 i = 0; i < elements; i ++) {
 		dgInt32 key = getRadixKey (&array[i], context);
@@ -393,12 +395,12 @@ void dgRadixSort (T* const array, T* const tmpArray, dgInt32 elements, dgInt32 r
 			scanCount[key] = index + 1;
 		}
 
-		if ((radix + 1) < radixPass) {
+		if ((radix + 1) < radixPass) { 
 			scanCount[0] = 0;
 			for (dgInt32 i = 1; i < 256; i ++) {
 				scanCount[i] = scanCount[i - 1] + histogram[i - 1][radix + 1];
 			}
-
+			
 			dgInt32 radixShift = (radix + 1) << 3;
 			for (dgInt32 i = 0; i < elements; i ++) {
 				dgInt32 key = (getRadixKey (&array[i], context) >> radixShift) & 0xff;
@@ -407,21 +409,21 @@ void dgRadixSort (T* const array, T* const tmpArray, dgInt32 elements, dgInt32 r
 				scanCount[key] = index + 1;
 			}
 		} else {
-			memcpy (array, tmpArray, elements * sizeof (T));
+			memcpy (array, tmpArray, elements * sizeof (T)); 
 		}
 	}
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	for (dgInt32 i = 0; i < (elements - 1); i ++) {
-		_ASSERTE (getRadixKey (&array[i], context) <= getRadixKey (&array[i + 1], context));
+		_DG_ASSERTE (getRadixKey (&array[i], context) <= getRadixKey (&array[i + 1], context));
 	}
 #endif
 
 }
 
 
-template <class T>
+template <class T> 
 void dgSort (T* const array, dgInt32 elements, dgInt32 (*compare) (const T* const  A, const T* const B, void* const context), void* const context = NULL)
 {
 	dgInt32 stack[1024][2];
@@ -437,15 +439,15 @@ void dgSort (T* const array, dgInt32 elements, dgInt32 (*compare) (const T* cons
 			dgInt32 i = lo;
 			dgInt32 j = hi;
 			T val (array[(lo + hi) >> 1]);
-			do {
+			do {    
 				while (compare (&array[i], &val, context) < 0) i ++;
 				while (compare (&array[j], &val, context) > 0) j --;
 
 				if (i <= j)	{
 					T tmp (array[i]);
-					array[i] = array[j];
+					array[i] = array[j]; 
 					array[j] = tmp;
-					i++;
+					i++; 
 					j--;
 				}
 			} while (i <= j);
@@ -460,7 +462,7 @@ void dgSort (T* const array, dgInt32 elements, dgInt32 (*compare) (const T* cons
 				stack[stackIndex][1] = j;
 				stackIndex ++;
 			}
-			_ASSERTE (stackIndex < sizeof (stack) / (2 * sizeof (stack[0][0])));
+			_DG_ASSERTE (stackIndex < sizeof (stack) / (2 * sizeof (stack[0][0])));
 		}
 	}
 
@@ -475,16 +477,16 @@ void dgSort (T* const array, dgInt32 elements, dgInt32 (*compare) (const T* cons
 	}
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	for (dgInt32 i = 0; i < (elements - 1); i ++) {
-		_ASSERTE (compare (&array[i], &array[i + 1], context) <= 0);
+		_DG_ASSERTE (compare (&array[i], &array[i + 1], context) <= 0);
 	}
 #endif
 
 }
 
 
-template <class T>
+template <class T> 
 void dgSortIndirect (T** const array, dgInt32 elements, dgInt32 (*compare) (const T* const  A, const T* const B, void* const context), void* const context = NULL)
 {
 	dgInt32 stack[1024][2];
@@ -500,15 +502,15 @@ void dgSortIndirect (T** const array, dgInt32 elements, dgInt32 (*compare) (cons
 			dgInt32 i = lo;
 			dgInt32 j = hi;
 			T* val (array[(lo + hi) >> 1]);
-			do {
+			do {    
 				while (compare (array[i], val, context) < 0) i ++;
 				while (compare (array[j], val, context) > 0) j --;
 
 				if (i <= j)	{
 					T* tmp (array[i]);
-					array[i] = array[j];
+					array[i] = array[j]; 
 					array[j] = tmp;
-					i++;
+					i++; 
 					j--;
 				}
 			} while (i <= j);
@@ -523,7 +525,7 @@ void dgSortIndirect (T** const array, dgInt32 elements, dgInt32 (*compare) (cons
 				stack[stackIndex][1] = j;
 				stackIndex ++;
 			}
-			_ASSERTE (stackIndex < sizeof (stack) / (2 * sizeof (stack[0][0])));
+			_DG_ASSERTE (stackIndex < sizeof (stack) / (2 * sizeof (stack[0][0])));
 		}
 	}
 
@@ -538,9 +540,9 @@ void dgSortIndirect (T** const array, dgInt32 elements, dgInt32 (*compare) (cons
 	}
 
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	for (dgInt32 i = 0; i < (elements - 1); i ++) {
-		_ASSERTE (compare (array[i], array[i + 1], context) <= 0);
+		_DG_ASSERTE (compare (array[i], array[i + 1], context) <= 0);
 	}
 #endif
 }
@@ -586,15 +588,15 @@ enum dgCpuClass
 
 #ifdef _WIN_32_VER
 
-	dgFloat32 dgAbsf(dgFloat32 x);
-	dgFloat32 dgSqrt(dgFloat32 x);
-	dgFloat32 dgSin(dgFloat32 x);
-	dgFloat32 dgCos(dgFloat32 x);
-	dgFloat32 dgAsin(dgFloat32 x);
-	dgFloat32 dgAcos(dgFloat32 x);
-	dgFloat32 dgAtan2(dgFloat32 x, dgFloat32 y);
-	dgFloat32 dgFloor (dgFloat32 x);
-	dgInt32 dgFastInt (dgFloat32 x);
+	dgFloat32 dgAbsf(dgFloat32 x); 
+	dgFloat32 dgSqrt(dgFloat32 x);  
+	dgFloat32 dgSin(dgFloat32 x);  
+	dgFloat32 dgCos(dgFloat32 x);  
+	dgFloat32 dgAsin(dgFloat32 x);  
+	dgFloat32 dgAcos(dgFloat32 x);  
+	dgFloat32 dgAtan2(dgFloat32 x, dgFloat32 y);  
+	dgFloat32 dgFloor (dgFloat32 x); 
+	dgInt32 dgFastInt (dgFloat32 x); 
 	void dgSinCos (dgFloat32 ang, dgFloat32& sinAng, dgFloat32& cosAng);
 
 	#define dgRsqrt(x) (dgFloat32 (1.0f) / dgSqrt(x))
@@ -605,7 +607,7 @@ enum dgCpuClass
 		#define dgLog(x) log(x)
 		#define dgPow(x,y) pow(x,y)
 		#define dgFmod(x,y) fmod(x,y)
-
+	
 	#else
 		#define dgCeil(x) ceilf(x)
 		#define dgLog(x) logf(x)
@@ -613,13 +615,13 @@ enum dgCpuClass
 		#define dgFmod(x,y) fmodf(x,y)
 	#endif
 
-#else
+#else 
 	#define dgAbsf(x) dgFloat32 (fabs(x))
 	#define dgSin(x) dgFloat32 (sin(x))
 	#define dgCos(x) dgFloat32 (cos(x))
 	#define dgAsin(x) dgFloat32 (asin(x))
 	#define dgAcos(x) dgFloat32 (acos(x))
-	#define dgSqrt(x) dgFloat32 (sqrt(x))
+	#define dgSqrt(x) dgFloat32 (sqrt(x))	
 	#define dgCeil(x) dgFloat32 (ceil(x))
 	#define dgFloor(x) dgFloat32 (floor(x))
 	#define dgFastInt(x) ((dgInt32) dgFloor(x))
@@ -628,7 +630,7 @@ enum dgCpuClass
 	#define dgPow(x,y) dgFloat32 (pow(x,y))
 	#define dgFmod(x,y) dgFloat32 (fmod(x,y))
 	#define dgAtan2(x,y) dgFloat32 (atan2(x,y))
-	#define dgRsqrt(x) (dgFloat32 (1.0f) / dgSqrt(x))
+	#define dgRsqrt(x) (dgFloat32 (1.0f) / dgSqrt(x))		
 	#define dgControlFP(x,y) x
 	#define stricmp(x,y) strcasecmp(x,y)
 	inline void dgSinCos (dgFloat32 ang, dgFloat32& sinAng, dgFloat32& cosAng)
@@ -646,15 +648,15 @@ dgCpuClass dgApi dgGetCpuType ();
 
 inline dgInt32 dgAtomicAdd (dgInt32* const addend, dgInt32 amount)
 {
-	#if (defined (_WIN_32_VER) || defined (_WIN_64_VER) || defined (_MINGW_32_VER) || defined (_MINGW_64_VER))
+	#if (defined (WIN32) || defined(_WIN32) || defined (__MINGW32__) || defined (__MINGW64__))
 		return InterlockedExchangeAdd((long*) addend, long (amount));
 	#endif
 
-#if defined (__linux__) || defined(__FreeBSD__)
+	#if (defined (__linux__) || defined(__FreeBSD__))
 		return __sync_fetch_and_add ((int32_t*)addend, amount );
 	#endif
 
-	#if (defined (_MAC_VER))
+	#if (defined (__APPLE__))
 		dgInt32 count = OSAtomicAdd32 (amount, (int32_t*)addend);
 		return count - (*addend);
 	#endif

@@ -316,7 +316,7 @@ public:
 
 		//Bloom
 		cPostEffectParams_Bloom bloomParams;
-		gpPostEffectComp->AddPostEffect(pGraphics->CreatePostEffect(&bloomParams));
+		gpPostEffectComp->AddPostEffect(pGraphics->CreatePostEffect(&bloomParams), 0);
 
 		CreateGuiWindow();
 	}
@@ -482,7 +482,7 @@ public:
 			cVector3f vAmbSlidePos = vGroupPos; vAmbSlidePos.x += 55;
 			cVector2f vAmbSlideSize = vSize; vAmbSlideSize.x -= 55;
 
-			pSlider = pSet->CreateWidgetSlider(eWidgetSliderOrientation_Horisontal,vAmbSlidePos,vAmbSlideSize,255,pGroup);
+			pSlider = pSet->CreateWidgetSlider(eWidgetSliderOrientation_Horizontal,vAmbSlidePos,vAmbSlideSize,255,pGroup);
 			pSlider->AddCallback(eGuiMessage_SliderMove,this, kGuiCallback(ChangeAmbientColor));
 			pSlider->SetValue( (int)(gpLightBox->GetDiffuseColor().r * 255.0 + 0.5f));
 			pLabel = pSet->CreateWidgetLabel(vGroupPos, vSize, _W("Ambient:"), pGroup);
@@ -502,7 +502,7 @@ public:
 	
 	//--------------------------------------------------------------
 	
-	bool PressLoadParticle(iWidget* apWidget,cGuiMessageData& aData)
+	bool PressLoadParticle(iWidget* apWidget, const cGuiMessageData& aData)
 	{
 		mvPickedFiles.clear();
 		cGuiSet *pSet = gpSimpleCamera->GetSet();
@@ -513,7 +513,7 @@ public:
 	}
 	kGuiCallbackFuncEnd(cSimpleUpdate,PressLoadParticle)  
 
-	bool PressReload(iWidget* apWidget,cGuiMessageData& aData)
+	bool PressReload(iWidget* apWidget, const cGuiMessageData& aData)
 	{
 		LoadParticle(gsParticleFile);
 		InitGuiAfterLoad();
@@ -523,7 +523,7 @@ public:
 	kGuiCallbackFuncEnd(cSimpleUpdate,PressReload)  
 
 	
-	bool LoadModelFromFilePicker(iWidget* apWidget,cGuiMessageData& aData)
+	bool LoadModelFromFilePicker(iWidget* apWidget, const cGuiMessageData& aData)
 	{
 		if(mvPickedFiles.empty()) return true;
 
@@ -543,7 +543,7 @@ public:
 
 	//--------------------------------------------------------------
 
-	bool ChangeDrawFloor(iWidget* apWidget,cGuiMessageData& aData)
+	bool ChangeDrawFloor(iWidget* apWidget,const cGuiMessageData& aData)
 	{
 		if(gvFloors.size() < 1) return true;
 		
@@ -552,7 +552,7 @@ public:
 	}
 	kGuiCallbackFuncEnd(cSimpleUpdate,ChangeDrawFloor)
 
-	bool ChangeDrawWalls(iWidget* apWidget,cGuiMessageData& aData)
+	bool ChangeDrawWalls(iWidget* apWidget, const cGuiMessageData& aData)
 	{
 		for(size_t i=1; i< gvFloors.size(); ++i)
 		{
@@ -564,21 +564,21 @@ public:
 	kGuiCallbackFuncEnd(cSimpleUpdate,ChangeDrawWalls)
 
 	
-	bool ChangeDrawGrid(iWidget* apWidget,cGuiMessageData& aData)
+	bool ChangeDrawGrid(iWidget* apWidget, const cGuiMessageData& aData)
 	{
 		gbDrawGrid = aData.mlVal == 1;
 		return true;
 	}
 	kGuiCallbackFuncEnd(cSimpleUpdate,ChangeDrawGrid)  
 	
-	bool ChangeDrawAxes(iWidget* apWidget,cGuiMessageData& aData)
+	bool ChangeDrawAxes(iWidget* apWidget, const cGuiMessageData& aData)
 	{
 		gbDrawAxes = aData.mlVal == 1;
 		return true;
 	}
 	kGuiCallbackFuncEnd(cSimpleUpdate,ChangeDrawAxes)  
 	
-	bool ChangeBackgroundColor(iWidget* apWidget,cGuiMessageData& aData)
+	bool ChangeBackgroundColor(iWidget* apWidget, const cGuiMessageData& aData)
 	{
 		cColor gvBGColors[] = {cColor(0,1),cColor(0.5f,1),cColor(1,1) };
 
@@ -587,14 +587,14 @@ public:
 	}
 	kGuiCallbackFuncEnd(cSimpleUpdate,ChangeBackgroundColor)
 
-	bool ChangeAmbientColor(iWidget* apWidget,cGuiMessageData& aData)
+	bool ChangeAmbientColor(iWidget* apWidget, const cGuiMessageData& aData)
 	{
 		gpLightBox->SetDiffuseColor(cColor( ((float)aData.mlVal) / 255.0f, 1.0f ));
 		return true;
 	}
 	kGuiCallbackFuncEnd(cSimpleUpdate,ChangeAmbientColor)  
 
-	bool ChangeSSAOActive(iWidget* apWidget,cGuiMessageData& aData)
+	bool ChangeSSAOActive(iWidget* apWidget, const cGuiMessageData& aData)
 	{
 		cRenderSettings *pSettings = gpSimpleCamera->GetViewport()->GetRenderSettings();
 
@@ -605,7 +605,7 @@ public:
 	kGuiCallbackFuncEnd(cSimpleUpdate,ChangeSSAOActive)
 
 		
-	bool ChangeBloomActive(iWidget* apWidget,cGuiMessageData& aData)
+	bool ChangeBloomActive(iWidget* apWidget, const cGuiMessageData& aData)
 	{
 		gpPostEffectComp->GetPostEffect(0)->SetActive(aData.mlVal == 1);
 
@@ -614,7 +614,7 @@ public:
 	kGuiCallbackFuncEnd(cSimpleUpdate,ChangeBloomActive)
 	//--------------------------------------------------------------
 
-	bool ChangeShowAABB(iWidget* apWidget,cGuiMessageData& aData)
+	bool ChangeShowAABB(iWidget* apWidget, const cGuiMessageData& aData)
 	{
 		gbDrawBoundingBox = aData.mlVal == 1;
 

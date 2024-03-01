@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -33,15 +33,15 @@
 
 FastRayTest::FastRayTest(const dgVector& l0, const dgVector& l1)
 	: m_p0 (l0), m_p1(l1), m_diff (l1 - l0),
-	  m_minT(dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f)) ,
+	  m_minT(dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f)) , 
 	  m_maxT(dgFloat32 (1.0f), dgFloat32 (1.0f), dgFloat32 (1.0f), dgFloat32 (1.0f)),
 //	  m_tolerance (DG_RAY_TOL_ERROR, DG_RAY_TOL_ERROR, DG_RAY_TOL_ERROR, dgFloat32 (0.0f)),
 	  m_tolerance (DG_RAY_TOL_ERROR, DG_RAY_TOL_ERROR, DG_RAY_TOL_ERROR, DG_RAY_TOL_ERROR),
-	  m_zero(dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f))
+	  m_zero(dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f)) 
 {
-	m_isParallel[0] = (dgAbsf (m_diff.m_x) > dgFloat32 (1.0e-8f)) ? 0 : dgInt32 (0xffffffff);
-	m_isParallel[1] = (dgAbsf (m_diff.m_y) > dgFloat32 (1.0e-8f)) ? 0 : dgInt32 (0xffffffff);
-	m_isParallel[2] = (dgAbsf (m_diff.m_z) > dgFloat32 (1.0e-8f)) ? 0 : dgInt32 (0xffffffff);
+	m_isParallel[0] = (dgAbsf (m_diff.m_x) > dgFloat32 (1.0e-8f)) ? 0 : dgInt32 (0xffffffff); 
+	m_isParallel[1] = (dgAbsf (m_diff.m_y) > dgFloat32 (1.0e-8f)) ? 0 : dgInt32 (0xffffffff); 
+	m_isParallel[2] = (dgAbsf (m_diff.m_z) > dgFloat32 (1.0e-8f)) ? 0 : dgInt32 (0xffffffff); 
 	m_isParallel[3] = 0;
 
 	m_dpInv.m_x = (!m_isParallel[0]) ? (dgFloat32 (1.0f) / m_diff.m_x) : dgFloat32 (1.0e20f);
@@ -111,7 +111,7 @@ dgInt32 FastRayTest::BoxTestSimd (const dgVector& minBox, const dgVector& maxBox
 
 dgInt32 FastRayTest::BoxTest (const dgVector& minBox, const dgVector& maxBox) const
 {
-	dgFloat32 tmin = 0.0f;
+	dgFloat32 tmin = 0.0f;          
 	dgFloat32 tmax = 1.0f;
 
 	for (dgInt32 i = 0; i < 3; i++) {
@@ -148,14 +148,14 @@ dgFloat32 FastRayTest::PolygonIntersectSimd (const dgVector& normal, const dgFlo
 /*
 	dgFloatSign test;
 
-	_ASSERTE (m_p0.m_w == m_p1.m_w);
+	_DG_ASSERTE (m_p0.m_w == m_p1.m_w);
 
 	simd_type dist = simd_mul_v ((simd_type&)normal, (simd_type&)m_diff);
 	dist = simd_add_s (dist, simd_permut_v(dist, dist, PURMUT_MASK(3, 2, 1, 2)));
 	dist = simd_add_s (dist, simd_permut_v(dist, dist, PURMUT_MASK(3, 2, 1, 1)));
 //	simd_store_s (simd_cmple_s (dist, simd_set1(dgFloat32 (0.0f))), &test.m_fVal);
 	simd_store_s (simd_cmple_s (dist, simd_set1(m_dirError)), &test.m_fVal);
-
+	
 //	if (dist < dgFloat32 (0.0f)) {
 	if (test.m_integer.m_iVal) {
 		dgInt32 i1;
@@ -206,19 +206,19 @@ dgFloat32 FastRayTest::PolygonIntersectSimd (const dgVector& normal, const dgFlo
 				if (test.m_integer.m_iVal) {
 					dgFloat32 tOut;
 					simd_store_s (simd_div_s(num, dist), &tOut);
-					_ASSERTE (tOut >= dgFloat32 (0.0f));
-					_ASSERTE (tOut <= dgFloat32 (1.0f));
+					_DG_ASSERTE (tOut >= dgFloat32 (0.0f));
+					_DG_ASSERTE (tOut <= dgFloat32 (1.0f));
 					return tOut;
 				}
 				p0v1 = p0v2;
-			}
+			} 
 		}
 	}
 	return 1.2f;
 */
 
 
-	_ASSERTE (m_p0.m_w == m_p1.m_w);
+	_DG_ASSERTE (m_p0.m_w == m_p1.m_w);
 
 	dgFloat32 dist = normal % m_diff;
 	if (dist < m_dirError) {
@@ -227,14 +227,14 @@ dgFloat32 FastRayTest::PolygonIntersectSimd (const dgVector& normal, const dgFlo
 		dgVector v0 (&polygon[indexArray[indexCount - 1] * stride]);
 		dgVector p0v0 (v0 - m_p0);
 		dgFloat32 tOut = normal % p0v0;
-		// this only work for convex polygons and for single side faces
-		// walk the polygon around the edges and calculate the volume
+		// this only work for convex polygons and for single side faces 
+		// walk the polygon around the edges and calculate the volume 
 
 		if ((tOut < dgFloat32 (0.0f)) && (tOut > dist)) {
-			dgInt32 i3 = indexCount - 1;
-			dgInt32 i2 = indexCount - 2;
-			dgInt32 i1 = indexCount - 3;
-			dgInt32 i0 = (indexCount > 3) ? indexCount - 4 : 0;
+			dgInt32 i3 = indexCount - 1; 
+			dgInt32 i2 = indexCount - 2; 
+			dgInt32 i1 = indexCount - 3; 
+			dgInt32 i0 = (indexCount > 3) ? indexCount - 4 : 0; 
 
 			for (dgInt32 i4 = 0; i4 < indexCount; i4 += 4) {
 //				dgVector v1 (&polygon[i2]);
@@ -292,17 +292,17 @@ dgFloat32 FastRayTest::PolygonIntersectSimd (const dgVector& normal, const dgFlo
 				// calculate the volume formed by the line and the edge of the polygon
 //				p0v0 = p0v1;
 
-				i3 = i4 + 3;
-				i2 = i4 + 2;
-				i1 = i4 + 1;
-				i0 = i4 + 0;
+				i3 = i4 + 3; 
+				i2 = i4 + 2; 
+				i1 = i4 + 1; 
+				i0 = i4 + 0; 
 			}
 
-			//the line is to the left of all the polygon edges,
+			//the line is to the left of all the polygon edges, 
 			//then the intersection is the point we the line intersect the plane of the polygon
 			tOut = tOut / dist;
-			_ASSERTE (tOut >= dgFloat32 (0.0f));
-			_ASSERTE (tOut <= dgFloat32 (1.0f));
+			_DG_ASSERTE (tOut >= dgFloat32 (0.0f));
+			_DG_ASSERTE (tOut <= dgFloat32 (1.0f));
 			return tOut;
 		}
 	}
@@ -316,7 +316,7 @@ dgFloat32 FastRayTest::PolygonIntersectSimd (const dgVector& normal, const dgFlo
 
 dgFloat32 FastRayTest::PolygonIntersect (const dgVector& normal, const dgFloat32* const polygon, dgInt32 strideInBytes, const dgInt32* const indexArray, dgInt32 indexCount) const
 {
-	_ASSERTE (m_p0.m_w == m_p1.m_w);
+	_DG_ASSERTE (m_p0.m_w == m_p1.m_w);
 
 	dgFloat32 dist = normal % m_diff;
 	if (dist < m_dirError) {
@@ -326,8 +326,8 @@ dgFloat32 FastRayTest::PolygonIntersect (const dgVector& normal, const dgFloat32
 		dgVector v0 (&polygon[indexArray[indexCount - 1] * stride]);
 		dgVector p0v0 (v0 - m_p0);
 		dgFloat32 tOut = normal % p0v0;
-		// this only work for convex polygons and for single side faces
-		// walk the polygon around the edges and calculate the volume
+		// this only work for convex polygons and for single side faces 
+		// walk the polygon around the edges and calculate the volume 
 		if ((tOut < dgFloat32 (0.0f)) && (tOut > dist)) {
 			for (dgInt32 i = 0; i < indexCount; i ++) {
 				dgInt32 i2 = indexArray[i] * stride;
@@ -342,11 +342,11 @@ dgFloat32 FastRayTest::PolygonIntersect (const dgVector& normal, const dgFloat32
 				p0v0 = p0v1;
 			}
 
-			//the line is to the left of all the polygon edges,
+			//the line is to the left of all the polygon edges, 
 			//then the intersection is the point we the line intersect the plane of the polygon
 			tOut = tOut / dist;
-			_ASSERTE (tOut >= dgFloat32 (0.0f));
-			_ASSERTE (tOut <= dgFloat32 (1.0f));
+			_DG_ASSERTE (tOut >= dgFloat32 (0.0f));
+			_DG_ASSERTE (tOut <= dgFloat32 (1.0f));
 			return tOut;
 		}
 	}
@@ -356,8 +356,8 @@ dgFloat32 FastRayTest::PolygonIntersect (const dgVector& normal, const dgFloat32
 
 
 
-bool dgApi dgRayBoxClip (dgVector& p0, dgVector& p1, const dgVector& boxP0, const dgVector& boxP1)
-{
+bool dgApi dgRayBoxClip (dgVector& p0, dgVector& p1, const dgVector& boxP0, const dgVector& boxP1) 
+{	
 	for (int i = 0; i < 3; i ++) {
 		dgFloat32 tmp0;
 		dgFloat32 tmp1;
@@ -366,13 +366,13 @@ bool dgApi dgRayBoxClip (dgVector& p0, dgVector& p1, const dgVector& boxP0, cons
 		if (tmp0 > dgFloat32 (0.0f)) {
 			tmp1 = boxP1[i] - p1[i];
 			if (tmp1 < dgFloat32 (0.0f)) {
-				p1 = p0 + (p1 - p0).Scale (tmp0 / (p1[i] - p0[i]));
+				p1 = p0 + (p1 - p0).Scale (tmp0 / (p1[i] - p0[i])); 
 				p1[i] = boxP1[i];
 			}
 		} else {
 			tmp1 = boxP1[i] - p1[i];
 			if (tmp1 > dgFloat32 (0.0f)) {
-				p0 += (p1 - p0).Scale (tmp0 / (p1[i] - p0[i]));
+				p0 += (p1 - p0).Scale (tmp0 / (p1[i] - p0[i])); 
 				p0[i] = boxP1[i];
 			} else {
 				return false;
@@ -383,13 +383,13 @@ bool dgApi dgRayBoxClip (dgVector& p0, dgVector& p1, const dgVector& boxP0, cons
 		if (tmp0 < dgFloat32 (0.0f)) {
 			tmp1 = boxP0[i] - p1[i];
 			if (tmp1 > dgFloat32 (0.0f)) {
-				p1 = p0 + (p1 - p0).Scale (tmp0 / (p1[i] - p0[i]));
+				p1 = p0 + (p1 - p0).Scale (tmp0 / (p1[i] - p0[i])); 
 				p1[i] = boxP0[i];
 			}
 		} else {
 			tmp1 = boxP0[i] - p1[i];
 			if (tmp1 < dgFloat32 (0.0f)) {
-				p0 += (p1 - p0).Scale (tmp0 / (p1[i] - p0[i]));
+				p0 += (p1 - p0).Scale (tmp0 / (p1[i] - p0[i])); 
 				p0[i] = boxP0[i];
 			} else {
 				return false;
@@ -409,11 +409,11 @@ dgVector dgApi dgPointToRayDistance (const dgVector& point, const dgVector& ray_
 }
 
 void dgApi dgRayToRayDistance (
-	const dgVector& ray_p0,
+	const dgVector& ray_p0, 
 	const dgVector& ray_p1,
-	const dgVector& ray_q0,
+	const dgVector& ray_q0, 
 	const dgVector& ray_q1,
-	dgVector& pOut,
+	dgVector& pOut, 
 	dgVector& qOut)
 {
 	dgFloat32    sN;
@@ -513,8 +513,8 @@ dgVector dgPointToTriangleDistance (const dgVector& point, const dgVector& p0, c
 	dgFloat32 vc = alpha1 * alpha4 - alpha3 * alpha2;
 	if ((vc <= dgFloat32 (0.0f)) && (alpha1 >= dgFloat32 (0.0f)) && (alpha3 <= dgFloat32 (0.0f))) {
 		dgFloat32 t = alpha1 / (alpha1 - alpha3);
-		_ASSERTE (t >= dgFloat32 (0.0f));
-		_ASSERTE (t <= dgFloat32 (1.0f));
+		_DG_ASSERTE (t >= dgFloat32 (0.0f));
+		_DG_ASSERTE (t <= dgFloat32 (1.0f));
 		return p0 + p10.Scale (t);
 	}
 
@@ -530,8 +530,8 @@ dgVector dgPointToTriangleDistance (const dgVector& point, const dgVector& p0, c
 	dgFloat32 vb = alpha5 * alpha2 - alpha1 * alpha6;
 	if ((vb <= dgFloat32 (0.0f)) && (alpha2 >= dgFloat32 (0.0f)) && (alpha6 <= dgFloat32 (0.0f))) {
 		dgFloat32 t = alpha2 / (alpha2 - alpha6);
-		_ASSERTE (t >= dgFloat32 (0.0f));
-		_ASSERTE (t <= dgFloat32 (1.0f));
+		_DG_ASSERTE (t >= dgFloat32 (0.0f));
+		_DG_ASSERTE (t <= dgFloat32 (1.0f));
 		return p0 + p20.Scale (t);
 	}
 
@@ -539,18 +539,18 @@ dgVector dgPointToTriangleDistance (const dgVector& point, const dgVector& p0, c
 	dgFloat32 va = alpha3 * alpha6 - alpha5 * alpha4;
 	if ((va <= dgFloat32 (0.0f)) && ((alpha4 - alpha3) >= dgFloat32 (0.0f)) && ((alpha5 - alpha6) >= dgFloat32 (0.0f))) {
 		dgFloat32 t = (alpha4 - alpha3) / ((alpha4 - alpha3) + (alpha5 - alpha6));
-		_ASSERTE (t >= dgFloat32 (0.0f));
-		_ASSERTE (t <= dgFloat32 (1.0f));
+		_DG_ASSERTE (t >= dgFloat32 (0.0f));
+		_DG_ASSERTE (t <= dgFloat32 (1.0f));
 		return p1 + (p2 - p1).Scale (t);
 	}
 
 	dgFloat32 den = float(dgFloat32 (1.0f)) / (va + vb + vc);
 	dgFloat32 t = vb * den;
 	dgFloat32 s = vc * den;
-	_ASSERTE (t >= dgFloat32 (0.0f));
-	_ASSERTE (s >= dgFloat32 (0.0f));
-	_ASSERTE (t <= dgFloat32 (1.0f));
-	_ASSERTE (s <= dgFloat32 (1.0f));
+	_DG_ASSERTE (t >= dgFloat32 (0.0f));
+	_DG_ASSERTE (s >= dgFloat32 (0.0f));
+	_DG_ASSERTE (t <= dgFloat32 (1.0f));
+	_DG_ASSERTE (s <= dgFloat32 (1.0f));
 	return p0 + p10.Scale (t) + p20.Scale (s);
 }
 
@@ -577,8 +577,8 @@ dgBigVector dgPointToTriangleDistance (const dgBigVector& point, const dgBigVect
 	dgFloat64 vc = alpha1 * alpha4 - alpha3 * alpha2;
 	if ((vc <= dgFloat64 (0.0f)) && (alpha1 >= dgFloat64 (0.0f)) && (alpha3 <= dgFloat64 (0.0f))) {
 		dgFloat64 t = alpha1 / (alpha1 - alpha3);
-		_ASSERTE (t >= dgFloat64 (0.0f));
-		_ASSERTE (t <= dgFloat64 (1.0f));
+		_DG_ASSERTE (t >= dgFloat64 (0.0f));
+		_DG_ASSERTE (t <= dgFloat64 (1.0f));
 		return p0 + p10.Scale (t);
 	}
 
@@ -594,8 +594,8 @@ dgBigVector dgPointToTriangleDistance (const dgBigVector& point, const dgBigVect
 	dgFloat64 vb = alpha5 * alpha2 - alpha1 * alpha6;
 	if ((vb <= dgFloat64 (0.0f)) && (alpha2 >= dgFloat64 (0.0f)) && (alpha6 <= dgFloat64 (0.0f))) {
 		dgFloat64 t = alpha2 / (alpha2 - alpha6);
-		_ASSERTE (t >= dgFloat64 (0.0f));
-		_ASSERTE (t <= dgFloat64 (1.0f));
+		_DG_ASSERTE (t >= dgFloat64 (0.0f));
+		_DG_ASSERTE (t <= dgFloat64 (1.0f));
 		return p0 + p20.Scale (t);
 	}
 
@@ -603,18 +603,18 @@ dgBigVector dgPointToTriangleDistance (const dgBigVector& point, const dgBigVect
 	dgFloat64 va = alpha3 * alpha6 - alpha5 * alpha4;
 	if ((va <= dgFloat64 (0.0f)) && ((alpha4 - alpha3) >= dgFloat64 (0.0f)) && ((alpha5 - alpha6) >= dgFloat64 (0.0f))) {
 		dgFloat64 t = (alpha4 - alpha3) / ((alpha4 - alpha3) + (alpha5 - alpha6));
-		_ASSERTE (t >= dgFloat64 (0.0f));
-		_ASSERTE (t <= dgFloat64 (1.0f));
+		_DG_ASSERTE (t >= dgFloat64 (0.0f));
+		_DG_ASSERTE (t <= dgFloat64 (1.0f));
 		return p1 + (p2 - p1).Scale (t);
 	}
 
 	dgFloat64 den = float(dgFloat64 (1.0f)) / (va + vb + vc);
 	dgFloat64 t = vb * den;
 	dgFloat64 s = vc * den;
-	_ASSERTE (t >= dgFloat64 (0.0f));
-	_ASSERTE (s >= dgFloat64 (0.0f));
-	_ASSERTE (t <= dgFloat64 (1.0f));
-	_ASSERTE (s <= dgFloat64 (1.0f));
+	_DG_ASSERTE (t >= dgFloat64 (0.0f));
+	_DG_ASSERTE (s >= dgFloat64 (0.0f));
+	_DG_ASSERTE (t <= dgFloat64 (1.0f));
+	_DG_ASSERTE (s <= dgFloat64 (1.0f));
 	return p0 + p10.Scale (t) + p20.Scale (s);
 }
 
@@ -630,7 +630,7 @@ bool dgApi dgPointToPolygonDistance (const dgVector& p, const dgFloat32* const p
 //	dgFloat32 dist;
 //	dgFloat32 minDist;
 
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	dgInt32 stride = dgInt32 (strideInBytes / sizeof (dgFloat32));
 
 	dgInt32 i0 = indexArray[0] * stride;
@@ -677,19 +677,19 @@ dgBigVector LineTriangleIntersection (const dgBigVector& p0, const dgBigVector& 
 	dgHugeVector Cp0 (Ch - ph0);
 
 	dgGoogol t0 ((Bp0 * Cp0) % p1p0);
-	dgFloat64 val0 = t0.GetAproximateValue();
+	dgFloat64 val0 = t0.GetAproximateValue();	
 	if (val0 < dgFloat64 (0.0f)) {
 		return dgBigVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (-1.0f));
 	}
 
 	dgGoogol t1 ((Cp0 * Ap0) % p1p0);
-	dgFloat64 val1 = t1.GetAproximateValue();
+	dgFloat64 val1 = t1.GetAproximateValue();	
 	if (val1 < dgFloat64 (0.0f)) {
 		return dgBigVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (-1.0f));
 	}
 
 	dgGoogol t2 ((Ap0 * Bp0) % p1p0);
-	dgFloat64 val2 = t2.GetAproximateValue();
+	dgFloat64 val2 = t2.GetAproximateValue();	
 	if (val2 < dgFloat64 (0.0f)) {
 		return dgBigVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (-1.0f));
 	}
@@ -697,10 +697,10 @@ dgBigVector LineTriangleIntersection (const dgBigVector& p0, const dgBigVector& 
 	dgGoogol sum = t0 + t1 + t2;
 	dgFloat64 den = sum.GetAproximateValue();
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	dgBigVector testpoint (A.Scale (val0 / den) + B.Scale (val1 / den) + C.Scale(val2 / den));
 	dgFloat64 volume = ((B - A) * (C - A)) % (testpoint - A);
-	_ASSERTE (fabs (volume) < dgFloat64 (1.0e-12f));
+	_DG_ASSERTE (fabs (volume) < dgFloat64 (1.0e-12f));
 #endif
 
 

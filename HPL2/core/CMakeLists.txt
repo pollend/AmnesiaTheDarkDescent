@@ -91,6 +91,8 @@ file(GLOB impl_sources RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
     sources/impl/SDLEngineSetup.cpp
     sources/impl/SDLFontData.cpp
     sources/impl/SDLTexture.cpp
+
+
     # OpenAL
     sources/impl/LowLevelSoundOpenAL.cpp
     sources/impl/OpenAL*
@@ -117,6 +119,8 @@ IF(APPLE)
 ELSEIF(WIN32)
     LIST(APPEND impl_sources
         sources/impl/PlatformWin32.cpp
+        sources/impl/MutexWin32.cpp
+        sources/impl/ThreadWin32.cpp
     )
 ELSEIF(LINUX)
     LIST(APPEND impl_sources
@@ -149,13 +153,14 @@ function(GenerateBuildID outvar idname includedir sourcedir)
             ${sourcedir}/BuildID_${idname}_${BUILDID_SUFFIX}.cpp
             ${includedir}/BuildID_${idname}.h
         COMMAND
-            ${BUILDID_BIN}
+            perl ${BUILDID_BIN}
         ARGS
             ${idname} ${includedir} ${sourcedir}
     )
     set(${outvar} ${sourcedir}/BuildID_${idname}_${BUILDID_SUFFIX}.cpp
             ${includedir}/BuildID_${idname}.h PARENT_SCOPE)
 endfunction()
+
 
 GenerateBuildID(version_source
     HPL2_0
@@ -210,10 +215,15 @@ add_library(HPL2 STATIC
 set(HPL2_INCLUDES
     PUBLIC include
     #Important that this is before dependencies so the correct OpenAL headers are used
-    PRIVATE ${OALWRAPPER_INCLUDE_DIR}
     PRIVATE ${THEORA_INCLUDE_DIR}
     PRIVATE ${DEVIL_INCLUDE_DIR}
     PRIVATE ${OPENGL_INCLUDE_DIR}
+
+    PUBLIC ${SDL2_INCLUDE_DIR}
+    #Important that this is before dependencies so the correct OpenAL headers are used
+    PRIVATE ${OALWRAPPER_INCLUDE_DIR}
+    PRIVATE ${ZLIB_INCLUDE_DIRS}
+    PRIVATE ${IL_INCLUDE_DIR}
 )
 
 target_include_directories(HPL2
@@ -227,19 +237,26 @@ if(LINUX)
     )
 endif()
 
+
+# Don't use exceptions
+if(WIN32)
+  add_compile_options(/EHs-c-)
+else()
+  add_compile_options(-fno-exceptions)
+endif()
+
 target_link_libraries(HPL2
-OALWrapper # also pulls in ogg,vorbis,SDL
+    OALWrapper # also pulls in ogg,vorbis,SDL
   AngelScript
   Newton
   GLEW::GLEW
   ${OPENGL_gl_LIBRARY}
   ${OPENGL_glu_LIBRARY}
   ${THEORA_LIBRARY}
-  z
   $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
   $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+  unofficial::theora::theora
   ZLIB::ZLIB
   ${IL_LIBRARIES}
   ${PLATFORM_LIBS}
-  unofficial::theora::theora
   )

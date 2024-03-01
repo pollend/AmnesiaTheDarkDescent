@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -30,17 +30,17 @@
 
 
 template<class T>
-class dgList
+class dgList 
 {
 	public:
 	class dgListNode
 	{
 		DG_CLASS_ALLOCATOR(allocator)
 
-		dgListNode (dgListNode* const prev, dgListNode* const next)
-			:m_info ()
+		dgListNode (dgListNode* const prev, dgListNode* const next) 
+			:m_info () 
 		{
-			_ASSERTE ((dgUnsigned64 (&m_info) & 0x0f) == 0);
+			_DG_ASSERTE ((dgUnsigned64 (&m_info) & 0x0f) == 0);
 			m_prev = prev;
 			m_next = next;
 			if (m_prev) {
@@ -51,10 +51,10 @@ class dgList
 			}
 		}
 
-		dgListNode (const T &info, dgListNode* const prev, dgListNode* const next)
-			:m_info (info)
+		dgListNode (const T &info, dgListNode* const prev, dgListNode* const next) 
+			:m_info (info) 
 		{
-			_ASSERTE ((dgUnsigned64 (&m_info) & 0x0f) == 0);
+			_DG_ASSERTE ((dgUnsigned64 (&m_info) & 0x0f) == 0);
 			m_prev = prev;
 			m_next = next;
 			if (m_prev) {
@@ -85,25 +85,25 @@ class dgList
 
 //		void Remove()
 //		{
-//			_ASSERTE (0);
+//			_DG_ASSERTE (0);
 //			Kill();
 //			Unlink();
 //			Release();
 //		}
 
-		void AddLast(dgListNode* const node)
+		void AddLast(dgListNode* const node) 
 		{
 			m_next = node;
 			node->m_prev = this;
 		}
 
-		void AddFirst(dgListNode* const node)
+		void AddFirst(dgListNode* const node) 
 		{
 			m_prev = node;
 			node->m_next = this;
 		}
 
-
+		
 
 		public:
 		T& GetInfo()
@@ -131,7 +131,7 @@ class dgList
 
 	class Iterator
 	{
-
+		
 
 		public:
 		Iterator (const dgList<T> &me)
@@ -171,25 +171,25 @@ class dgList
 
 		void operator++ ()
 		{
-			_ASSERTE (m_ptr);
+			_DG_ASSERTE (m_ptr);
 			m_ptr = m_ptr->m_next();
 		}
 
 		void operator++ (dgInt32)
 		{
-			_ASSERTE (m_ptr);
+			_DG_ASSERTE (m_ptr);
 			m_ptr = m_ptr->GetNext();
 		}
 
-		void operator-- ()
+		void operator-- () 
 		{
-			_ASSERTE (m_ptr);
+			_DG_ASSERTE (m_ptr);
 			m_ptr = m_ptr->GetPrev();
 		}
 
-		void operator-- (dgInt32)
+		void operator-- (dgInt32) 
 		{
-			_ASSERTE (m_ptr);
+			_DG_ASSERTE (m_ptr);
 			m_ptr = m_ptr->GetPrev();
 		}
 
@@ -284,7 +284,7 @@ dgList<T>::dgList (dgMemoryAllocator* const allocator)
 
 
 template<class T>
-dgList<T>::~dgList ()
+dgList<T>::~dgList () 
 {
 	RemoveAll ();
 }
@@ -331,8 +331,8 @@ typename dgList<T>::dgListNode *dgList<T>::GetLast() const
 template<class T>
 typename dgList<T>::dgListNode *dgList<T>::Append (dgListNode* const node)
 {
-	_ASSERTE (node->m_next == NULL);
-	_ASSERTE (node->m_prev == NULL);
+	_DG_ASSERTE (node->m_next == NULL);
+	_DG_ASSERTE (node->m_prev == NULL);
 	m_count	++;
 	if (m_first == NULL) {
 		m_last = node;
@@ -341,8 +341,8 @@ typename dgList<T>::dgListNode *dgList<T>::Append (dgListNode* const node)
 		m_last->AddLast (node);
 		m_last = node;
 	}
-#ifdef __ENABLE_SANITY_CHECK
-	_ASSERTE (SanityCheck ());
+#ifdef __ENABLE_SANITY_CHECK 
+	_DG_ASSERTE (SanityCheck ());
 #endif
 	return m_last;
 }
@@ -357,8 +357,8 @@ typename dgList<T>::dgListNode *dgList<T>::Append ()
 	} else {
 		m_last = new (m_allocator) dgListNode(m_last, NULL);
 	}
-#ifdef __ENABLE_SANITY_CHECK
-	_ASSERTE (SanityCheck ());
+#ifdef __ENABLE_SANITY_CHECK 
+	_DG_ASSERTE (SanityCheck ());
 #endif
 	return m_last;
 }
@@ -373,8 +373,8 @@ typename dgList<T>::dgListNode *dgList<T>::Append (const T &element)
 	} else {
 		m_last = new (m_allocator) dgListNode(element, m_last, NULL);
 	}
-#ifdef __ENABLE_SANITY_CHECK
-	_ASSERTE (SanityCheck ());
+#ifdef __ENABLE_SANITY_CHECK 
+	_DG_ASSERTE (SanityCheck ());
 #endif
 
 	return m_last;
@@ -383,8 +383,8 @@ typename dgList<T>::dgListNode *dgList<T>::Append (const T &element)
 template<class T>
 typename dgList<T>::dgListNode *dgList<T>::Addtop (dgListNode* const node)
 {
-	_ASSERTE (node->m_next == NULL);
-	_ASSERTE (node->m_prev == NULL);
+	_DG_ASSERTE (node->m_next == NULL);
+	_DG_ASSERTE (node->m_prev == NULL);
 	m_count	++;
 	if (m_last == NULL) {
 		m_last = node;
@@ -393,8 +393,8 @@ typename dgList<T>::dgListNode *dgList<T>::Addtop (dgListNode* const node)
 		m_first->AddFirst(node);
 		m_first = node;
 	}
-#ifdef __ENABLE_SANITY_CHECK
-	_ASSERTE (SanityCheck ());
+#ifdef __ENABLE_SANITY_CHECK 
+	_DG_ASSERTE (SanityCheck ());
 #endif
 	return m_first;
 }
@@ -410,8 +410,8 @@ typename dgList<T>::dgListNode *dgList<T>::Addtop ()
 	} else {
 		m_first = new (m_allocator) dgListNode(NULL, m_first);
 	}
-#ifdef __ENABLE_SANITY_CHECK
-	_ASSERTE (SanityCheck ());
+#ifdef __ENABLE_SANITY_CHECK 
+	_DG_ASSERTE (SanityCheck ());
 #endif
 	return m_first;
 }
@@ -427,8 +427,8 @@ typename dgList<T>::dgListNode *dgList<T>::Addtop (const T &element)
 	} else {
 		m_first = new (m_allocator) dgListNode(element, NULL, m_first);
 	}
-#ifdef __ENABLE_SANITY_CHECK
-	_ASSERTE (SanityCheck ());
+#ifdef __ENABLE_SANITY_CHECK 
+	_DG_ASSERTE (SanityCheck ());
 #endif
 	return m_first;
 }
@@ -436,9 +436,9 @@ typename dgList<T>::dgListNode *dgList<T>::Addtop (const T &element)
 template<class T>
 void dgList<T>::InsertAfter (dgListNode* const root, dgListNode* const node)
 {
-	_ASSERTE (root);
-	_ASSERTE (node != root);
-
+	_DG_ASSERTE (root);
+	_DG_ASSERTE (node != root);
+	
 	if (root->m_next != node) {
 		if (node == m_first) {
 			m_first = node->m_next;
@@ -447,23 +447,23 @@ void dgList<T>::InsertAfter (dgListNode* const root, dgListNode* const node)
 			m_last = node->m_prev;
 		}
 		node->Unlink ();
-
+		
 		node->m_prev = root;
 		node->m_next = root->m_next;
 		if (root->m_next) {
 			root->m_next->m_prev = node;
-		}
+		} 
 		root->m_next = node;
 
 		if (node->m_next == NULL) {
 			m_last = node;
 		}
 
-		_ASSERTE (m_last);
-		_ASSERTE (!m_last->m_next);
-		_ASSERTE (m_first);
-		_ASSERTE (!m_first->m_prev);
-		_ASSERTE (SanityCheck ());
+		_DG_ASSERTE (m_last);
+		_DG_ASSERTE (!m_last->m_next);
+		_DG_ASSERTE (m_first);
+		_DG_ASSERTE (!m_first->m_prev);
+		_DG_ASSERTE (SanityCheck ());
 	}
 }
 
@@ -471,9 +471,9 @@ void dgList<T>::InsertAfter (dgListNode* const root, dgListNode* const node)
 template<class T>
 void dgList<T>::InsertBefore (dgListNode* const root, dgListNode* const node)
 {
-	_ASSERTE (root);
-	_ASSERTE (node != root);
-
+	_DG_ASSERTE (root);
+	_DG_ASSERTE (node != root);
+	
 	if (root->m_prev != node) {
 		if (node == m_last) {
 			m_last = node->m_prev;
@@ -482,23 +482,23 @@ void dgList<T>::InsertBefore (dgListNode* const root, dgListNode* const node)
 			m_first = node->m_next;
 		}
 		node->Unlink ();
-
+		
 		node->m_next = root;
 		node->m_prev = root->m_prev;
 		if (root->m_prev) {
 			root->m_prev->m_next = node;
-		}
+		} 
 		root->m_prev = node;
 
 		if (node->m_prev == NULL) {
 			m_first = node;
 		}
 
-		_ASSERTE (m_first);
-		_ASSERTE (!m_first->m_prev);
-		_ASSERTE (m_last);
-		_ASSERTE (!m_last->m_next);
-		_ASSERTE (SanityCheck ());
+		_DG_ASSERTE (m_first);
+		_DG_ASSERTE (!m_first->m_prev);
+		_DG_ASSERTE (m_last);
+		_DG_ASSERTE (!m_last->m_next);
+		_DG_ASSERTE (SanityCheck ());
 	}
 }
 
@@ -513,12 +513,12 @@ void dgList<T>::RotateToEnd (dgListNode* const node)
 			}
 			node->Unlink();
 			m_last->AddLast(node);
-			m_last = node;
+			m_last = node; 
 		}
 	}
 
-#ifdef __ENABLE_SANITY_CHECK
-	_ASSERTE (SanityCheck ());
+#ifdef __ENABLE_SANITY_CHECK 
+	_DG_ASSERTE (SanityCheck ());
 #endif
 }
 
@@ -532,12 +532,12 @@ void dgList<T>::RotateToBegin (dgListNode* const node)
 			}
 			node->Unlink();
 			m_first->AddFirst(node);
-			m_first = node;
+			m_first = node; 
 		}
 	}
 
-#ifdef __ENABLE_SANITY_CHECK
-	_ASSERTE (SanityCheck ());
+#ifdef __ENABLE_SANITY_CHECK 
+	_DG_ASSERTE (SanityCheck ());
 #endif
 }
 
@@ -564,12 +564,12 @@ typename dgList<T>::dgListNode *dgList<T>::GetNodeFromInfo (T &info) const
 	dgInt64 offset = ((char*) &node->m_info) - ((char *) node);
 	dgListNode* const retnode = (dgListNode *) (((char *) node) - offset);
 
-	_ASSERTE (&retnode->GetInfo () == &info);
+	_DG_ASSERTE (&retnode->GetInfo () == &info);
 	return retnode;
 }
 
 
-template<class T>
+template<class T> 
 void dgList<T>::Remove (const T &element)
 {
 	dgListNode *const node = Find (element);
@@ -578,13 +578,13 @@ void dgList<T>::Remove (const T &element)
 	}
 }
 
-template<class T>
+template<class T> 
 void dgList<T>::Unlink (dgListNode* const node)
 {
-	_ASSERTE (node);
+	_DG_ASSERTE (node);
 
 	m_count --;
-	_ASSERTE (m_count >= 0);
+	_DG_ASSERTE (m_count >= 0);
 
 	if (node == m_first) {
 		m_first = m_first->GetNext();
@@ -595,8 +595,8 @@ void dgList<T>::Unlink (dgListNode* const node)
 //	node->Remove();
 	node->Unlink();
 
-#ifdef __ENABLE_SANITY_CHECK
-	_ASSERTE (SanityCheck ());
+#ifdef __ENABLE_SANITY_CHECK 
+	_DG_ASSERTE (SanityCheck ());
 #endif
 }
 
@@ -619,7 +619,7 @@ void dgList<T>::RemoveAll ()
 		node->Unlink();
 		delete node;
 	}
-	_ASSERTE (m_count == 0);
+	_DG_ASSERTE (m_count == 0);
 	m_last = NULL;
 	m_first = NULL;
 }
@@ -627,27 +627,27 @@ void dgList<T>::RemoveAll ()
 template<class T>
 bool dgList<T>::SanityCheck () const
 {
-	#ifdef _DEBUG
+	#ifdef _DG_DEBUG
 	dgInt32 tCount = 0;
 	for (dgListNode * node = m_first; node; node = node->GetNext()) {
 		tCount ++;
 		if (node->GetPrev()) {
-			_ASSERTE (node->GetPrev() != node->GetNext());
+			_DG_ASSERTE (node->GetPrev() != node->GetNext());
 			if (node->GetPrev()->GetNext() != node) {
-				_ASSERTE (0);
-				return false;
+				_DG_ASSERTE (0);
+				return false; 
 			}
 		}
 		if (node->GetNext()) {
-			_ASSERTE (node->GetPrev() != node->GetNext());
+			_DG_ASSERTE (node->GetPrev() != node->GetNext());
 			if (node->GetNext()->GetPrev() != node)	{
-				_ASSERTE (0);
+				_DG_ASSERTE (0);
 				return false;
 			}
 		}
 	}
 	if (tCount != m_count) {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		return false;
 	}
 	#endif

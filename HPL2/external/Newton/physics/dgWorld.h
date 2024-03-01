@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -122,13 +122,13 @@ class dgWorld:
 	public dgBroadPhaseCollision,
 	public dgBodyMaterialList,
 	public dgBodyCollisionList,
-	public dgActiveContacts,
+	public dgActiveContacts, 
 	public dgCollidingPairCollector
 {
 	public:
 
 	class dgDetroyBodyByForce
-	{
+	{	
 		public:
 		dgDetroyBodyByForce()
 			:m_count(0)
@@ -162,25 +162,25 @@ class dgWorld:
 	dgInt32 GetThreadOnSingleIsland() const;
 
 	void FlushCache();
-
+	
 	void* GetUserData() const;
 	void SetUserData (void* const userData);
 
 	void Update (dgFloat32 timestep);
 	void UpdateCollision ();
-	dgInt32 Collide (dgCollision* collisionA, const dgMatrix& matrixA, dgCollision* collisionB, const dgMatrix& matrixB,
+	dgInt32 Collide (dgCollision* collisionA, const dgMatrix& matrixA, dgCollision* collisionB, const dgMatrix& matrixB, 
 					 dgTriplex* points, dgTriplex* normals, dgFloat32* penetration, dgInt32 maxSize, dgInt32 threadIndex);
 
-	dgInt32 CollideContinue (dgCollision* collisionA, const dgMatrix& matrixA, const dgVector& velocA, const dgVector& omegaA,
-							 dgCollision* collisionB, const dgMatrix& matrixB, const dgVector& velocB, const dgVector& omegaB,
+	dgInt32 CollideContinue (dgCollision* collisionA, const dgMatrix& matrixA, const dgVector& velocA, const dgVector& omegaA, 
+							 dgCollision* collisionB, const dgMatrix& matrixB, const dgVector& velocB, const dgVector& omegaB, 
 							 dgFloat32& timeStep, dgTriplex* points, dgTriplex* normals, dgFloat32* penetration, dgInt32 maxSize, dgInt32 threadIndex);
-	dgInt32 CollideContinueSimd (dgCollision* collisionA, const dgMatrix& matrixA, const dgVector& velocA, const dgVector& omegaA,
-								 dgCollision* collisionB, const dgMatrix& matrixB, const dgVector& velocB, const dgVector& omegaB,
+	dgInt32 CollideContinueSimd (dgCollision* collisionA, const dgMatrix& matrixA, const dgVector& velocA, const dgVector& omegaA, 
+								 dgCollision* collisionB, const dgMatrix& matrixB, const dgVector& velocB, const dgVector& omegaB, 
 								 dgFloat32& timeStep, dgTriplex* points, dgTriplex* normals, dgFloat32* penetration, dgInt32 maxSize, dgInt32 threadIndex);
 
 
 	dgInt32 ClosestPoint (dgTriplex& point, dgCollision* const collision, const dgMatrix& matrix, dgTriplex& contact, dgTriplex& normal, dgInt32 threadIndex) const;
-	dgInt32 ClosestPoint (dgCollision* const collisionA, const dgMatrix& matrixA, dgCollision* const collisionB, const dgMatrix& matrixB,
+	dgInt32 ClosestPoint (dgCollision* const collisionA, const dgMatrix& matrixA, dgCollision* const collisionB, const dgMatrix& matrixB, 
 						  dgTriplex& contactA, dgTriplex& contactB, dgTriplex& normalAB, dgInt32 threadIndex) const;
 
 
@@ -190,10 +190,10 @@ class dgWorld:
 	dgBody* GetIslandBody (const void* const island, dgInt32 index) const;
 
 
-	void SetIslandUpdateCallback (OnIslandUpdate callback);
+	void SetIslandUpdateCallback (OnIslandUpdate callback); 
 	void SetDestroyCollisionCallback (OnDestroyCollision shape);
-	void SetLeavingWorldCallback (OnLeavingWorldAction callback);
-	void SetBodyDestructionByExeciveForce (OnBodyDestructionByExeciveForce callback);
+	void SetLeavingWorldCallback (OnLeavingWorldAction callback); 
+	void SetBodyDestructionByExeciveForce (OnBodyDestructionByExeciveForce callback); 
 //	void ForEachBodyInAABB (const dgVector& q0, const dgVector& q1, OnLeavingWorldAction callback);
 
 	dgBody* CreateBody (dgCollision* const collision/*, const dgMatrix& matrix*/);
@@ -203,35 +203,35 @@ class dgWorld:
 //	void AddToBreakQueue (const dgContact* const contactJoint, dgFloat32 masValue);
 	void AddToBreakQueue (const dgContact* const contactJoint, dgBody* const body, dgFloat32 maxForce);
 
-    // modify the velocity and angular velocity of a body in such a way
-	// that the velocity of pointPosit is increase by pointDeltaVeloc
+    // modify the velocity and angular velocity of a body in such a way 
+	// that the velocity of pointPosit is increase by pointDeltaVeloc 
 	// pointVeloc and pointPosit are in world space
 	void AddBodyImpulse (dgBody* body, const dgVector& pointDeltaVeloc, const dgVector& pointPosit);
 
-	// apply the transform matrix to the body and recurse trough all bodies attached to this body with a
+	// apply the transform matrix to the body and recurse trough all bodies attached to this body with a 
 	// bilateral joint contact joint are ignored.
 	void BodySetMatrix (dgBody* body, const dgMatrix& matrix);
 //	void FreezeBody (dgBody *body);
 //	void UnfreezeBody (dgBody *body);
 //	dgInt32 GetActiveBodiesCount() const;
-
+	
 	dgInt32 GetBodiesCount() const;
 	dgInt32 GetConstraintsCount() const;
 
 
-	dgUnsigned32 GetBoxID () const;
-	dgUnsigned32 GetConeID () const;
-	dgUnsigned32 GetSphereID () const;
-	dgUnsigned32 GetConvexID () const;
-	dgUnsigned32 GetEllipseID () const;
-	dgUnsigned32 GetCapsuleID () const;
-	dgUnsigned32 GetCylinderID () const;
-	dgUnsigned32 GetConvexHullID () const;
-	dgUnsigned32 GetChamferCylinderID () const;
-	dgUnsigned32 GetConvexHullModifierID () const;
-	dgUnsigned32 GetPolygonSoupID () const;
+	dgUnsigned32 GetBoxID () const; 
+	dgUnsigned32 GetConeID () const; 
+	dgUnsigned32 GetSphereID () const; 
+	dgUnsigned32 GetConvexID () const; 
+	dgUnsigned32 GetEllipseID () const; 
+	dgUnsigned32 GetCapsuleID () const; 
+	dgUnsigned32 GetCylinderID () const; 
+	dgUnsigned32 GetConvexHullID () const; 
+	dgUnsigned32 GetChamferCylinderID () const; 
+	dgUnsigned32 GetConvexHullModifierID () const; 
+	dgUnsigned32 GetPolygonSoupID () const; 
 	dgUnsigned32 GetSceneID () const;
-	dgUnsigned32 GetCompoundCollisionID () const;
+	dgUnsigned32 GetCompoundCollisionID () const; 
 
 	dgCollision* CreateNull ();
 	dgCollision* CreateSphere (dgFloat32 radiusdg, dgInt32 shapeID, const dgMatrix& offsetMatrix = dgGetIdentityMatrix());
@@ -245,28 +245,28 @@ class dgWorld:
 	dgCollision* CreateConvexModifier (dgCollision* convexCollision);
 	dgCollision* CreateCollisionCompound (dgInt32 count, dgCollision* const array[]);
 //	dgCollision* CreateCollisionCompoundBreakable (dgInt32 count, dgMeshEffect* const solidArray[], dgMeshEffect* const splitePlanes[],
-//													  dgMatrix* const matrixArray, dgInt32* const idArray, dgFloat32* const mass, dgInt32 debriID,
+//													  dgMatrix* const matrixArray, dgInt32* const idArray, dgFloat32* const mass, dgInt32 debriID, 
 //													  dgCollisionCompoundBreakableCallback callback, void* buildUsedData);
 
-	dgCollision* CreateCollisionCompoundBreakable (dgInt32 count, const dgMeshEffect* const solidArray[], const dgInt32* const idArray,
+	dgCollision* CreateCollisionCompoundBreakable (dgInt32 count, const dgMeshEffect* const solidArray[], const dgInt32* const idArray, 
 												   const dgFloat32* const densities, const dgInt32* const internalFaceMaterial, dgInt32 debriID, dgFloat32 gap);
 
 
-	dgCollision* CreateBVH ();
+	dgCollision* CreateBVH ();	
 	dgCollision* CreateStaticUserMesh (const dgVector& boxP0, const dgVector& boxP1, const dgUserMeshCreation& data);
-	dgCollision* CreateBVHFieldCollision(dgInt32 width, dgInt32 height, dgInt32 contructionMode,
+	dgCollision* CreateBVHFieldCollision(dgInt32 width, dgInt32 height, dgInt32 contructionMode, 
 										 const dgUnsigned16* const elevationMap, const dgInt8* const atributeMap, dgFloat32 horizontalScale, dgFloat32 vertcalScale);
 
-	dgCollision* CreateScene ();
+	dgCollision* CreateScene ();	
 
 	void Serialize (dgCollision* shape, dgSerialize deserialization, void* const userData) const;
 	dgCollision* CreateFromSerialization (dgDeserialize deserialization, void* const userData);
 
 	void RemoveFromCache (dgCollision* const collision);
 	void ReleaseCollision(dgCollision* const collision);
-
+	
 	dgUpVectorConstraint* CreateUpVectorConstraint (const dgVector& pin, dgBody *body);
-
+	
 	dgBallConstraint* CreateBallConstraint (const dgVector& pivot, dgBody* const body0, dgBody *refBody = NULL);
 	dgHingeConstraint* CreateHingeConstraint (const dgVector& pivot, const dgVector& pin, dgBody* const body0, dgBody *refBody = NULL);
 	dgSlidingConstraint* CreateSlidingConstraint (const dgVector& pivot, const dgVector& pin, dgBody* const body0, dgBody *refBody = NULL);
@@ -286,7 +286,7 @@ class dgWorld:
 
 	OnGetPerformanceCountCallback GetPerformaceFuntion()const ;
 	void SetPerfomanceCounter(OnGetPerformanceCountCallback callback);
-
+	
 //	dgUnsigned32 GetPerfomanceTicks (dgInt32 thread, dgUnsigned32 entry) const;
 	dgUnsigned32 GetPerfomanceTicks (dgUnsigned32 entry) const;
 	dgUnsigned32 GetThreadPerfomanceTicks (dgUnsigned32 threadIndex) const;
@@ -299,7 +299,7 @@ class dgWorld:
 
 	dgBody* GetSentinelBody() const;
 	dgMemoryAllocator* GetAllocator() const;
-
+	
 	private:
 	void CalculateContacts (dgCollidingPairCollector::dgPair* const pair, dgFloat32 timestep, dgInt32 threadIndex);
 	void CalculateContactsSimd (dgCollidingPairCollector::dgPair* const pair, dgFloat32 timestep, dgInt32 threadIndex);
@@ -314,9 +314,9 @@ class dgWorld:
 	dgInt32 CalculateSphereToSphereContacts (dgCollisionParamProxi& proxi) const;
 	dgInt32 CalculateCapsuleToSphereContacts (dgCollisionParamProxi& proxi) const;
 	dgInt32 CalculateCapsuleToCapsuleContacts (dgCollisionParamProxi& proxi) const;
-	dgInt32 SphereSphereCollision (const dgVector& sph0, dgFloat32 radius0, const dgVector& sph1, dgFloat32 radius1, dgCollisionParamProxi& proxi) const;
+	dgInt32 SphereSphereCollision (const dgVector& sph0, dgFloat32 radius0, const dgVector& sph1, dgFloat32 radius1, dgCollisionParamProxi& proxi) const;  
 
-
+	
 	dgInt32 ValidateContactCache (dgBody* const convexBody, dgBody* const otherBody, dgContact* const contact) const;
 
 
@@ -330,15 +330,15 @@ class dgWorld:
 	dgInt32 CalculateConvexToNonConvexContactsContinue (dgCollisionParamProxi& proxi) const;
 	dgInt32 CalculateConvexToNonConvexContactsContinueSimd (dgCollisionParamProxi& proxi) const;
 
-
-//	dgInt32 CalculateConvexToConvexContinuesContacts (dgFloat32& timestep, dgBody* body1, dgBody* body2, dgContactPoint contactOut[]) const;
-//	dgInt32 CalculateConvexToConvexContinuesContacts (dgCollisionParamProxi& proxi) const;
-//	dgInt32 CalculateConvexToConvexContinuesContacts (dgCollisionParamProxi& proxi) const;
+	
+//	dgInt32 CalculateConvexToConvexContinuesContacts (dgFloat32& timestep, dgBody* body1, dgBody* body2, dgContactPoint contactOut[]) const; 
+//	dgInt32 CalculateConvexToConvexContinuesContacts (dgCollisionParamProxi& proxi) const; 
+//	dgInt32 CalculateConvexToConvexContinuesContacts (dgCollisionParamProxi& proxi) const; 
 //	dgInt32 CalculateConvexToConvexContacts (dgFloat32& timestep, dgBody* conv1, dgBody* conv2, dgFloat32 penetrationPadding, dgContactPoint* const contact) const;
 //	dgInt32 CalculateConvexToConvexContactsSimd (dgFloat32& timestep, dgBody* conv1, dgBody* conv2, dgFloat32 penetrationPadding, dgContactPoint* const contact) const;
 	dgInt32 CalculateConvexToConvexContacts (dgCollisionParamProxi& proxi) const;
 	dgInt32 CalculateConvexToConvexContactsSimd (dgCollisionParamProxi& proxi) const;
-
+	
 //	dgInt32 CalculateConvexToNonConvexContacts (dgFloat32& timestep, dgBody* conv, dgBody* nConv, dgContactPoint* const contact, dgInt32 maxContacts) const;
 	dgInt32 CalculateConvexToNonConvexContacts (dgCollisionParamProxi& proxi) const;
 	dgInt32 CalculateConvexToNonConvexContactsSimd (dgCollisionParamProxi& proxi) const;
@@ -356,7 +356,7 @@ class dgWorld:
 
 	void SceneContacts (dgCollidingPairCollector::dgPair* const pair, dgCollisionParamProxi& proxi) const;
 	void SceneContacts (const dgCollisionScene::dgProxy& sceneProxy, dgCollidingPairCollector::dgPair* const pair, dgCollisionParamProxi& proxi) const;
-
+	
 	void SceneContactsSimd (dgCollidingPairCollector::dgPair* const pair, dgCollisionParamProxi& proxi) const;
 	void SceneContactsSimd (const dgCollisionScene::dgProxy& sceneProxy, dgCollidingPairCollector::dgPair* const pair, dgCollisionParamProxi& proxi) const;
 
@@ -364,7 +364,7 @@ class dgWorld:
 	dgInt32 ClosestCompoundPoint (dgBody* const compoundConvexA, dgBody* const collisionB, dgTriplex& contactA, dgTriplex& contactB, dgTriplex& normalAB, dgInt32 threadIndex) const;
 
 	bool AreBodyConnectedByJoints (dgBody* const origin, dgBody* const target);
-
+	
 	void AddSentinelBody();
 
 
@@ -390,24 +390,24 @@ class dgWorld:
 	dgFloat32 m_frictiomTheshold;
 
 	dgSolverSleepTherfesholds m_sleepTable[DG_SLEEP_ENTRIES];
-
+	
 	dgInt32 m_genericLRUMark;
 	dgInt32 m_islandMemorySizeInBytes;
 	dgInt32 m_bodiesMemorySizeInBytes;
 	dgInt32 m_jointsMemorySizeInBytes;
 	dgInt32 m_pairMemoryBufferSizeInBytes;
-	void *m_jointsMemory;
-	void *m_bodiesMemory;
-	void *m_islandMemory;
+	void *m_jointsMemory; 
+	void *m_bodiesMemory; 
+	void *m_islandMemory; 
 	void *m_pairMemoryBuffer;
 
-
+	
 	dgInt32 m_singleIslandMultithreading;
 	dgInt32 m_contactBuffersSizeInBytes[DG_MAXIMUN_THREADS];
 	dgInt32 m_jacobiansMemorySizeInBytes[DG_MAXIMUN_THREADS];
 	dgInt32 m_internalForcesMemorySizeInBytes[DG_MAXIMUN_THREADS];
-	void* m_jacobiansMemory[DG_MAXIMUN_THREADS];
-	void* m_internalForcesMemory[DG_MAXIMUN_THREADS];
+	void* m_jacobiansMemory[DG_MAXIMUN_THREADS]; 
+	void* m_internalForcesMemory[DG_MAXIMUN_THREADS];  
 	void* m_contactBuffers[DG_MAXIMUN_THREADS];
 
 	dgBody* m_sentionelBody;
@@ -423,13 +423,13 @@ class dgWorld:
 	OnBodyDestructionByExeciveForce m_destroyBodyByExeciveForce;
 
 	dgDetroyBodyByForce m_destroyeddBodiesPool;
-	dgUnsigned32 m_perfomanceCounters[m_counterSize];
+	dgUnsigned32 m_perfomanceCounters[m_counterSize];	
 
 	dgTree<void*, unsigned> m_perInstanceData;
 
 	dgThreads m_threadsManager;
 	dgWorldDynamicUpdate m_dynamicSolver;
-
+	
 	friend class dgBody;
 	friend class dgActiveContacts;
 	friend class dgBroadPhaseCell;
@@ -445,12 +445,12 @@ class dgWorld:
 	friend class dgBroadPhaseCollision;
 	friend class dgSolverWorlkerThreads;
 	friend class dgCollidingPairCollector;
-	friend class dgParallelSolverClear;
+	friend class dgParallelSolverClear;	
 	friend class dgParallelSolverUpdateForce;
 	friend class dgParallelSolverUpdateVeloc;
 	friend class dgParallelSolverBodyInertia;
 	friend class dgParallelSolverInitFeedbackUpdate;
-
+	
 	friend class dgBroadPhaseApplyExternalForce;
 	friend class dgParallelSolverCalculateForces;
 	friend class dgParallelSolverJointAcceleration;
@@ -458,7 +458,7 @@ class dgWorld:
 	friend class dgBroadPhaseCellPairsWorkerThread;
 	friend class dgParallelSolverInitInternalForces;
 	friend class dgParallelSolverBuildJacobianMatrix;
-
+	
 	friend class dgBroadPhaseMaterialCallbackWorkerThread;
 	friend class dgBroadPhaseCalculateContactsWorkerThread;
 } DG_GCC_VECTOR_ALIGMENT ;

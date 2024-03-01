@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -54,7 +54,7 @@ class dgMeshTreeCSGPointsPool
 	{
 		m_points[m_count] = point;
 		m_count ++;
-		_ASSERTE (m_count < DG_MESH_EFFECT_POINT_SPLITED);
+		_DG_ASSERTE (m_count < DG_MESH_EFFECT_POINT_SPLITED);
 		return (m_count - 1);
 	}
 
@@ -96,7 +96,7 @@ class dgMeshTreeCSGFace: public dgRefCounter
 		m_allocator = allocator;
 	}
 
-	~dgMeshTreeCSGFace()
+	~dgMeshTreeCSGFace() 
 	{
 		CSGLinearEdge* ptr;
 		ptr = m_face;
@@ -160,7 +160,7 @@ class dgMeshTreeCSGFace: public dgRefCounter
 		return true;
 	}
 
-	void InsertVertex (const dgMeshTreeCSGFace* const vertices, const dgMeshTreeCSGPointsPool& pool)
+	void InsertVertex (const dgMeshTreeCSGFace* const vertices, const dgMeshTreeCSGPointsPool& pool) 
 	{
 		CSGLinearEdge* points;
 
@@ -168,7 +168,7 @@ class dgMeshTreeCSGFace: public dgRefCounter
 		do {
 			dgFloat64 smallDist;
 			CSGLinearEdge* edge;
-			CSGLinearEdge* closestEdge;
+			CSGLinearEdge* closestEdge; 
 
 			closestEdge = NULL;
 			smallDist = dgFloat64 (1.0e10f);
@@ -259,7 +259,7 @@ class dgMeshEffectSolidTree
 
 	dgMeshEffectSolidTree (const dgMeshEffect& mesh, dgEdge* face)
 	{
- _ASSERTE (0);
+ _DG_ASSERTE (0);
  /*
 //		m_plane = MakePlane (mesh, face);
 		dgBigVector origin (mesh.m_points[face->m_incidentVertex]);
@@ -284,7 +284,7 @@ class dgMeshEffectSolidTree
 	~dgMeshEffectSolidTree()
 	{
 		if (m_front)	{
-			delete m_front;
+			delete m_front; 
 		}
 
 		if (m_back)	{
@@ -300,11 +300,11 @@ class dgMeshEffectSolidTree
 //		normal = normal.Scale (1.0f / sqrt (normal % normal));
 //		return dgBigPlane (normal, - (normal % origin));
 //	}
-
+	
 
 	void AddFace (const dgMeshEffect& mesh, dgEdge* face)
 	{
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 		/*
 		dgFloat64 mag2;
 		dgEdge* ptr;
@@ -313,7 +313,7 @@ class dgMeshEffectSolidTree
 		dgMeshEffectSolidTree* pool[DG_MESH_EFFECT_BOLLEAN_STACK];
 
 //		dgBigPlane plane (MakePlane (mesh, face));
-
+		
 		dgBigVector normal (mesh.FaceNormal (face, &mesh.m_points[0][0], sizeof (dgVector)));
 		mag2 = normal % normal;
 		if (mag2 > dgFloat32 (1.0e-14f)) {
@@ -335,27 +335,27 @@ class dgMeshEffectSolidTree
 			while (stack) {
 				dgFloat64 minDist;
 				dgFloat64 maxDist;
-
+				
 				dgMeshEffectSolidTree* root;
 
 				stack --;
 				root = pool[stack];
 				CSGConvexCurve& curve = faces[stack];
-				_ASSERTE (curve.CheckConvex(plane));
+				_DG_ASSERTE (curve.CheckConvex(plane));
 
 				minDist = dgFloat64 (0.0f);
 				maxDist = dgFloat64 (0.0f);
 				for (CSGConvexCurve::dgListNode* node = curve.GetFirst(); node; node = node->GetNext()) {
 					dgFloat64 dist;
-
+				
 					dist = root->m_plane.Evalue(node->GetInfo());
 					if (dist < - DG_MESH_EFFECT_PLANE_TOLERANCE) {
 						minDist = dist;
 					}
 					if (dist > DG_MESH_EFFECT_PLANE_TOLERANCE) {
 						maxDist = dist;
-					}
-				}
+					} 
+				} 
 
 				if ((minDist < dgFloat64 (0.0f)) && (maxDist > dgFloat64 (0.0f))) {
 
@@ -366,14 +366,14 @@ class dgMeshEffectSolidTree
 					}
 					curve.RemoveAll();
 
-
+				
 					if (!root->m_back) {
 						root->m_back = new (mesh.GetAllocator()) dgMeshEffectSolidTree (plane);
 					} else {
 						dgFloat64 test0;
 						dgBigVector p0 (tmp.GetLast()->GetInfo());
 						CSGConvexCurve& backFace = faces[stack];
-
+					
 						backFace.SetAllocator(mesh.GetAllocator());
 						test0 = root->m_plane.Evalue(p0);
 						for (CSGConvexCurve::dgListNode* node = tmp.GetFirst(); node; node = node->GetNext()) {
@@ -407,14 +407,14 @@ class dgMeshEffectSolidTree
 						}
 
 						// check Here because the clipper can generate a point and lines
-						_ASSERTE (!backFace.GetCount() || (backFace.GetCount() >= 3));
+						_DG_ASSERTE (!backFace.GetCount() || (backFace.GetCount() >= 3));
 
 						pool[stack] = root->m_back;
 						stack ++;
-						_ASSERTE (stack < (sizeof (pool)/sizeof (pool[0])));
+						_DG_ASSERTE (stack < (sizeof (pool)/sizeof (pool[0])));
 					}
 
-
+					
 					if (!root->m_front) {
 						root->m_front = new (mesh.GetAllocator())dgMeshEffectSolidTree (plane);
 					} else {
@@ -455,11 +455,11 @@ class dgMeshEffectSolidTree
 						}
 
 						// check Here because the clipper can generate a point and lines
-						_ASSERTE (!frontFace.GetCount() || (frontFace.GetCount() >= 3));
+						_DG_ASSERTE (!frontFace.GetCount() || (frontFace.GetCount() >= 3));
 
 						pool[stack] = root->m_front;
 						stack ++;
-						_ASSERTE (stack < (sizeof (pool)/sizeof (pool[0])));
+						_DG_ASSERTE (stack < (sizeof (pool)/sizeof (pool[0])));
 					}
 
 
@@ -470,16 +470,16 @@ class dgMeshEffectSolidTree
 						} else {
 							pool[stack] = root->m_back;
 							stack ++;
-							_ASSERTE (stack < (sizeof (pool)/sizeof (pool[0])));
+							_DG_ASSERTE (stack < (sizeof (pool)/sizeof (pool[0])));
 						}
-
+						
 					} else if (maxDist > dgFloat64 (0.0f)) {
 						if (!root->m_front) {
 							root->m_front = new (mesh.GetAllocator())dgMeshEffectSolidTree (plane);
 						} else {
 							pool[stack] = root->m_front;
 							stack ++;
-							_ASSERTE (stack < (sizeof (pool)/sizeof (pool[0])));
+							_DG_ASSERTE (stack < (sizeof (pool)/sizeof (pool[0])));
 						}
 					}
 				}
@@ -515,10 +515,10 @@ class dgMeshEffectBuilder
 
 	static void GetShapeFromCollision (void* userData, dgInt32 vertexCount, const dgFloat32* faceVertex, dgInt32 id)
 	{
-		dgInt32 vertexIndex;
+		dgInt32 vertexIndex; 
 		dgMeshEffectBuilder& builder = *((dgMeshEffectBuilder*)userData);
-
-
+		
+		
 		if (builder.m_faceCount >= builder.m_maxFaceCount) {
 			dgInt32* index;
 
@@ -531,7 +531,7 @@ class dgMeshEffectBuilder
 		builder.m_faceIndexCount[builder.m_faceCount] = vertexCount;
 		builder.m_faceCount = builder.m_faceCount + 1;
 
-		vertexIndex = builder.m_vertexCount;
+		vertexIndex = builder.m_vertexCount; 
 		dgFloat32 brush = dgFloat32 (builder.m_brush);
 		for (dgInt32 i = 0; i < vertexCount; i ++) {
 			if (vertexIndex >= builder.m_maxVertexCount) {
@@ -560,7 +560,7 @@ class dgMeshEffectBuilder
 
 	dgInt32 m_faceCount;
 	dgInt32 m_maxFaceCount;
-
+	
 	dgVector* m_vertex;
 	dgInt32* m_faceIndexCount;
 };
@@ -575,7 +575,7 @@ dgMeshEffect::dgMeshEffect(dgMemoryAllocator* const allocator, bool preAllocaBuf
 dgMeshEffect::dgMeshEffect (dgMemoryAllocator* const allocator, const dgMatrix& planeMatrix, dgFloat32 witdth, dgFloat32 breadth, dgInt32 material, const dgMatrix& textureMatrix0, const dgMatrix& textureMatrix1)
 	:dgPolyhedra(allocator)
 {
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 /*
 	dgVector face[4];
 	dgInt32 index[4];
@@ -602,7 +602,7 @@ dgMeshEffect::dgMeshEffect (dgMemoryAllocator* const allocator, const dgMatrix& 
 		m_attib[i].m_normal.m_x = planeMatrix.m_front.m_x;
 		m_attib[i].m_normal.m_y = planeMatrix.m_front.m_y;
 		m_attib[i].m_normal.m_z = planeMatrix.m_front.m_z;
-
+		
 		m_attib[i].m_u0 = uv0.m_y;
 		m_attib[i].m_v0 = uv0.m_z;
 
@@ -625,7 +625,7 @@ dgMeshEffect::dgMeshEffect (dgMemoryAllocator* const allocator, const dgMatrix& 
 
 
 dgMeshEffect::dgMeshEffect(dgPolyhedra& mesh, const dgMeshEffect& source)
-	:dgPolyhedra (mesh)
+	:dgPolyhedra (mesh) 
 {
 	m_isFlagFace = source.m_isFlagFace;
 	m_pointCount = source.m_pointCount;
@@ -641,7 +641,7 @@ dgMeshEffect::dgMeshEffect(dgPolyhedra& mesh, const dgMeshEffect& source)
 
 
 dgMeshEffect::dgMeshEffect(const dgMeshEffect& source)
-	:dgPolyhedra (source)
+	:dgPolyhedra (source) 
 {
 	m_isFlagFace = source.m_isFlagFace;
 	m_pointCount = source.m_pointCount;
@@ -657,7 +657,7 @@ dgMeshEffect::dgMeshEffect(const dgMeshEffect& source)
 
 
 dgMeshEffect::dgMeshEffect(dgCollision* const collision)
-	:dgPolyhedra (collision->GetAllocator())
+	:dgPolyhedra (collision->GetAllocator()) 
 {
 	dgMeshEffectBuilder builder;
 
@@ -679,7 +679,7 @@ dgMeshEffect::dgMeshEffect(dgCollision* const collision)
 	}
 
 	dgStack<dgInt32>indexList (builder.m_vertexCount);
-	dgVertexListToIndexList (&builder.m_vertex[0].m_x, sizeof (dgVector), sizeof (dgVector), 0, builder.m_vertexCount, &indexList[0], DG_VERTEXLIST_INDEXLIST_TOL);
+	dgVertexListToIndexList (&builder.m_vertex[0].m_x, sizeof (dgVector), sizeof (dgVector), 0, builder.m_vertexCount, &indexList[0], DG_VERTEXLIST_INDEXLIST_TOL);	
 
 	dgStack<dgInt32> materialIndex(builder.m_faceCount);
 	dgStack<dgInt32> m_normalUVIndex(builder.m_vertexCount);
@@ -727,10 +727,10 @@ void dgMeshEffect::Init(bool preAllocaBuffers)
 
 void dgMeshEffect::Triangulate  ()
 {
-
+	
 /*
 	dgPolyhedra::Iterator iter (*this);
-	for (bool hasPolygons = true; hasPolygons;) {
+	for (bool hasPolygons = true; hasPolygons;) { 
 		hasPolygons = false;
 		dgInt32 mark = IncLRU();
 		for (iter.Begin(); iter; iter ++){
@@ -783,7 +783,7 @@ void dgMeshEffect::Triangulate  ()
 
 	dgPolyhedra leftOversOut(GetAllocator());
 	polygon.Triangulate(&m_attib[0].m_vertex.m_x, sizeof (dgVertexAtribute), &leftOversOut);
-	_ASSERTE (leftOversOut.GetCount() == 0);
+	_DG_ASSERTE (leftOversOut.GetCount() == 0);
 
 
 	RemoveAll();
@@ -846,7 +846,7 @@ void dgMeshEffect::ConvertToPolygons ()
 
 	dgPolyhedra leftOversOut(GetAllocator());
 	polygon.ConvexPartition (&m_attib[0].m_vertex.m_x, sizeof (dgVertexAtribute), &leftOversOut);
-	_ASSERTE (leftOversOut.GetCount() == 0);
+	_DG_ASSERTE (leftOversOut.GetCount() == 0);
 
 	RemoveAll();
 	SetLRU (0);
@@ -933,7 +933,7 @@ void dgMeshEffect::RemoveUnusedVertices(dgInt32* const vertexMap)
 
 	m_pointCount = vertexCount;
 	memcpy (&m_points[0].m_x, &points[0].m_x, m_pointCount * sizeof (dgVector));
-	
+	 
 	m_atribCount = attribCount;
 	memcpy (&m_attib[0].m_vertex.m_x, &atributes[0].m_vertex.m_x, m_atribCount * sizeof (dgVertexAtribute));
 
@@ -988,8 +988,8 @@ dgMatrix dgMeshEffect::CalculateOOBB (dgVector& size) const
 
 void dgMeshEffect::CalculateAABB (dgVector& minBox, dgVector& maxBox) const
 {
-	dgVector minP ( dgFloat32 (1.0e15f),  dgFloat32 (1.0e15f),  dgFloat32 (1.0e15f), dgFloat32 (0.0f));
-	dgVector maxP (-dgFloat32 (1.0e15f), -dgFloat32 (1.0e15f), -dgFloat32 (1.0e15f), dgFloat32 (0.0f));
+	dgVector minP ( dgFloat32 (1.0e15f),  dgFloat32 (1.0e15f),  dgFloat32 (1.0e15f), dgFloat32 (0.0f)); 
+	dgVector maxP (-dgFloat32 (1.0e15f), -dgFloat32 (1.0e15f), -dgFloat32 (1.0e15f), dgFloat32 (0.0f)); 
 
 	dgPolyhedra::Iterator iter (*this);
 	const dgVector* const points = &m_points[0];
@@ -997,13 +997,13 @@ void dgMeshEffect::CalculateAABB (dgVector& minBox, dgVector& maxBox) const
 		dgEdge* const edge = &(*iter);
 		const dgVector& p (points[edge->m_incidentVertex]);
 
-		minP.m_x = GetMin (p.m_x, minP.m_x);
-		minP.m_y = GetMin (p.m_y, minP.m_y);
-		minP.m_z = GetMin (p.m_z, minP.m_z);
+		minP.m_x = GetMin (p.m_x, minP.m_x); 
+		minP.m_y = GetMin (p.m_y, minP.m_y); 
+		minP.m_z = GetMin (p.m_z, minP.m_z); 
 
-		maxP.m_x = GetMax (p.m_x, maxP.m_x);
-		maxP.m_y = GetMax (p.m_y, maxP.m_y);
-		maxP.m_z = GetMax (p.m_z, maxP.m_z);
+		maxP.m_x = GetMax (p.m_x, maxP.m_x); 
+		maxP.m_y = GetMax (p.m_y, maxP.m_y); 
+		maxP.m_z = GetMax (p.m_z, maxP.m_z); 
 	}
 
 	minBox = minP;
@@ -1013,7 +1013,7 @@ void dgMeshEffect::CalculateAABB (dgVector& minBox, dgVector& maxBox) const
 void dgMeshEffect::EnumerateAttributeArray (dgVertexAtribute* attib)
 {
 	dgInt32 index = 0;
-	dgPolyhedra::Iterator iter (*this);
+	dgPolyhedra::Iterator iter (*this);	
 	for(iter.Begin(); iter; iter ++){
 		dgEdge* const edge = &(*iter);
 		attib[index] = m_attib[dgInt32 (edge->m_userData)];
@@ -1033,29 +1033,29 @@ void dgMeshEffect::ApplyAttributeArray (dgVertexAtribute* attib)
 	m_attib = (dgVertexAtribute*) GetAllocator()->MallocLow(dgInt32 (m_atribCount * sizeof(dgVertexAtribute)));
 	memcpy (m_attib, attib, m_atribCount * sizeof(dgVertexAtribute));
 
-	dgPolyhedra::Iterator iter (*this);
+	dgPolyhedra::Iterator iter (*this);	
 	for(iter.Begin(); iter; iter ++){
 		dgEdge* const edge = &(*iter);
 		dgInt32 index = indexMap[dgInt32 (edge->m_userData)];
-		_ASSERTE (index >=0);
-		_ASSERTE (index < m_atribCount);
+		_DG_ASSERTE (index >=0);
+		_DG_ASSERTE (index < m_atribCount);
 		edge->m_userData = dgUnsigned64 (index);
 	}
 }
 
 dgVector dgMeshEffect::GetOrigin ()const
 {
-	dgVector origin (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));
+	dgVector origin (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f));	
 	for (dgInt32 i = 0; i < m_pointCount; i ++) {
 		origin += m_points[i];
-	}
+	}	
 	return origin.Scale (dgFloat32 (1.0f) / m_pointCount);
 }
 
 
 void dgMeshEffect::FixCylindricalMapping (dgVertexAtribute* attribArray) const
 {
-	dgPolyhedra::Iterator iter (*this);
+	dgPolyhedra::Iterator iter (*this);	
 	for(iter.Begin(); iter; iter ++){
 		dgEdge* const edge = &(*iter);
 		dgVertexAtribute& attrib0 = attribArray[dgInt32 (edge->m_userData)];
@@ -1070,7 +1070,7 @@ void dgMeshEffect::FixCylindricalMapping (dgVertexAtribute* attribArray) const
 				attrib1.m_u0 += dgFloat32 (1.0f);
 				attrib1.m_u1 = attrib1.m_u0;
 			}
-
+			
 		}
 	}
 
@@ -1120,7 +1120,7 @@ void dgMeshEffect::SphericalMapping (dgInt32 material)
 	dgStack<dgVertexAtribute>attribArray (GetCount());
 	EnumerateAttributeArray (&attribArray[0]);
 
-	dgPolyhedra::Iterator iter (*this);
+	dgPolyhedra::Iterator iter (*this);	
 	for(iter.Begin(); iter; iter ++){
 		dgEdge* edge;
 		edge = &(*iter);
@@ -1174,7 +1174,7 @@ void dgMeshEffect::CylindricalMapping (dgInt32 cylinderMaterial, dgInt32 capMate
 	dgStack<dgVertexAtribute>attribArray (GetCount());
 	EnumerateAttributeArray (&attribArray[0]);
 
-	dgPolyhedra::Iterator iter (*this);
+	dgPolyhedra::Iterator iter (*this);	
 	for(iter.Begin(); iter; iter ++){
 		dgEdge* edge;
 		edge = &(*iter);
@@ -1249,7 +1249,7 @@ void dgMeshEffect::BoxMapping (dgInt32 front, dgInt32 side, dgInt32 top)
 
 
 	mark = IncLRU();
-	dgPolyhedra::Iterator iter (*this);
+	dgPolyhedra::Iterator iter (*this);	
 	for(iter.Begin(); iter; iter ++){
 		dgEdge* edge;
 		edge = &(*iter);
@@ -1267,7 +1267,7 @@ void dgMeshEffect::BoxMapping (dgInt32 front, dgInt32 side, dgInt32 top)
 			dgVector e0 (p1 - p0);
 			dgVector e1 (p2 - p0);
 			dgVector n (e0 * e1);
-
+			
 			index = 0;
 			maxProjection = dgFloat32 (0.0f);
 
@@ -1311,7 +1311,7 @@ void dgMeshEffect::CalculateNormals (dgFloat32 angleInRadians)
 	EnumerateAttributeArray (&attribArray[0]);
 
 	dgInt32 mark = IncLRU();
-	dgPolyhedra::Iterator iter (*this);
+	dgPolyhedra::Iterator iter (*this);	
 	for(iter.Begin(); iter; iter ++){
 		dgEdge* edge;
 		edge = &(*iter);
@@ -1335,7 +1335,7 @@ void dgMeshEffect::CalculateNormals (dgFloat32 angleInRadians)
 	}
 
 
-	dgFloat32 smoothValue = dgCos (angleInRadians);
+	dgFloat32 smoothValue = dgCos (angleInRadians); 
 	mark = IncLRU();
 	for(iter.Begin(); iter; iter ++){
 		dgEdge* edge = &(*iter);
@@ -1423,7 +1423,7 @@ void dgMeshEffect::AddPoint(const dgFloat32* vertex, dgInt32 material)
 {
 	dgVertexAtribute attib;
 	AddVertex(dgVector (vertex[0], vertex[1], vertex[2], vertex[3]));
-
+	
 	attib.m_vertex.m_x = m_points[m_pointCount -1].m_x;
 	attib.m_vertex.m_y = m_points[m_pointCount -1].m_y;
 	attib.m_vertex.m_z = m_points[m_pointCount -1].m_z;
@@ -1493,7 +1493,7 @@ void dgMeshEffect::EndPolygon ()
 	dgStack<dgInt32>indexMap(m_pointCount);
 	dgStack<dgInt32>attrIndexMap(m_atribCount);
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	for (dgInt32 i = 0; i < m_pointCount; i += 3) {
 		dgFloat32 mag2;
 		dgVector p0 (m_points[i + 0]);
@@ -1503,7 +1503,7 @@ void dgMeshEffect::EndPolygon ()
 		dgVector e2 (p2 - p0);
 		dgVector n (e1 * e2);
 		mag2 = dgSqrt (n % n);
-		_ASSERTE (mag2 > DG_MESH_EFFECT_TRIANGLE_MIN_AREA);
+		_DG_ASSERTE (mag2 > DG_MESH_EFFECT_TRIANGLE_MIN_AREA);
 	}
 #endif
 
@@ -1536,20 +1536,20 @@ void dgMeshEffect::EndPolygon ()
 			userdata[2] = attrIndexMap[i * 3 + 2];
 			edge = AddFace (3, index, userdata);
 			if (!edge) {
-				_ASSERTE ((m_pointCount + 3) <= m_maxPointCount);
+				_DG_ASSERTE ((m_pointCount + 3) <= m_maxPointCount);
 				index[0] = m_pointCount + 0;
 				index[1] = m_pointCount + 1;
 				index[2] = m_pointCount + 2;
 				m_pointCount += 3;
 				edge = AddFace (3, index, userdata);
-				_ASSERTE (edge);
+				_DG_ASSERTE (edge);
 			}
 		}
 	}
 
 	EndFace();
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 	dgPolyhedra::Iterator iter (*this);
 	for (iter.Begin(); iter; iter ++){
 		dgEdge* face;
@@ -1563,7 +1563,7 @@ void dgMeshEffect::EndPolygon ()
 			dgVector e2 (p2 - p0);
 			dgVector n (e1 * e2);
 			mag2 = dgSqrt (n % n);
-			_ASSERTE (mag2 > DG_MESH_EFFECT_TRIANGLE_MIN_AREA);
+			_DG_ASSERTE (mag2 > DG_MESH_EFFECT_TRIANGLE_MIN_AREA);
 		}
 	}
 #endif
@@ -1571,7 +1571,7 @@ void dgMeshEffect::EndPolygon ()
 
 
 void dgMeshEffect::BuildFromVertexListIndexList(
-	dgInt32 faceCount, const dgInt32* const faceIndexCount, const dgInt32* const faceMaterialIndex,
+	dgInt32 faceCount, const dgInt32* const faceIndexCount, const dgInt32* const faceMaterialIndex, 
 	const dgFloat32* const vertex, dgInt32 vertexStrideInBytes, const dgInt32* const vertexIndex,
 	const dgFloat32* const normal, dgInt32  normalStrideInBytes, const dgInt32* const normalIndex,
 	const dgFloat32* const uv0, dgInt32  uv0StrideInBytes, const dgInt32* const uv0Index,
@@ -1589,7 +1589,7 @@ void dgMeshEffect::BuildFromVertexListIndexList(
 		}
 		acc += count;
 	}
-
+		
 	dgInt32 layerCountBase = 0;
 	dgInt32 vertexStride = dgInt32 (vertexStrideInBytes / sizeof (dgFloat32));
 	for (int i = 0; i < vertexCount; i ++) {
@@ -1610,7 +1610,7 @@ void dgMeshEffect::BuildFromVertexListIndexList(
 			dgVertexAtribute point;
 			dgInt32 index = vertexIndex[acc + i];
 			point.m_vertex = m_points[index];
-
+			
 			index = normalIndex[(acc + i)] * normalStride;
 			point.m_normal.m_x =  normal[index + 0];
 			point.m_normal.m_y =  normal[index + 1];
@@ -1619,7 +1619,7 @@ void dgMeshEffect::BuildFromVertexListIndexList(
 			index = uv0Index[(acc + i)] * uv0Stride;
 			point.m_u0 = uv0[index + 0];
 			point.m_v0 = uv0[index + 1];
-
+			
 			index = uv1Index[(acc + i)] * uv1Stride;
 			point.m_u1 = uv1[index + 0];
 			point.m_v1 = uv1[index + 1];
@@ -1630,7 +1630,7 @@ void dgMeshEffect::BuildFromVertexListIndexList(
 		acc += indexCount;
 	}
 
-
+ 
 //	dgStack<dgInt32>indexMap(m_pointCount);
 //	m_pointCount = dgVertexListToIndexList (&m_points[0].m_x, sizeof (dgVector), sizeof (dgTriplex), 0, m_pointCount, &indexMap[0], DG_VERTEXLIST_INDEXLIST_TOL);
 
@@ -1640,7 +1640,7 @@ void dgMeshEffect::BuildFromVertexListIndexList(
 	bool hasFaces = true;
 	dgStack<dgInt8> faceMark (faceCount);
 	memset (&faceMark[0], 1, size_t (faceMark.GetSizeInBytes()));
-
+	
 	dgInt32 layerCount = 0;
 	while (hasFaces) {
 		acc = 0;
@@ -1651,7 +1651,7 @@ void dgMeshEffect::BuildFromVertexListIndexList(
 			dgInt64 userdata[256];
 
 			int indexCount = faceIndexCount[j];
-			_ASSERTE (indexCount < sizeof (index) / sizeof (index[0]));
+			_DG_ASSERTE (indexCount < sizeof (index) / sizeof (index[0]));
 
 			if (faceMark[j]) {
 				for (int i = 0; i < indexCount; i ++) {
@@ -1667,7 +1667,7 @@ void dgMeshEffect::BuildFromVertexListIndexList(
 					for (int i = 0; i < indexCount - 1; i ++) {
 						for (int k = i + 1; k < indexCount; k ++) {
 							if (index[i] == index[k]) {
-								degeneratedFace = true;
+								degeneratedFace = true;		
 							}
 						}
 					}
@@ -1718,7 +1718,7 @@ dgInt32 dgMeshEffect::GetTotalIndexCount() const
 		if (edge->m_incidentFace < 0) {
 			continue;
 		}
-
+		
 		ptr = edge;
 		do {
 			count ++;
@@ -1780,7 +1780,7 @@ void* dgMeshEffect::GetFirstVertex ()
 			ptr = ptr->m_twin->m_next;
 		} while (ptr != edge);
 	}
-	return node;
+	return node; 
 }
 
 void* dgMeshEffect::GetNextVertex (const void* vertex)
@@ -1799,10 +1799,10 @@ void* dgMeshEffect::GetNextVertex (const void* vertex)
 				ptr->m_mark = mark;
 				ptr = ptr->m_twin->m_next;
 			} while (ptr != edge);
-			return node;
+			return node; 
 		}
 	}
-	return NULL;
+	return NULL; 
 }
 
 int dgMeshEffect::GetVertexIndex (const void* vertex) const
@@ -1833,7 +1833,7 @@ void* dgMeshEffect::GetFirstPoint ()
 			break;
 		}
 	}
-	return node;
+	return node; 
 }
 
 void* dgMeshEffect::GetNextPoint (const void* point)
@@ -1856,11 +1856,11 @@ void* dgMeshEffect::GetNextPoint (const void* point)
 					ptr = ptr->m_next;
 				} while (ptr != edge);
 			} else {
-				return node;
+				return node; 
 			}
 		}
 	}
-	return NULL;
+	return NULL; 
 }
 
 int dgMeshEffect::GetPointIndex (const void* point) const
@@ -1880,7 +1880,7 @@ dgEdge* dgMeshEffect::ConectVertex (dgEdge* const e0, dgEdge* const e1)
 {
 	dgEdge* const edge = AddHalfEdge(e1->m_incidentVertex, e0->m_incidentVertex);
 	dgEdge* const twin = AddHalfEdge(e0->m_incidentVertex, e1->m_incidentVertex);
-	_ASSERTE ((edge && twin) || !(edge || twin));
+	_DG_ASSERTE ((edge && twin) || !(edge || twin));
 	if (edge) {
 		edge->m_twin = twin;
 		twin->m_twin = edge;
@@ -1931,7 +1931,7 @@ void* dgMeshEffect::GetFirstEdge ()
 		edge->m_mark = mark;
 		edge->m_twin->m_mark = mark;
 	}
-	return node;
+	return node; 
 }
 
 void* dgMeshEffect::GetNextEdge (const void* edge)
@@ -1946,10 +1946,10 @@ void* dgMeshEffect::GetNextEdge (const void* edge)
 		if (node->GetInfo().m_mark != mark) {
 			node->GetInfo().m_mark = mark;
 			node->GetInfo().m_twin->m_mark = mark;
-			return node;
+			return node; 
 		}
 	}
-	return NULL;
+	return NULL; 
 }
 
 void dgMeshEffect::GetEdgeIndex (const void* edge, dgInt32& v0, dgInt32& v1) const
@@ -2004,10 +2004,10 @@ void* dgMeshEffect::GetNextFace (const void* face)
 				ptr->m_mark = mark;
 				ptr = ptr->m_next;
 			} while (ptr != edge);
-			return node;
+			return node; 
 		}
 	}
-	return NULL;
+	return NULL; 
 }
 
 
@@ -2035,7 +2035,7 @@ int dgMeshEffect::GetFaceIndexCount (const void* face) const
 		count ++;
 		ptr = ptr->m_next;
 	} while (ptr != edge);
-	return count;
+	return count; 
 }
 
 void dgMeshEffect::GetFaceIndex (const void* face, int* indices) const
@@ -2075,7 +2075,7 @@ dgInt32 GetTotalFaceCount() const;
 	dgInt32 materialCount;
 	dgInt32 materials[256];
 	dgInt32 streamIndexMap[256];
-	dgIndexArray* array;
+	dgIndexArray* array; 
 
 	count = 0;
 	materialCount = 0;
@@ -2084,7 +2084,7 @@ dgInt32 GetTotalFaceCount() const;
 	array->m_indexList = (dgInt32*)&array[1];
 
 	mark = IncLRU();
-	dgPolyhedra::Iterator iter (*this);
+	dgPolyhedra::Iterator iter (*this);	
 	memset(streamIndexMap, 0, sizeof (streamIndexMap));
 	for(iter.Begin(); iter; iter ++){
 
@@ -2172,7 +2172,7 @@ void dgMeshEffect::GetIndirectVertexStreams(
 	dgInt32 count;
 	dgInt32 stride;
 	dgTriplex* tmpUV;
-
+	
 	tmpUV = (dgTriplex*) GetAllocator()->MallocLow (dgInt32 (sizeof (dgTriplex) * m_atribCount));
 
 	stride = dgInt32 (uvStrideInByte1 /sizeof (dgFloat32));
@@ -2212,16 +2212,16 @@ dgMeshEffect::dgIndexArray* dgMeshEffect::MaterialGeomteryBegin()
 	dgInt32 materialCount;
 	dgInt32 materials[256];
 	dgInt32 streamIndexMap[256];
-	dgIndexArray* array;
+	dgIndexArray* array; 
 
 	count = 0;
 	materialCount = 0;
-
+	
 	array = (dgIndexArray*) GetAllocator()->MallocLow (dgInt32 (4 * sizeof (dgInt32) * GetCount() + sizeof (dgIndexArray) + 2048));
 	array->m_indexList = (dgInt32*)&array[1];
-
+	
 	mark = IncLRU();
-	dgPolyhedra::Iterator iter (*this);
+	dgPolyhedra::Iterator iter (*this);	
 	memset(streamIndexMap, 0, sizeof (streamIndexMap));
 	for(iter.Begin(); iter; iter ++){
 
@@ -2345,7 +2345,7 @@ dgInt32 dgMeshEffect::GetEffectiveVertexCount() const
 	dgPolyhedra::Iterator iter (*this);
 	for (iter.Begin(); iter; iter ++){
 		dgEdge* vertex;
-
+	
 		vertex = &(*iter);
 		if (vertex->m_mark != mark) {
 			dgEdge* ptr;
@@ -2365,7 +2365,7 @@ dgInt32 dgMeshEffect::GetEffectiveVertexCount() const
 
 dgCollision* dgMeshEffect::CreateConvexCollision(dgFloat32 tolerance, dgInt32 shapeID, const dgMatrix& srcMatrix) const
 {
-	dgStack<dgVector> poolPtr (m_pointCount * 2);
+	dgStack<dgVector> poolPtr (m_pointCount * 2); 
 	dgVector* const pool = &poolPtr[0];
 
 	dgVector minBox;
@@ -2397,7 +2397,7 @@ dgCollision* dgMeshEffect::CreateConvexCollision(dgFloat32 tolerance, dgInt32 sh
 	matrix.m_posit += matrix.RotateVector(com);
 	matrix.m_posit.m_w = dgFloat32 (1.0f);
 
-	dgStack<dgInt32> buffer(dgInt32 (2 + 3 * count + sizeof (dgMatrix) / sizeof (dgInt32)));
+	dgStack<dgInt32> buffer(dgInt32 (2 + 3 * count + sizeof (dgMatrix) / sizeof (dgInt32)));  
 
 	memset (&buffer[0], 0, size_t (buffer.GetSizeInBytes()));
 	buffer[0] = m_convexHullCollision;
@@ -2473,17 +2473,17 @@ dgEdge* dgMeshEffect::InsertFaceVertex (dgEdge* const face, const dgVector& poin
 	alpha5 = p10 % p_p2;
 	alpha6 = p20 % p_p2;
 
-	_ASSERTE (!((alpha1 <= dgFloat32 (0.0f)) && (alpha2 <= dgFloat32 (0.0f))));
-	_ASSERTE (!((alpha6 >= dgFloat32 (0.0f)) && (alpha5 <= alpha6)));
-	_ASSERTE (!((alpha3 >= dgFloat32 (0.0f)) && (alpha4 <= alpha3)));
+	_DG_ASSERTE (!((alpha1 <= dgFloat32 (0.0f)) && (alpha2 <= dgFloat32 (0.0f))));
+	_DG_ASSERTE (!((alpha6 >= dgFloat32 (0.0f)) && (alpha5 <= alpha6)));
+	_DG_ASSERTE (!((alpha3 >= dgFloat32 (0.0f)) && (alpha4 <= alpha3)));
 
 	vc = alpha1 * alpha4 - alpha3 * alpha2;
 	vb = alpha5 * alpha2 - alpha1 * alpha6;
 	va = alpha3 * alpha6 - alpha5 * alpha4;
 
-	_ASSERTE (!((vc <= dgFloat32 (0.0f)) && (alpha1 >= dgFloat32 (0.0f)) && (alpha3 <= dgFloat32 (0.0f))));
-	_ASSERTE (!((vb <= dgFloat32 (0.0f)) && (alpha2 >= dgFloat32 (0.0f)) && (alpha6 <= dgFloat32 (0.0f))));
-	_ASSERTE (!((va <= dgFloat32 (0.0f)) && ((alpha4 - alpha3) >= dgFloat32 (0.0f)) && ((alpha5 - alpha6) >= dgFloat32 (0.0f))));
+	_DG_ASSERTE (!((vc <= dgFloat32 (0.0f)) && (alpha1 >= dgFloat32 (0.0f)) && (alpha3 <= dgFloat32 (0.0f))));
+	_DG_ASSERTE (!((vb <= dgFloat32 (0.0f)) && (alpha2 >= dgFloat32 (0.0f)) && (alpha6 <= dgFloat32 (0.0f))));
+	_DG_ASSERTE (!((va <= dgFloat32 (0.0f)) && ((alpha4 - alpha3) >= dgFloat32 (0.0f)) && ((alpha5 - alpha6) >= dgFloat32 (0.0f))));
 
 	den = float(dgFloat32 (1.0f)) / (va + vb + vc);
 
@@ -2514,8 +2514,8 @@ dgEdge* dgMeshEffect::InsertFaceVertex (dgEdge* const face, const dgVector& poin
 	attribute.m_normal.m_z = normal.m_z;
 	attribute.m_u = attr0.m_u * alpha0 +  attr1.m_u * alpha1 + attr2.m_u * alpha2;
 	attribute.m_v = attr0.m_v * alpha0 +  attr1.m_v * alpha1 + attr2.m_v * alpha2;
-	_ASSERTE (attr0.m_material == attr1.m_material);
-	_ASSERTE (attr0.m_material == attr2.m_material);
+	_DG_ASSERTE (attr0.m_material == attr1.m_material);
+	_DG_ASSERTE (attr0.m_material == attr2.m_material);
 	AddVertex (&attribute.m_vertex.m_x, attr0.m_material);
 
 	vertexIndex = m_pointCount - 1;
@@ -2535,7 +2535,7 @@ dgEdge* dgMeshEffect::InsertFaceVertex (dgEdge* const face, const dgVector& poin
 	twin2 = AddHalfEdge(v2, vertexIndex);
 
 	edge0->m_incidentFace = face->m_incidentFace;
-	twin0->m_incidentFace = face->m_incidentFace;
+	twin0->m_incidentFace = face->m_incidentFace; 
 
 	edge1->m_incidentFace = face->m_incidentFace;
 	twin1->m_incidentFace = face->m_incidentFace;
@@ -2671,7 +2671,7 @@ dgInt32 dgMeshEffect::RayIntersection (dgFloat32& p0p1, const dgVector& p0, cons
 
 void dgMeshEffect::TransformMesh (const dgMatrix& matrix)
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
  /*
 	dgMatrix normalMatrix (matrix);
 	normalMatrix.m_posit = dgVector (dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (0.0f), dgFloat32 (1.0f));
@@ -2689,8 +2689,8 @@ dgMeshEffect::dgVertexAtribute dgMeshEffect::InterpolateEdge (dgEdge* const edge
 
 	dgFloat32 t1 = param;
 	dgFloat32 t0 = dgFloat32 (1.0f) - t1;
-	_ASSERTE (t1 >= dgFloat32(0.0f));
-	_ASSERTE (t1 <= dgFloat32(1.0f));
+	_DG_ASSERTE (t1 >= dgFloat32(0.0f));
+	_DG_ASSERTE (t1 <= dgFloat32(1.0f));
 
 	const dgVertexAtribute& attrEdge0 = m_attib[edge->m_userData];
 	const dgVertexAtribute& attrEdge1 = m_attib[edge->m_next->m_userData];
@@ -2699,9 +2699,9 @@ dgMeshEffect::dgVertexAtribute dgMeshEffect::InterpolateEdge (dgEdge* const edge
 	attrEdge.m_vertex.m_y = attrEdge0.m_vertex.m_y * t0 + attrEdge1.m_vertex.m_y * t1;
 	attrEdge.m_vertex.m_z = attrEdge0.m_vertex.m_z * t0 + attrEdge1.m_vertex.m_z * t1;
 	attrEdge.m_vertex.m_w = dgFloat32(0.0f);
-	attrEdge.m_normal.m_x = attrEdge0.m_normal.m_x * t0 +  attrEdge1.m_normal.m_x * t1;
-	attrEdge.m_normal.m_y = attrEdge0.m_normal.m_y * t0 +  attrEdge1.m_normal.m_y * t1;
-	attrEdge.m_normal.m_z = attrEdge0.m_normal.m_z * t0 +  attrEdge1.m_normal.m_z * t1;
+	attrEdge.m_normal.m_x = attrEdge0.m_normal.m_x * t0 +  attrEdge1.m_normal.m_x * t1; 
+	attrEdge.m_normal.m_y = attrEdge0.m_normal.m_y * t0 +  attrEdge1.m_normal.m_y * t1; 
+	attrEdge.m_normal.m_z = attrEdge0.m_normal.m_z * t0 +  attrEdge1.m_normal.m_z * t1; 
 	attrEdge.m_u0 = attrEdge0.m_u0 * t0 +  attrEdge1.m_u0 * t1;
 	attrEdge.m_v0 = attrEdge0.m_v0 * t0 +  attrEdge1.m_v0 * t1;
 	attrEdge.m_u1 = attrEdge0.m_u1 * t0 +  attrEdge1.m_u1 * t1;
@@ -2851,13 +2851,13 @@ dgMeshEffect::dgVertexAtribute dgMeshEffect::InterpolateVertex (const dgVector& 
 								 attr0.m_normal.m_z * alpha0 + attr1.m_normal.m_z * alpha1 + attr2.m_normal.m_z * alpha2, dgFloat32 (0.0f));
 				normal = normal.Scale (dgRsqrt (normal % normal));
 
-#ifdef _DEBUG
+#ifdef _DG_DEBUG
 				dgVector testPoint (attr0.m_vertex.m_x * alpha0 + attr1.m_vertex.m_x * alpha1 + attr2.m_vertex.m_x * alpha2,
 									attr0.m_vertex.m_y * alpha0 + attr1.m_vertex.m_y * alpha1 + attr2.m_vertex.m_y * alpha2,
 									attr0.m_vertex.m_z * alpha0 + attr1.m_vertex.m_z * alpha1 + attr2.m_vertex.m_z * alpha2, dgFloat32 (0.0f));
-				_ASSERTE (dgAbsf (testPoint.m_x - point.m_x) < dgFloat32 (1.0e-1f));
-				_ASSERTE (dgAbsf (testPoint.m_y - point.m_y) < dgFloat32 (1.0e-1f));
-				_ASSERTE (dgAbsf (testPoint.m_z - point.m_z) < dgFloat32 (1.0e-1f));
+				_DG_ASSERTE (dgAbsf (testPoint.m_x - point.m_x) < dgFloat32 (1.0e-1f));
+				_DG_ASSERTE (dgAbsf (testPoint.m_y - point.m_y) < dgFloat32 (1.0e-1f));
+				_DG_ASSERTE (dgAbsf (testPoint.m_z - point.m_z) < dgFloat32 (1.0e-1f));
 #endif
 
 
@@ -2870,9 +2870,9 @@ dgMeshEffect::dgVertexAtribute dgMeshEffect::InterpolateVertex (const dgVector& 
 				attribute.m_u = attr0.m_u * alpha0 +  attr1.m_u * alpha1 + attr2.m_u * alpha2;
 				attribute.m_v = attr0.m_v * alpha0 +  attr1.m_v * alpha1 + attr2.m_v * alpha2;
 				attribute.m_material = attr0.m_material;
-				_ASSERTE (attr0.m_material == attr1.m_material);
-				_ASSERTE (attr0.m_material == attr2.m_material);
-				return attribute;
+				_DG_ASSERTE (attr0.m_material == attr1.m_material);
+				_DG_ASSERTE (attr0.m_material == attr2.m_material);
+				return attribute; 
 			}
 
 			q1 = q2;
@@ -2884,7 +2884,7 @@ dgMeshEffect::dgVertexAtribute dgMeshEffect::InterpolateVertex (const dgVector& 
 	}
 
 	// this should never happens
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return attribute;
 
 #else
@@ -2905,7 +2905,7 @@ dgMeshEffect::dgVertexAtribute dgMeshEffect::InterpolateVertex (const dgVector& 
 		ptr = ptr->m_next;
 		const dgEdge* edge2 = ptr;
 		do {
-		_ASSERTE (0);
+		_DG_ASSERTE (0);
 			const dgVector& q2 = m_points[ptr->m_incidentVertex];
 
 			dgVector p10 (q1 - q0);
@@ -2944,13 +2944,13 @@ dgMeshEffect::dgVertexAtribute dgMeshEffect::InterpolateVertex (const dgVector& 
 								attr0.m_normal.m_z * alpha0 + attr1.m_normal.m_z * alpha1 + attr2.m_normal.m_z * alpha2, dgFloat32 (0.0f));
 				normal = normal.Scale (dgRsqrt (normal % normal));
 
-	#ifdef _DEBUG
+	#ifdef _DG_DEBUG
 				dgVector testPoint (attr0.m_vertex.m_x * alpha0 + attr1.m_vertex.m_x * alpha1 + attr2.m_vertex.m_x * alpha2,
 									attr0.m_vertex.m_y * alpha0 + attr1.m_vertex.m_y * alpha1 + attr2.m_vertex.m_y * alpha2,
 									attr0.m_vertex.m_z * alpha0 + attr1.m_vertex.m_z * alpha1 + attr2.m_vertex.m_z * alpha2, dgFloat32 (0.0f));
-								_ASSERTE (dgAbsf (testPoint.m_x - point.m_x) < dgFloat32 (1.0e-1f));
-				_ASSERTE (dgAbsf (testPoint.m_y - point.m_y) < dgFloat32 (1.0e-1f));
-				_ASSERTE (dgAbsf (testPoint.m_z - point.m_z) < dgFloat32 (1.0e-1f));
+								_DG_ASSERTE (dgAbsf (testPoint.m_x - point.m_x) < dgFloat32 (1.0e-1f));
+				_DG_ASSERTE (dgAbsf (testPoint.m_y - point.m_y) < dgFloat32 (1.0e-1f));
+				_DG_ASSERTE (dgAbsf (testPoint.m_z - point.m_z) < dgFloat32 (1.0e-1f));
 	#endif
 
 
@@ -2966,9 +2966,9 @@ dgMeshEffect::dgVertexAtribute dgMeshEffect::InterpolateVertex (const dgVector& 
 				attribute.m_v1 = attr0.m_v1 * alpha0 +  attr1.m_v1 * alpha1 + attr2.m_v1 * alpha2;
 
 				attribute.m_material = attr0.m_material;
-				_ASSERTE (attr0.m_material == attr1.m_material);
-				_ASSERTE (attr0.m_material == attr2.m_material);
-				return attribute;
+				_DG_ASSERTE (attr0.m_material == attr1.m_material);
+				_DG_ASSERTE (attr0.m_material == attr2.m_material);
+				return attribute; 
 			}
 
 			q1 = q2;
@@ -2980,7 +2980,7 @@ dgMeshEffect::dgVertexAtribute dgMeshEffect::InterpolateVertex (const dgVector& 
 	}
 
 	// this should never happens
-	_ASSERTE (0);
+	_DG_ASSERTE (0);
 	return attribute;
 #endif
 
@@ -2991,7 +2991,7 @@ dgMeshEffect::dgVertexAtribute dgMeshEffect::InterpolateVertex (const dgVector& 
 
 void dgMeshEffect::MergeFaces (dgMeshEffect* source)
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
  /*
 	dgInt32 mark;
 
@@ -3011,11 +3011,11 @@ _ASSERTE (0);
 				ptr->m_mark = mark;
 				face[count] = source->m_attib[ptr->m_userData];
 				count ++;
-				_ASSERTE (count < (sizeof (face) / sizeof (face[0])));
+				_DG_ASSERTE (count < (sizeof (face) / sizeof (face[0])));
 				ptr = ptr->m_next;
 			} while (ptr != edge);
 
-//			_ASSERTE (count == 3);
+//			_DG_ASSERTE (count == 3);
 			AddPolygon(count, &face[0].m_vertex.m_x, sizeof (dgVertexAtribute), face[0].m_material);
 		}
 	}
@@ -3025,7 +3025,7 @@ _ASSERTE (0);
 
 void dgMeshEffect::ReverseMergeFaces (dgMeshEffect* source)
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
  /*
 
 	dgInt32 mark;
@@ -3052,7 +3052,7 @@ _ASSERTE (0);
 				ptr = ptr->m_prev;
 			} while (ptr != edge);
 
-			_ASSERTE (count == 3);
+			_DG_ASSERTE (count == 3);
 			AddPolygon(count, &face[0].m_vertex.m_x, sizeof (dgVertexAtribute), face[0].m_material);
 		}
 	}
@@ -3061,9 +3061,9 @@ _ASSERTE (0);
 
 
 void dgMeshEffect::ClipFace (
-	const dgBigPlane& plane,
-	dgMeshTreeCSGFace* src,
-	dgMeshTreeCSGFace** left,
+	const dgBigPlane& plane, 
+	dgMeshTreeCSGFace* src, 
+	dgMeshTreeCSGFace** left, 
 	dgMeshTreeCSGFace** right,
 	dgMeshTreeCSGPointsPool& pointPool) const
 {
@@ -3080,7 +3080,7 @@ void dgMeshEffect::ClipFace (
 	frontFaceCount = 0;
 
 	indexP0 = src->m_face->m_index;
-	ptr = src->m_face->m_next;
+	ptr = src->m_face->m_next; 
 	last = ptr;
 
 	test0 = plane.Evalue(pointPool.m_points[indexP0]);
@@ -3095,7 +3095,7 @@ void dgMeshEffect::ClipFace (
 		if (test0 >= dgFloat64 (0.0f)) {
 			frontFace[frontFaceCount] = indexP0;
 			frontFaceCount += 1;
-			_ASSERTE (frontFaceCount < DG_MESH_EFFECT_POINT_SPLITED);
+			_DG_ASSERTE (frontFaceCount < DG_MESH_EFFECT_POINT_SPLITED);
 			if (test0 > dgFloat64 (0.0f) && (test1 < dgFloat64 (0.0f))) {
 				dgFloat64 den;
 
@@ -3107,7 +3107,7 @@ void dgMeshEffect::ClipFace (
 				frontFace[frontFaceCount] = index;
 
 				frontFaceCount ++;
-				_ASSERTE (frontFaceCount < DG_MESH_EFFECT_POINT_SPLITED);
+				_DG_ASSERTE (frontFaceCount < DG_MESH_EFFECT_POINT_SPLITED);
 			}
 
 		} else if (test1 > dgFloat64 (0.0f)) {
@@ -3121,23 +3121,23 @@ void dgMeshEffect::ClipFace (
 			frontFace[frontFaceCount] = index;
 
 			frontFaceCount ++;
-			_ASSERTE (frontFaceCount < DG_MESH_EFFECT_POINT_SPLITED);
+			_DG_ASSERTE (frontFaceCount < DG_MESH_EFFECT_POINT_SPLITED);
 		}
 
 
 		if (test0 <= dgFloat64 (0.0f)) {
 			backFace[backFaceCount] = indexP0;;
 			backFaceCount ++;
-			_ASSERTE (backFaceCount < DG_MESH_EFFECT_POINT_SPLITED);
+			_DG_ASSERTE (backFaceCount < DG_MESH_EFFECT_POINT_SPLITED);
 			if (index) {
 				backFace[backFaceCount] = index;
 				backFaceCount += 1;
-				_ASSERTE (backFaceCount < DG_MESH_EFFECT_POINT_SPLITED);
+				_DG_ASSERTE (backFaceCount < DG_MESH_EFFECT_POINT_SPLITED);
 			}
 		} else if (index) {
 			backFace[backFaceCount] = index;
 			backFaceCount += 1;
-			_ASSERTE (backFaceCount < DG_MESH_EFFECT_POINT_SPLITED);
+			_DG_ASSERTE (backFaceCount < DG_MESH_EFFECT_POINT_SPLITED);
 		}
 
 		test0 = test1;
@@ -3146,35 +3146,35 @@ void dgMeshEffect::ClipFace (
 		ptr = ptr->m_next;
 	} while (ptr != last);
 
-//	_ASSERTE (!backFaceCount || (backFaceCount >= 3));
-//	_ASSERTE (!frontFaceCount || (frontFaceCount >= 3));
+//	_DG_ASSERTE (!backFaceCount || (backFaceCount >= 3));
+//	_DG_ASSERTE (!frontFaceCount || (frontFaceCount >= 3));
 
 	if ((backFaceCount >= 3) && (frontFaceCount >= 3)) {
 		dgMeshTreeCSGFace *meshFace;
 
-		_ASSERTE (backFaceCount >= 3);
-		_ASSERTE (frontFaceCount >= 3);
+		_DG_ASSERTE (backFaceCount >= 3);
+		_DG_ASSERTE (frontFaceCount >= 3);
 
 		meshFace = new (GetAllocator()) dgMeshTreeCSGFace(GetAllocator());
 		for (dgInt32 i = 0; i < backFaceCount; i ++) {
 			meshFace->AddPoint (backFace[i]);
-		}
-		*left = meshFace;
+		} 
+		*left = meshFace; 
 
 		meshFace = new (GetAllocator()) dgMeshTreeCSGFace(GetAllocator());
 		for (dgInt32 i = 0; i < frontFaceCount; i ++) {
 			meshFace->AddPoint (frontFace[i]);
-		}
-		*right = meshFace;
+		} 
+		*right = meshFace; 
 
 	} else {
 		if (backFaceCount >= 3) {
-			*left = src;
+			*left = src; 
 			*right = NULL;
 			src->AddRef();
 		} else {
-			_ASSERTE (frontFaceCount >= 3);
-			*left = NULL;
+			_DG_ASSERTE (frontFaceCount >= 3);
+			*left = NULL; 
 			*right = src;
 			src->AddRef();
 		}
@@ -3185,7 +3185,7 @@ void dgMeshEffect::ClipFace (
 
 void dgMeshEffect::CopyCGSFace (const dgMeshEffect& reference, dgEdge* const face)
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
  /*
 	dgEdge* ptr;
 	dgInt32 count;
@@ -3377,7 +3377,7 @@ void dgMeshEffect::ClipMesh (const dgMatrix& matrix, const dgMeshEffect* clipMes
 		*left = NULL;
 		*right = NULL;
 		PlaneClipMesh (&clipper, left, right);
-
+	
 	} else {
 		dgMeshEffect* leftMeshSource;
 		dgMeshEffect* rightMeshSource;
@@ -3444,7 +3444,7 @@ void dgMeshEffect::ClipMesh (const dgMatrix& matrix, const dgMeshEffect* clipMes
 
 void dgMeshEffect::AddCGSFace (const dgMeshEffect& reference, dgEdge* const refFace, dgInt32 count, dgMeshTreeCSGFace** const faces, const dgMeshTreeCSGPointsPool& pointsPool)
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
  /*
 
 	dgInt32 mark;
@@ -3455,9 +3455,9 @@ _ASSERTE (0);
 	memset (masks, 0, pointsPool.m_count * sizeof (masks[0]));
 
 	for (dgInt32 i = 0; i < (count - 1); i ++) {
-		dgMeshTreeCSGFace* const src = faces[i];
+		dgMeshTreeCSGFace* const src = faces[i]; 
 		for (dgInt32 j = i + 1; j < count; j ++) {
-			dgMeshTreeCSGFace* const dst = faces[j];
+			dgMeshTreeCSGFace* const dst = faces[j]; 
 			src->InsertVertex (dst, pointsPool);
 			dst->InsertVertex (src, pointsPool);
 		}
@@ -3467,7 +3467,7 @@ _ASSERTE (0);
 	polygon.BeginFace();
 	for (dgInt32 i = 0; i < count; i ++) {
 		dgInt32 indexCount;
-		dgMeshTreeCSGFace* const face = faces[i];
+		dgMeshTreeCSGFace* const face = faces[i]; 
 		dgMeshTreeCSGFace::CSGLinearEdge* ptr;
 		dgMeshTreeCSGFace::CSGLinearEdge* edge;
 
@@ -3509,7 +3509,7 @@ _ASSERTE (0);
 			do {
 				ptr->m_mark = mark;
 
-				const dgVector& p = pool[ptr->m_incidentVertex];
+				const dgVector& p = pool[ptr->m_incidentVertex];					
 				points[faceIndexCount] = reference.InterpolateVertex (p, refFace);
 
 				//dgTrace (("%f %f %f\n", p.m_x, p.m_y, p.m_z));
@@ -3526,10 +3526,10 @@ _ASSERTE (0);
 
 dgMeshEffectSolidTree* dgMeshEffect::CreateSolidTree() const
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 return NULL;
 /*
-	dgInt32 mark;
+	dgInt32 mark;	
 	dgMeshEffectSolidTree* tree;
 
 	tree = NULL;
@@ -3563,7 +3563,7 @@ return NULL;
 			}
 		}
 	}
-	_ASSERTE (tree);
+	_DG_ASSERTE (tree);
 	return tree;
 */
 }
@@ -3575,21 +3575,21 @@ void dgMeshEffect::DestroySolidTree (dgMeshEffectSolidTree* tree)
 
 void dgMeshEffect::ClipMesh (const dgMeshEffect* clipMesh, dgMeshEffect** left, dgMeshEffect** right) const
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 /*
-	dgInt32 mark;
+	dgInt32 mark;	
 	dgMeshEffect* leftMesh;
 	dgMeshEffect* rightMesh;
 	dgMeshEffectSolidTree* tree;
 
 	tree = clipMesh->CreateSolidTree();
-	_ASSERTE (tree);
+	_DG_ASSERTE (tree);
 
 	leftMesh = new dgMeshEffect (true);
 	rightMesh = new dgMeshEffect (true);
 
 	leftMesh->BeginPolygon();
-	rightMesh->BeginPolygon();
+	rightMesh->BeginPolygon(); 
 
 	mark = IncLRU();
 	dgPolyhedra::Iterator iter (*this);
@@ -3599,7 +3599,7 @@ _ASSERTE (0);
 		face = &(*iter);
 		if (face->m_incidentFace > 0) {
 			if (face->m_mark != mark) {
-				dgInt32 stack;
+				dgInt32 stack;	
 				dgInt32 frontCount;
 				dgInt32 backCount;
 				dgEdge* ptr;
@@ -3633,8 +3633,8 @@ _ASSERTE (0);
 
 				while (stack) {
 					dgMeshEffectSolidTree* root;
-					dgMeshTreeCSGFace* rootFace;
-					dgMeshTreeCSGFace* leftFace;
+					dgMeshTreeCSGFace* rootFace; 
+					dgMeshTreeCSGFace* leftFace; 
 					dgMeshTreeCSGFace* rightFace;
 
 					stack --;
@@ -3645,31 +3645,31 @@ _ASSERTE (0);
 					rootFace->Release();
 
 					if (rightFace) {
-						_ASSERTE (rightFace->CheckConvex(this, face, points));
+						_DG_ASSERTE (rightFace->CheckConvex(this, face, points));
 
 						if (root->m_front) {
 							stackPool[stack] = root->m_front;
 							faceOnStack[stack] = rightFace;
 							stack ++;
-							_ASSERTE (stack < sizeof (stackPool) / sizeof (stackPool[0]));
+							_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (stackPool[0]));
 						} else {
 							frontList[frontCount] = rightFace;
 							frontCount ++;
-							_ASSERTE (frontCount  < sizeof (frontList)/sizeof (frontList[0]));
+							_DG_ASSERTE (frontCount  < sizeof (frontList)/sizeof (frontList[0]));
 						}
 					}
 
 					if (leftFace) {
-						_ASSERTE (leftFace->CheckConvex(this, face, points));
+						_DG_ASSERTE (leftFace->CheckConvex(this, face, points));
 						if (root->m_back) {
 							stackPool[stack] = root->m_back;
 							faceOnStack[stack] = leftFace;
 							stack ++;
-							_ASSERTE (stack < sizeof (stackPool) / sizeof (stackPool[0]));
+							_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (stackPool[0]));
 						} else {
 							backList[backCount] = leftFace;
 							backCount ++;
-							_ASSERTE (backCount < sizeof (backList)/sizeof (backList[0]));
+							_DG_ASSERTE (backCount < sizeof (backList)/sizeof (backList[0]));
 						}
 					}
 				}
@@ -3698,7 +3698,7 @@ _ASSERTE (0);
 
 
 	leftMesh->EndPolygon();
-	rightMesh->EndPolygon();
+	rightMesh->EndPolygon(); 
 
 	if (!leftMesh->GetCount()) {
 		leftMesh->Release();
@@ -3719,9 +3719,9 @@ _ASSERTE (0);
 
 
 bool dgMeshEffect::CheckIntersection (
-									  const dgMeshEffect* const meshA,
+									  const dgMeshEffect* const meshA, 
 									  const dgMeshEffectSolidTree* const solidTreeA,
-									  const dgMeshEffect* const meshB,
+									  const dgMeshEffect* const meshB, 
 									  const dgMeshEffectSolidTree* const solidTreeB,
 									  dgFloat32 scale)
 {
@@ -3732,7 +3732,7 @@ bool dgMeshEffect::CheckIntersection (
 
 bool dgMeshEffect::CheckIntersection (const dgMeshEffectSolidTree* const solidTree, dgFloat32 scale) const
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 return false;
 /*
 
@@ -3774,7 +3774,7 @@ return false;
 			if (face->m_incidentFace > 0) {
 				if (face->m_mark != mark) {
 
-					dgInt32 stack;
+					dgInt32 stack;	
 					dgInt32 frontCount;
 					dgInt32 backCount;
 					dgEdge* ptr;
@@ -3803,8 +3803,8 @@ return false;
 					meshFace->AddRef();
 
 					while (stack) {
-						dgMeshTreeCSGFace* rootFace;
-						dgMeshTreeCSGFace* leftFace;
+						dgMeshTreeCSGFace* rootFace; 
+						dgMeshTreeCSGFace* leftFace; 
 						dgMeshTreeCSGFace* rightFace;
 						const dgMeshEffectSolidTree* root;
 
@@ -3816,13 +3816,13 @@ return false;
 						rootFace->Release();
 
 						if (rightFace) {
-							_ASSERTE (rightFace->CheckConvex(this, face, points));
+							_DG_ASSERTE (rightFace->CheckConvex(this, face, points));
 
 							if (root->m_front) {
 								stackPool[stack] = root->m_front;
 								faceOnStack[stack] = rightFace;
 								stack ++;
-								_ASSERTE (stack < sizeof (stackPool) / sizeof (stackPool[0]));
+								_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (stackPool[0]));
 							} else {
 								rightFace->Release();
 								frontCount ++;
@@ -3830,12 +3830,12 @@ return false;
 						}
 
 						if (leftFace) {
-							_ASSERTE (leftFace->CheckConvex(this, face, points));
+							_DG_ASSERTE (leftFace->CheckConvex(this, face, points));
 							if (root->m_back) {
 								stackPool[stack] = root->m_back;
 								faceOnStack[stack] = leftFace;
 								stack ++;
-								_ASSERTE (stack < sizeof (stackPool) / sizeof (stackPool[0]));
+								_DG_ASSERTE (stack < sizeof (stackPool) / sizeof (stackPool[0]));
 							} else {
 								leftFace->Release();
 								backCount ++;
@@ -3859,19 +3859,19 @@ return false;
 
 void dgMeshEffect::PlaneClipMesh (const dgMeshEffect* planeMesh, dgMeshEffect** left, dgMeshEffect** right) const
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 /*
 
 	dgEdge* face;
 	dgMeshEffect* leftMesh;
 	dgMeshEffect* rightMesh;
 
-	_ASSERTE (planeMesh->m_isFlagFace);
+	_DG_ASSERTE (planeMesh->m_isFlagFace);
 	face = &planeMesh->GetRoot()->GetInfo();
 	if (face->m_incidentFace < 0) {
 		face = face->m_twin;
 	}
-	_ASSERTE (face->m_incidentFace > 0);
+	_DG_ASSERTE (face->m_incidentFace > 0);
 	dgVector normal (planeMesh->FaceNormal (face, &planeMesh->m_points[0][0], sizeof (dgVector)));
 	normal = normal.Scale (dgRsqrt (normal % normal));
 	const dgVector& point = planeMesh->m_points[face->m_incidentVertex];
@@ -3880,14 +3880,14 @@ _ASSERTE (0);
 	dgMeshEffect tmp (*this);
 	tmp.PlaneClipMesh (plane, left, right);
 
-//	_ASSERTE (tmp.CheckSingleMesh());
+//	_DG_ASSERTE (tmp.CheckSingleMesh());
 
 	leftMesh = *left;
 	rightMesh = *right;
 
 	if (leftMesh && rightMesh) {
-		_ASSERTE (leftMesh->GetCount());
-		_ASSERTE (rightMesh->GetCount());
+		_DG_ASSERTE (leftMesh->GetCount());
+		_DG_ASSERTE (rightMesh->GetCount());
 		if (!(leftMesh->PlaneApplyCap (planeMesh, plane) && rightMesh->PlaneApplyCap (planeMesh, plane.Scale (dgFloat32 (-1.0f))))) {
 			leftMesh->Release();
 			rightMesh->Release();
@@ -3896,8 +3896,8 @@ _ASSERTE (0);
 		} else {
 			leftMesh->Triangulate ();
 			rightMesh->Triangulate ();
-//			_ASSERTE (rightMesh->CheckSingleMesh());
-//			_ASSERTE (leftMesh->CheckSingleMesh());
+//			_DG_ASSERTE (rightMesh->CheckSingleMesh());
+//			_DG_ASSERTE (leftMesh->CheckSingleMesh());
 		}
 	}
 */
@@ -3906,10 +3906,10 @@ _ASSERTE (0);
 
 void dgMeshEffect::PlaneClipMesh (const dgPlane& plane, dgMeshEffect** left, dgMeshEffect** right)
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
  /*
 
-	dgInt32 mark;
+	dgInt32 mark;	
 	dgInt32 rightCount;
 	dgInt32 leftCount;
 	dgMeshEffect* leftMesh;
@@ -4007,7 +4007,7 @@ _ASSERTE (0);
 			do {
 				side |= vertexSide[ptr->m_incidentVertex];
 				if (vertexSide[ptr->m_incidentVertex] == 0) {
-					_ASSERTE (side != -1);
+					_DG_ASSERTE (side != -1);
 					if (side > 0) {
 						if (ptr->m_next != face) {
 							dgEdge* back;
@@ -4015,8 +4015,8 @@ _ASSERTE (0);
 
 							front = AddHalfEdge(ptr->m_incidentVertex, face->m_incidentVertex);
 							back = AddHalfEdge(face->m_incidentVertex, ptr->m_incidentVertex);
-							_ASSERTE (back);
-							_ASSERTE (front);
+							_DG_ASSERTE (back);
+							_DG_ASSERTE (front);
 
 							back->m_mark = mark;
 							front->m_mark = mark;
@@ -4050,8 +4050,8 @@ _ASSERTE (0);
 
 							back = AddHalfEdge(ptr->m_incidentVertex, face->m_incidentVertex);
 							front = AddHalfEdge(face->m_incidentVertex, ptr->m_incidentVertex);
-							_ASSERTE (back);
-							_ASSERTE (front);
+							_DG_ASSERTE (back);
+							_DG_ASSERTE (front);
 
 							back->m_mark = mark;
 							front->m_mark = mark;
@@ -4090,7 +4090,7 @@ _ASSERTE (0);
 
 	mark = IncLRU();
 	leftMesh->BeginPolygon();
-	rightMesh->BeginPolygon();
+	rightMesh->BeginPolygon(); 
 	for (iter.Begin(); iter; iter ++){
 		dgEdge* face;
 
@@ -4118,7 +4118,7 @@ _ASSERTE (0);
 	}
 
 	leftMesh->EndPolygon();
-	rightMesh->EndPolygon();
+	rightMesh->EndPolygon(); 
 
 	if (!(leftMesh->GetCount() && rightMesh->GetCount())) {
 		leftMesh->Release();
@@ -4135,7 +4135,7 @@ _ASSERTE (0);
 
 bool dgMeshEffect::CheckSingleMesh() const
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 return false;
  /*
 
@@ -4152,8 +4152,8 @@ return false;
 			dgVector p (m_attib[vertex->m_userData].m_vertex.m_x, m_attib[vertex->m_userData].m_vertex.m_y, m_attib[vertex->m_userData].m_vertex.m_z, dgFloat32 (0.0f));
 			dgVector err (m_points[vertex->m_incidentVertex] - p);
 			err2 = err % err;
-			_ASSERTE (err2 < dgFloat32 (1.0e-10f));
-		}
+			_DG_ASSERTE (err2 < dgFloat32 (1.0e-10f));
+		} 
 	}
 
 	BeginConectedSurface();
@@ -4167,7 +4167,7 @@ return false;
 
 dgInt32 dgMeshEffect::PlaneApplyCap (const dgMeshEffect* planeMesh, const dgPlane& faceNormal)
 {
-_ASSERTE (0);
+_DG_ASSERTE (0);
 return 0;
 /*
 
@@ -4179,7 +4179,7 @@ return 0;
 	if (plane->m_incidentFace < 0) {
 		plane = plane->m_twin;
 	}
-	_ASSERTE (plane->m_incidentFace > 0);
+	_DG_ASSERTE (plane->m_incidentFace > 0);
 
 	ret = 0;
 	mark = IncLRU();
@@ -4202,7 +4202,7 @@ return 0;
 				maxDist = GetMax (maxDist, dgAbsf (faceNormal.Evalue(m_points[ptr->m_incidentVertex])));
 				ptr->m_mark = mark;
 				ptr = ptr->m_next;
-			} while (ptr != face);
+			} while (ptr != face); 
 
 			if (maxDist <= dgFloat32 (1.5e-3f)) {
 				bool haveColinear;
@@ -4230,14 +4230,14 @@ return 0;
 							err = mag01 * mag01 - mag00 * mag11;
 							if (dgAbsf (err) < epsilon) {
 								dgEdge* ptr1;
-								_ASSERTE (ptr->m_twin->m_incidentFace >= 0);
+								_DG_ASSERTE (ptr->m_twin->m_incidentFace >= 0);
 
 								dgVector normal0 (FaceNormal(ptr->m_twin, &m_points[0].m_x, sizeof (dgVector)));
 								mag00 = normal0 % normal0;
 								ptr1 = ptr->m_twin->m_prev->m_twin;
 								do {
 									dgVector normal1 (FaceNormal(ptr1->m_twin, &m_points[0].m_x, sizeof (dgVector)));
-
+								
 									mag11 = normal1 % normal1;
 									mag01 = normal0 % normal1;
 									epsilon = dgFloat32 (1.0e-6f) * mag00 * mag11;
@@ -4252,7 +4252,7 @@ return 0;
 										haveColinear = true;
 										DeleteEdge(ptr1);
 										ptr1 = ptr->m_twin;
-
+										
 									}
 
 									ptr1 = ptr1->m_prev->m_twin;
@@ -4273,7 +4273,7 @@ return 0;
 									if (ptr->m_next == face) {
 										face = face->m_prev;
 									}
-
+									
 									ptr->m_twin->m_userData = ptr->m_next->m_twin->m_userData;
 									ptr->m_twin->m_incidentVertex = ptr->m_next->m_twin->m_incidentVertex;
 
@@ -4307,7 +4307,7 @@ return 0;
 						}
 
 						ptr = ptr->m_next;
-					} while (ptr != face) ;
+					} while (ptr != face) ; 
 				}
 
 
@@ -4324,7 +4324,7 @@ return 0;
 					ptr->m_incidentFace = 1;
 
 					ptr = ptr->m_next;
-				} while (ptr != face);
+				} while (ptr != face); 
 //				dgVector normal;
 //				TriangulateFace (face, &m_points[0].m_x, sizeof (dgVector), normal);
 				ret = 1;
@@ -4352,7 +4352,7 @@ bool dgMeshEffect::SeparateDuplicateLoops (dgEdge* const face)
 	for (dgEdge* ptr0 = face; ptr0 != face->m_prev; ptr0 = ptr0->m_next) {
 		dgInt32 index = ptr0->m_incidentVertex;
 
-		dgEdge* ptr1 = ptr0->m_next;
+		dgEdge* ptr1 = ptr0->m_next; 
 		do {
 			if (ptr1->m_incidentVertex == index) {
 				dgEdge* const ptr00 = ptr0->m_prev;
@@ -4438,14 +4438,14 @@ void dgMeshEffect::WeldTJoints ()
 					dgFloat32 dist20 = p2p0 % p2p0;
 					if (dist20 > dist10) {
 						dgFloat32 t = (p1p0 % p2p0) / dist20;
-						_ASSERTE (t > dgFloat32 (0.0f));
-						_ASSERTE (t < dgFloat32 (1.0f));
+						_DG_ASSERTE (t > dgFloat32 (0.0f));
+						_DG_ASSERTE (t < dgFloat32 (1.0f));
 
 						if (corner->m_next->m_next->m_next != corner) {
 							next = corner->m_next;
 							ConectVertex (corner->m_next, corner->m_prev);
 						}
-						_ASSERTE (corner->m_next->m_next->m_next  == corner);
+						_DG_ASSERTE (corner->m_next->m_next->m_next  == corner);
 
 						corner->m_userData = corner->m_prev->m_twin->m_userData;
 						corner->m_incidentFace = corner->m_prev->m_twin->m_incidentFace;
@@ -4457,17 +4457,17 @@ void dgMeshEffect::WeldTJoints ()
 						corner->m_next->m_userData = dgUnsigned64 (m_atribCount - 1);
 						DeleteEdge(corner->m_prev);
 					} else {
-						_ASSERTE (dist20 < dist10);
+						_DG_ASSERTE (dist20 < dist10);
 
 						dgFloat32 t = (p1p0 % p2p0) / dist10;
-						_ASSERTE (t > dgFloat32 (0.0f));
-						_ASSERTE (t < dgFloat32 (1.0f));
+						_DG_ASSERTE (t > dgFloat32 (0.0f));
+						_DG_ASSERTE (t < dgFloat32 (1.0f));
 
 						if (corner->m_next->m_next->m_next != corner) {
 							ConectVertex (corner->m_next, corner->m_prev);
 							next = corner->m_next->m_twin;
 						}
-						_ASSERTE (corner->m_next->m_next->m_next  == corner);
+						_DG_ASSERTE (corner->m_next->m_next->m_next  == corner);
 
 						corner->m_next->m_userData = corner->m_twin->m_userData;
 						corner->m_next->m_incidentFace = corner->m_twin->m_incidentFace;
@@ -4498,7 +4498,7 @@ dgFloat32 dgMeshEffect::CalculateVolume () const
 		dgEdge* ptr;
 		dgEdge* face;
 		dgVector points[256];
-
+		
 		face = &(*iter);
 		if ((face->m_incidentFace > 0) && (face->m_mark != mark)) {
 			count = 0;
@@ -4541,9 +4541,9 @@ class dgClusterFace
 };
 
 class dgClusterList: public dgList <dgClusterFace>
-{
+{	
 	public:
-	dgClusterList(dgMemoryAllocator* const allocator)
+	dgClusterList(dgMemoryAllocator* const allocator) 
 		:dgList <dgClusterFace>(allocator)
 	{
 	}
@@ -4575,7 +4575,7 @@ class dgClusterList: public dgList <dgClusterFace>
 		return count;
 	}
 
-	dgFloat32 CalculateTriagleConcavity2 (const dgCollisionConvexHull& collision, dgClusterFace& info, const dgEdge* const triangle, const dgVector* const points) const
+	dgFloat32 CalculateTriagleConcavity2 (const dgCollisionConvexHull& collision, dgClusterFace& info, const dgEdge* const triangle, const dgVector* const points) const 
 	{
 		int stack = 1;
 		dgVector pool[256][3];
@@ -4584,9 +4584,9 @@ class dgClusterList: public dgList <dgClusterFace>
 		pool[0][2] = points[triangle->m_next->m_next->m_incidentVertex];
 
 		dgFloat32 concavity = dgFloat32 (0.0f);
-		const dgFloat32 minArea = dgFloat32 (0.125f);
+		const dgFloat32 minArea = dgFloat32 (0.125f); 
 		const dgFloat32 minArea2 = minArea * minArea * 0.5f;
-
+		
 
 		const dgVector step (info.m_normal.Scale (dgFloat32 (4.0f) * ((dgCollision&)collision).GetBoxMaxRadius()));
 		while (stack) {
@@ -4645,7 +4645,7 @@ class dgClusterList: public dgList <dgClusterFace>
 		for (dgListNode* node = GetFirst(); node; node = node->GetNext()) {
 			dgClusterFace& info = node->GetInfo();
 			for (dgEdge* edge = info.m_edge->m_next->m_next; edge != info.m_edge; edge = edge = edge->m_next) {
-				dgFloat32 val = CalculateTriagleConcavity2 (collision, info, edge->m_prev->m_prev, points);
+				dgFloat32 val = CalculateTriagleConcavity2 (collision, info, edge->m_prev->m_prev, points); 
 				if (val > concavity) {
 					concavity = val;
 				}
@@ -4697,7 +4697,7 @@ dgMeshEffect::dgMeshEffect (const dgMeshEffect& source, dgFloat32 absoluteconcav
 
 	// enumerate all faces, and initialize cluster pool
 	dgMeshEffect::Iterator iter (mesh);
-
+	
 	for (iter.Begin(); iter; iter ++) {
 		dgEdge* edge = &(*iter);
 		edge->m_userData = 0;
@@ -4713,7 +4713,7 @@ dgMeshEffect::dgMeshEffect (const dgMeshEffect& source, dgFloat32 absoluteconcav
 
 				ptr->m_incidentFace = faceIndex;
 
-				ptr->m_mark = meshMask;
+				ptr->m_mark = meshMask;	
 				ptr = ptr->m_next;
 			} while (ptr != edge);
 
@@ -4727,14 +4727,14 @@ dgMeshEffect::dgMeshEffect (const dgMeshEffect& source, dgFloat32 absoluteconcav
 			faceInfo.m_area = dgFloat32 (0.5f) * mag;
 			faceInfo.m_normal = normal.Scale (1.0f / mag);
 
-			clusters[faceIndex].m_perimeter = perimeter;
+			clusters[faceIndex].m_perimeter = perimeter; 
 			clusters[faceIndex].m_area = faceInfo.m_area;
 
 			faceIndex ++;
 		}
 	}
 
-	_ASSERTE (faceCount == faceIndex);
+	_DG_ASSERTE (faceCount == faceIndex);
 
 	// recalculate all edge cost
 	dgMatrix matrix (dgGetIdentityMatrix());
@@ -4746,7 +4746,7 @@ dgMeshEffect::dgMeshEffect (const dgMeshEffect& source, dgFloat32 absoluteconcav
 
 	dgList<dgPairProxi> proxiList (mesh.GetAllocator());
 	dgUpHeap<dgList<dgPairProxi>::dgListNode*, dgFloat32> heap (mesh.GetCount() + 1000, mesh.GetAllocator());
-
+	
 	int vertexMark = 0;
 
 	dgFloat32 diagonalInv = dgFloat32 (1.0f);
@@ -4754,7 +4754,7 @@ dgMeshEffect::dgMeshEffect (const dgMeshEffect& source, dgFloat32 absoluteconcav
 	meshMask = mesh.IncLRU();
 	for (int faceIndex = 1; faceIndex < faceCount; faceIndex ++) {
 		dgClusterList& clusterListA = clusters[faceIndex];
-		_ASSERTE (clusterListA.GetFirst()->GetInfo().m_edge->m_incidentFace == faceIndex);
+		_DG_ASSERTE (clusterListA.GetFirst()->GetInfo().m_edge->m_incidentFace == faceIndex); 
 
 		vertexMark ++;
 		int vertexCount = clusterListA.AddVertexToPool (mesh, &vertexPool[0], &vertexMarks[0], vertexMark);
@@ -4815,12 +4815,12 @@ dgMeshEffect::dgMeshEffect (const dgMeshEffect& source, dgFloat32 absoluteconcav
 		heap.Pop();
 		dgPairProxi& pair = pairNode->GetInfo();
 
-		_ASSERTE ((pair.m_edgeA && pair.m_edgeA) || (!pair.m_edgeA && !pair.m_edgeA));
+		_DG_ASSERTE ((pair.m_edgeA && pair.m_edgeA) || (!pair.m_edgeA && !pair.m_edgeA));
 		if (pair.m_edgeA && pair.m_edgeB) {
 
-			_ASSERTE (pair.m_edgeA->m_incidentFace != pair.m_edgeB->m_incidentFace);
+			_DG_ASSERTE (pair.m_edgeA->m_incidentFace != pair.m_edgeB->m_incidentFace);
 			if (pair.m_edgeA->m_incidentFace > pair.m_edgeB->m_incidentFace) {
-				Swap (pair.m_edgeA->m_incidentFace, pair.m_edgeB->m_incidentFace);
+				Swap (pair.m_edgeA->m_incidentFace, pair.m_edgeB->m_incidentFace);			
 			}
 
 			dgInt32 faceIndexA = pair.m_edgeA->m_incidentFace;
@@ -4840,7 +4840,7 @@ dgMeshEffect::dgMeshEffect (const dgMeshEffect& source, dgFloat32 absoluteconcav
 				} while (ptr != faceB.m_edge);
 				listA.Append (nodeB);
 			}
-			listA.m_area = pair.m_area;
+			listA.m_area = pair.m_area; 
 			listA.m_perimeter = pair.m_perimeter;
 
 			dgInt32 mark = mesh.IncLRU();
@@ -4861,7 +4861,7 @@ dgMeshEffect::dgMeshEffect (const dgMeshEffect& source, dgFloat32 absoluteconcav
 						//ptr->m_userData = 0;
 						ptr->m_twin->m_mark = mark;
 						//ptr->m_twin->m_userData = 0;
-					}
+					}	
 
 					if (ptr->m_mark != mark) {
 						dgClusterList& adjacentList = clusters[ptr->m_twin->m_incidentFace];
@@ -4889,8 +4889,8 @@ dgMeshEffect::dgMeshEffect (const dgMeshEffect& source, dgFloat32 absoluteconcav
 				do {
 					if ((edge->m_mark != mark) && (edge->m_twin->m_incidentFace > 0)) {
 						dgEdge* twin = edge->m_twin;
-						_ASSERTE (edge->m_userData == 0);
-						_ASSERTE (twin->m_userData == 0);
+						_DG_ASSERTE (edge->m_userData == 0);
+						_DG_ASSERTE (twin->m_userData == 0);
 						dgClusterList& neighbourgCluster = clusters[twin->m_incidentFace];
 
 
@@ -4925,7 +4925,7 @@ dgMeshEffect::dgMeshEffect (const dgMeshEffect& source, dgFloat32 absoluteconcav
 								adjecentEdge = adjecentEdge->m_next;
 							} while (adjecentEdge != adjacentFace.m_edge);
 						}
-
+						
 
 						dgFloat32 area = listA.m_area + adjacentList.m_area;
 						dgFloat32 perimeter = listA.m_perimeter + adjacentList.m_perimeter - edgeLength;
@@ -4955,7 +4955,7 @@ dgMeshEffect::dgMeshEffect (const dgMeshEffect& source, dgFloat32 absoluteconcav
 					}
 
 
-					edge = edge->m_next;
+					edge = edge->m_next;						
 				} while (edge != face.m_edge);
 			}
 		}
@@ -4966,13 +4966,13 @@ dgMeshEffect::dgMeshEffect (const dgMeshEffect& source, dgFloat32 absoluteconcav
 
 
 	BeginPolygon();
-
+	
 	dgFloat32 layer = dgFloat32 (0.0f);
 	dgVertexAtribute polygon[128];
 	memset (polygon, 0, sizeof (polygon));
 	for (dgInt32 i = 0; i < faceCount; i ++) {
 		dgClusterList& clusterList = clusters[i];
-
+		
 		if (clusterList.GetCount()) {
 			for (dgClusterList::dgListNode* node = clusterList.GetFirst(); node; node = node->GetNext()) {
 				dgClusterFace& face = node->GetInfo();

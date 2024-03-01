@@ -1,21 +1,21 @@
 /* Copyright (c) <2003-2011> <Julio Jerez, Newton Game Dynamics>
-*
+* 
 * This software is provided 'as-is', without any express or implied
 * warranty. In no event will the authors be held liable for any damages
 * arising from the use of this software.
-*
+* 
 * Permission is granted to anyone to use this software for any purpose,
 * including commercial applications, and to alter it and redistribute it
 * freely, subject to the following restrictions:
-*
+* 
 * 1. The origin of this software must not be misrepresented; you must not
 * claim that you wrote the original software. If you use this software
 * in a product, an acknowledgment in the product documentation would be
 * appreciated but is not required.
-*
+* 
 * 2. Altered source versions must be plainly marked as such, and must not be
 * misrepresented as being the original software.
-*
+* 
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
@@ -28,15 +28,15 @@
 
 /*
 void _BackAndForwardSustitition (void *rightsideVector,
-										   void *rowPointers,
-										   dgInt32 rowStrideInBytes,
-										   dgInt32 typeSizeInBytes,
+										   void *rowPointers, 
+										   dgInt32 rowStrideInBytes, 
+										   dgInt32 typeSizeInBytes, 
 										   dgInt32 size);
 
 bool _SolveByCholeskyDecomposition (void *rightsideVector,
-												void *rowPointers,
-												dgInt32 rowStrideInBytes,
-												dgInt32 typeSizeInBytes,
+												void *rowPointers, 
+												dgInt32 rowStrideInBytes, 
+												dgInt32 typeSizeInBytes, 
 												dgInt32 size);
 
 
@@ -82,8 +82,8 @@ dgSPDMatrix<T>::dgSPDMatrix (const dgSPDMatrix<T>& src)
 
 template<class T>
 dgSPDMatrix<T>::dgSPDMatrix (
-	dgInt32 size,
-	T *elemBuffer,
+	dgInt32 size, 
+	T *elemBuffer, 
 	dgGeneralVector<T>* m_rowBuffer)
 	:dgGeneralMatrix<T>(size, size, elemBuffer, m_rowBuffer)
 {
@@ -91,15 +91,15 @@ dgSPDMatrix<T>::dgSPDMatrix (
 
 template<class T>
 dgSPDMatrix<T>::dgSPDMatrix (
-	const dgSPDMatrix<T>& src,
-	T *elemBuffer,
+	const dgSPDMatrix<T>& src, 
+	T *elemBuffer, 
 	dgGeneralVector<T>* m_rowBuffer)
 	:dgGeneralMatrix<T>(src, elemBuffer, m_rowBuffer)
 {
 }
 
 
-template<class T>
+template<class T>  
 dgSPDMatrix<T>::~dgSPDMatrix ()
 {
 }
@@ -194,8 +194,8 @@ bool dgSPDMatrix<T>::CholeskyDecomposition()
 	}
 
 	#ifdef DG_COUNT_FLOAT_OPS
-	dgGeneralVector<T>::SetMemWrites(memCount);
-	dgGeneralVector<T>::SetFloatOps(floatCount);
+	dgGeneralVector<T>::SetMemWrites(memCount); 
+	dgGeneralVector<T>::SetFloatOps(floatCount); 
 	#endif
 
 	return true;
