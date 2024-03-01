@@ -30,7 +30,7 @@ jobs:
       - name: Package Amnesia
         working-directory: .${{ github.workspace }}/build
         run: tar -czvf ../Amnesia-x86-64-Debug.tar.gz * --exclude *.a
-      - name: Upload warfork artifact
+      - name: Upload Amnesia artifact
         uses: actions/upload-artifact@v3
         with:
           name: amnesia-x86-64-debug
@@ -63,7 +63,7 @@ jobs:
       - name: Package Amnesia
         working-directory: ./build
         run: 7z a ..\win-x86-64-Debug.zip * '-xr!*.exp' '-xr!*.lib'
-      - name: Upload warfork artifact
+      - name: Upload Amnesia artifact
         uses: actions/upload-artifact@v3
         with:
           name: win-x86-64-Debug
