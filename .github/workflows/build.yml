@@ -28,13 +28,13 @@ jobs:
           cd ${{ github.workspace }}
           ninja
       - name: Package Amnesia
-        working-directory: .${{ github.workspace }}/build
-        run: tar -czvf ../Amnesia-x86-64-Debug.tar.gz * --exclude *.a
+        working-directory: ./build
+        run: tar -czvf ../amnesia-linux-x86-64-debug.tar.gz * 
       - name: Upload Amnesia artifact
         uses: actions/upload-artifact@v3
         with:
-          name: amnesia-x86-64-debug
-          path: Amnesia-x86-64-Debug.tar.gz
+          name: amnesia-linux-x86-64-debug
+          path: amnesia-linux-x86-64-debug.tar.gz
 
   windows:
     runs-on: windows-latest
@@ -61,10 +61,11 @@ jobs:
           cd ${{ github.workspace }}\build
           msbuild ALL_BUILD.vcxproj /property:Configuration=Debug
       - name: Package Amnesia
-        working-directory: ./build
-        run: 7z a ..\win-x86-64-Debug.zip * '-xr!*.exp' '-xr!*.lib'
+        working-directory: .\build
+        run: 7z a ..\amnesia-win-x86-64-debug.zip *
       - name: Upload Amnesia artifact
         uses: actions/upload-artifact@v3
         with:
-          name: win-x86-64-Debug
-          path: win-x86-64-Debug.zip
+          name: amnesia-win-x86-64-debug
+          path: amnesia-win-x86-64-debug.zip
+          
