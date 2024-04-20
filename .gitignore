@@ -356,3 +356,7 @@ BuildID_*.h
 CMakeCache.txt
 vcpkg_installed/
 CMakeFiles/
+
+Makefile
+cmake_install.cmake
+*.a
