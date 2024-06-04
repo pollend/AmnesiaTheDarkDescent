@@ -15,17 +15,11 @@ This is a heavy rework of the core engine, mostly an experiment in absurdity to 
   - fixed parallax occlusion mapping, rendering artifacts need to be fixed with curved surfaces.
 - hpl::Event is an interface that makes building Observables a lot easier. 
 - RTTI interface avoid the overhead of using dynamc_cast<>
-## Random Ideas
-
-- Replace newton physics with Jolt [ticket](https://github.com/pollend/AmnesiaTheDarkDescent/issues/20)
-- Remove OALWrapper and use miniaudio [ticket](https://github.com/pollend/AmnesiaTheDarkDescent/issues/13)
-- Remove iXMLDocument indirection and use FastXML [ticket](https://github.com/pollend/AmnesiaTheDarkDescent/issues/25)
-- Would like to mess around with raytracing support from Vulkan and DirectX, would probably have to use another solution. 
-- Various collection of possible improvements to the editor [ticket](https://github.com/pollend/AmnesiaTheDarkDescent/issues/22)
 
 Feel free to drop a ticket if your interested in anything. 
 
 # Branches
+- origin/stabilization - modified version of HPL2 with patches to the engine
 - origin/master - Vulkan/Direct11/Direct12 implementation using [The-Forge](https://theforge.dev/)
 - origin/original - original running code should be as bug free as when the game was released
 
