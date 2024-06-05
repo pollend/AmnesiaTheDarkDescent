@@ -1,10 +1,18 @@
 /// Copyright © 2009-2020 Frictional Games
 /// Copyright 2023 Michael Pollind
 /// SPDX-License-Identifier: GPL-3.0
-
-#vert solid_z.vert
+#vert solid_z_shadow.vert
     #include "solid_z.vert.fsl"
 #end
+
+#frag solid_z_shadow.frag
+    #define ALPHA_REJECT 0.5
+    #include "solid_z_shadow.frag.fsl"
+#end
+
+//#vert solid_z_shadow.vert
+//    #include "solid_z_shadow.vert.fsl"
+//#end
 
 #frag solid_z.frag
     #define SEARCH_SAMPLE_COUNT 4
@@ -17,12 +25,25 @@
     #include "gui.vert.fsl"
 #end
 
+#vert depth_clear.vert
+    #include "depth_clear.vert.fsl"
+#end
+
+#frag empty.frag
+    #include "empty.frag.fsl"
+#end
+
 #frag gui.frag
     #include "gui.frag.fsl"
 #end
 
 #vert solid_diffuse.vert
-    #include "solid_diffuse.vert.fsl"
+    #include "legacy/solid_diffuse.vert.fsl"
+#end
+
+#frag solid_diffuse.frag
+    #define ALPHA_REJECT 0.5
+    #include "legacy/solid_diffuse.frag.fsl"
 #end
 
 #vert solid_illumination.vert
@@ -33,18 +54,12 @@
     #include "solid_illumination.frag.fsl"
 #end
 
-#frag solid_diffuse.frag
-    #define ALPHA_REJECT 0.5
-    #include "solid_diffuse.frag.fsl"
-#end
 
 #frag solid_diffuse_parallax.frag
-    // toned down the parallax effect a bit
-
     #define PARALLAX_ENABLED 1
     #define SEARCH_SAMPLE_COUNT 4
     #define ALPHA_REJECT 0.5
-    #include "solid_diffuse.frag.fsl"
+    #include "legacy/solid_diffuse.frag.fsl"
 #end
 
 #vert deferred_light.vert
@@ -273,19 +288,186 @@
     #include "final_posteffect.frag.fsl"
 #end
 
-#vert forward_diffuse.vert
-  #include "forward_diffuse.vert.fsl"
+#vert visibilityBuffer_pass.vert
+  #include "visibilityBuffer_pass.vert.fsl"
 #end
 
-#frag forward_diffuse.frag
-  #define ALPHA_REJECT 0.5
-  #include "forward_diffuse.frag.fsl"
+#frag visibilityBuffer_pass.frag
+  #include "visibilityBuffer_pass.frag.fsl"
 #end
 
-#comp point_light_clusters.comp
-  #include "point_light_clusters.comp.fsl"
+#vert visibility_shade_pass.vert
+  #include "visibility_shade_pass.vert.fsl"
 #end
 
-#comp light_clusters_clear.comp
-  #include "light_clusters_clear.comp.fsl"
+#frag visibility_shade_pass.frag
+  #include "visibility_shade_pass.frag.fsl"
+#end
+
+#frag visibility_emit_shade_pass.frag
+  #include "visibility_emit_shade_pass.frag.fsl"
+#end
+
+#vert visibilityBuffer_alpha_pass.vert
+  #include "visibilityBuffer_alpha_pass.vert.fsl"
+#end
+
+#frag visibilityBuffer_alpha_pass.frag
+  #include "visibilityBuffer_alpha_pass.frag.fsl"
+#end
+
+#comp scene_light_cluster.comp
+  #include "scene_light_cluster.comp.fsl"
+#end
+
+#comp scene_light_cluster_clear.comp
+  #include "scene_light_cluster_clear.comp.fsl"
+#end
+
+#vert particle_shade.vert
+  #include "particle_shade.vert.fsl"
+#end
+
+#frag particle_shade_add.frag
+  #define USE_BLEND_MODE_ADD 1
+  #include "particle_shade.frag.fsl"
+#end
+
+#frag particle_shade_mul.frag
+  #define USE_BLEND_MODE_MUL 1
+  #include "particle_shade.frag.fsl"
+#end
+
+#frag particle_shade_mulX2.frag
+  #define USE_BLEND_MODE_MULX2 1
+  #include "particle_shade.frag.fsl"
+#end
+
+#frag particle_shade_alpha.frag
+  #define USE_BLEND_MODE_ALPHA 1
+  #include "particle_shade.frag.fsl"
+#end
+
+#frag particle_shade_premul_alpha.frag
+  #define USE_BLEND_MODE_PREMUL_ALPHA 1
+  #include "particle_shade.frag.fsl"
+#end
+
+#frag decal_shade.frag
+    #include "decal_shade.frag.fsl"
+#end
+
+#vert decal_shade.vert
+    #include "decal_shade.vert.fsl"
+#end
+
+#vert translucency_shade.vert
+  #include "translucency_shade.vert.fsl"
+#end
+
+#frag translucency_refraction_shade_add.frag
+  #define USE_REFRACTION 1
+  #define USE_BLEND_MODE_ADD 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_refraction_shade_mul.frag
+  #define USE_REFRACTION 1
+  #define USE_BLEND_MODE_MUL 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_refraction_shade_mulX2.frag
+  #define USE_REFRACTION 1
+  #define USE_BLEND_MODE_MULX2 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_refraction_shade_alpha.frag
+  #define USE_REFRACTION 1
+  #define USE_BLEND_MODE_ALPHA 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_refraction_shade_premul_alpha.frag
+  #define USE_REFRACTION 1
+  #define USE_BLEND_MODE_PREMUL_ALPHA 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_add.frag
+  #define USE_BLEND_MODE_ADD 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_mul.frag
+  #define USE_BLEND_MODE_MUL 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_mulX2.frag
+  #define USE_BLEND_MODE_MULX2 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_alpha.frag
+  #define USE_BLEND_MODE_ALPHA 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_premul_alpha.frag
+  #define USE_BLEND_MODE_PREMUL_ALPHA 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_illumination_add.frag
+  #define USE_ILLUMINATION 1 
+  #define USE_BLEND_MODE_ADD 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_illumination_mul.frag
+  #define USE_ILLUMINATION 1 
+  #define USE_BLEND_MODE_MUL 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_illumination_mulX2.frag
+  #define USE_ILLUMINATION 1 
+  #define USE_BLEND_MODE_MULX2 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_illumination_alpha.frag
+  #define USE_ILLUMINATION 1 
+  #define USE_BLEND_MODE_ALPHA 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_shade_illumination_premul_alpha.frag
+  #define USE_ILLUMINATION 1 
+  #define USE_BLEND_MODE_PREMUL_ALPHA 1
+  #include "translucency_shade.frag.fsl"
+#end
+
+#frag translucency_water_shade.frag
+  #define WAVE_AMPLITUDE_SCALE 0.04
+  #define WAVE_FREQUENCY_SCALE 10.0
+  #include "translucency_water_shade.frag.fsl"
+#end
+
+#vert depth_shade.vert 
+    #include "depth_shade.vert.fsl"
+#end
+
+#frag depth_shade.frag
+    #include "depth_shade.frag.fsl"
+#end
+
+#frag depth_clear_shade.frag
+    #include "depth_clear_shade.frag.fsl"
+#end
+
+#vert depth_clear_shade.vert
+    #include "depth_clear_shade.vert.fsl"
 #end

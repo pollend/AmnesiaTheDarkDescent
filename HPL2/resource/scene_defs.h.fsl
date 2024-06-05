@@ -1,0 +1,195 @@
+#ifndef _SCENE_RESOURCE_DEFS_H_
+#define _SCENE_RESOURCE_DEFS_H_
+
+#define PARALLAX_MULTIPLIER 0.7
+
+#define POINT_LIGHT_MAX_COUNT  (256)
+#define SCENE_OPAQUE_COUNT (512)
+
+#define LIGHT_CLUSTER_WIDTH 16 
+#define LIGHT_CLUSTER_HEIGHT 9 
+#define LIGHT_CLUSTER_SLICE  24
+#define LIGHT_CLUSTER_COUNT 128
+
+#define LIGHT_FROXEL_COUNT_POS(ix, iy, iz) ((LIGHT_CLUSTER_WIDTH * LIGHT_CLUSTER_HEIGHT * (iz)) + ((iy)*LIGHT_CLUSTER_WIDTH) + (ix))
+#define LIGHT_FROXEL_DATA_POS(ix, iy, iz, il) (LIGHT_FROXEL_COUNT_POS(ix, iy, iz) * LIGHT_CLUSTER_COUNT + (il))
+
+#define LIGHT_CLUSTER_COUNT_POS(ix, iy) ( ((iy)*LIGHT_CLUSTER_WIDTH)+(ix) )
+#define LIGHT_CLUSTER_DATA_POS(il, ix, iy) ( LIGHT_CLUSTER_COUNT_POS(ix, iy)*LIGHT_CLUSTER_COUNT + (il) )
+
+#define PRIMARY_VIEWPORT_INDEX 0
+#define SCENE_MAX_REFLECTION_COUNT 4 
+#define SCENE_MAX_TEXTURE_COUNT 4096 
+#define SCENE_MAX_TEXTURE_CUBE_COUNT 1024 
+
+STRUCT(TranslucentMaterial) {
+    DATA(uint, diffuseTextureIndex, None);
+    DATA(uint, normalTextureIndex, None);
+    DATA(uint, alphaTextureIndex, None);
+    DATA(uint, specularTextureIndex, None);
+    DATA(uint, heightTextureIndex, None);
+    DATA(uint, illuminationTextureIndex, None);
+    DATA(uint, dissolveAlphaTextureIndex, None);
+    DATA(uint, cubeMapTextureIndex, None);
+    DATA(uint, cubeMapAlphaTextureIndex, None);
+
+    DATA(uint, config, None);
+    DATA(float, refractionScale, None);
+    DATA(float, frenselBias, None);
+    DATA(float, frenselPos, None);
+
+    DATA(float, rimMulLight, None);
+    DATA(float, rimMulPower, None);
+	DATA(float, _pad2, None);
+};
+
+STRUCT(WaterMaterial) {
+    DATA(uint, diffuseTextureIndex, None);
+    DATA(uint, normalTextureIndex, None);
+    DATA(uint, cubeMapTextureIndex, None);
+    DATA(uint, config, None);
+
+    DATA(float, refractionScale, None);
+    DATA(float, frenselBias, None);
+    DATA(float, frenselPow, None);
+    DATA(float, reflectionFadeStart, None);
+
+    DATA(float, reflectionFadeEnd, None);
+    DATA(float, waveSpeed, None);
+    DATA(float, waveAmplitude, None);
+    DATA(float, waveFreq, None);
+};
+
+
+STRUCT(DiffuseMaterial) {
+    DATA(uint, diffuseTextureIndex, None);
+    DATA(uint, normalTextureIndex, None);
+    DATA(uint, alphaTextureIndex, None);
+    DATA(uint, specularTextureIndex, None);
+    DATA(uint, heightTextureIndex, None);
+    DATA(uint, illuminationTextureIndex, None);
+    DATA(uint, dissolveAlphaTextureIndex, None);
+    DATA(uint, config, None);
+
+    DATA(float, heightMapScale, None);
+    DATA(float, heightMapBias, None);
+    DATA(float, frenselBias, None);
+    DATA(float, frenselPow, None);
+};
+
+
+STRUCT(Decal) {
+    DATA(uint, diffuseTextureIndex, None);
+    DATA(uint,  __pad0, None);
+    DATA(uint, __pad1, NONE);
+    DATA(uint, __pad2, NONE);
+    DATA(float4x4, modelMat, None);
+    DATA(float4x4, uvMat, None);
+};
+
+STRUCT(Particle) {
+    DATA(uint, diffuseTextureIndex, None);
+    DATA(uint,  __pad0, None);
+    DATA(float, sceneAlpha, NONE);
+    DATA(float, lightLevel, NONE);
+    DATA(float4x4, modelMat, None);
+    DATA(float4x4, uvMat, None);
+};
+
+INLINE bool isTextureIndexValid(uint index) {
+    return index < SCENE_MAX_TEXTURE_COUNT;
+}
+
+INLINE bool isTextureCubeIndexValid(uint index) {
+    return index < SCENE_MAX_TEXTURE_CUBE_COUNT;
+}
+
+STRUCT(MaterialTexture) 
+{
+    DATA(bool, hasGradient, None);
+    DATA(float2, texCoordDX, None);
+    DATA(float2, texCoordDY, None);
+    
+    DATA(uint, filterID, None);
+    DATA(uint, textureID, None);
+};
+
+STRUCT(UniformObject) 
+{
+    DATA(uint,     indexOffset, None);
+    DATA(uint,     vertexOffset, None);
+    DATA(uint,     materialType, None);
+    DATA(uint,     materialIndex, None);
+    
+    DATA(float,    dissolveAmount, None);
+    DATA(float,    lightLevel, None);
+    DATA(float,    illuminationAmount, None);
+    DATA(float,    alphaAmount, None);
+    
+    DATA(float4x4, modelMat, None);
+    DATA(float4x4, invModelMat, None);
+    DATA(float4x4, uvMat, None);
+};
+
+#define MATERIAL_IS_ALPHA_SINGLE_CHANNEL (0x1)
+#define MATERIAL_IS_HEIGHT_SINGLE_CHANNEL (0x2)
+#define MATERIAL_USE_ALPHA_DISSOLVE_FILTER (0x4)
+#define MATERIAL_USE_REFLECTION (0x8)
+#define MATERIAL_USE_REFRACTION (0x16)
+
+#define MATERIAL_TYPE_SOLID_DIFFUSE     1
+#define MATERIAL_TYPE_SOLID_TRANSLUCENT 2
+#define MATERIAL_TYPE_SOLID_WATER       3
+#define MATERIAL_TYPE_SOLID_DECAL       4
+
+#define LIGHT_TYPE_POINT_LIGHT 0 
+#define LIGHT_TYPE_SPOT_LIGHT 1 
+
+STRUCT(Light) {
+    DATA(float4, color, none);
+    DATA(float3, direction, none);
+    DATA(uint, lightType, none);
+    
+    DATA(float3, position, none);
+    DATA(float, radius, none);
+    
+    DATA(uint, attenuationTexture, NONE);
+    DATA(float, angle, none);
+    DATA(uint, goboTextureIndex, NONE);
+    DATA(uint, __pad2, NONE);
+
+    DATA(float4, normalizeShadow, none);
+    
+    DATA(float4x4, viewProjection, none);
+};
+
+#define WORLD_FLAG_IS_FOG_ENABLED (0x1)
+
+STRUCT(WorldInfo) {
+    DATA(uint,  worldFlags, None);
+    DATA(float, worldFogStart, None);
+    DATA(float, worldFogLength, None);
+    DATA(float, oneMinusFogAlpha, None);
+    DATA(float, fogFalloffExp, None);
+    DATA(float, afT, None);
+    DATA(uint, __pad1, NONE);
+    DATA(uint, __pad2, NONE);
+    DATA(float4, worldFogColor, None);
+};
+
+STRUCT(ViewportInfo) {
+    DATA(float4x4, invViewMat, None);
+    DATA(float4x4, invProjMat, None);
+    DATA(float4x4, invViewProj, None);
+    DATA(float4x4, viewMat, None);
+    DATA(float4x4, projMat, None);
+    DATA(float4, rect, None);    
+    DATA(float3, cameraPosition, None);
+    DATA(uint, __pad0, NONE);
+    DATA(float, zNear, None);
+    DATA(float, zFar, None);
+    DATA(uint, __pad1, NONE);
+};
+
+#endif
+

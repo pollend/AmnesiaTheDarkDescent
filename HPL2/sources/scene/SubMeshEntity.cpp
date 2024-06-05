@@ -21,7 +21,6 @@
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
 #include "FixPreprocessor.h"
 
-
 #include "graphics/ForgeRenderer.h"
 #include "graphics/GraphicsAllocator.h"
 #include "graphics/GraphicsBuffer.h"
@@ -79,7 +78,7 @@ namespace hpl {
             auto gpuStream = m_geometry->getStreamBySemantic(localStream.m_semantic);
             ASSERT(gpuStream != m_geometry->vertexStreams().end());
 
-            BufferUpdateDesc updateDesc = { gpuStream->buffer().m_handle, gpuStream->stride() *  m_geometry->vertextOffset(),  gpuStream->stride() * reservedVerticies};
+            BufferUpdateDesc updateDesc = { gpuStream->buffer().m_handle, gpuStream->stride() *  m_geometry->vertexOffset(),  gpuStream->stride() * reservedVerticies};
             beginUpdateResource(&updateDesc);
 
             GraphicsBuffer gpuBuffer(updateDesc);
@@ -95,7 +94,7 @@ namespace hpl {
                     dest.WriteRaw(((i + m_numberVertices) * gpuStream->stride()), sp);
                 }
             }
-            endUpdateResource(&updateDesc, nullptr);
+            endUpdateResource(&updateDesc);
         }
         {
             BufferUpdateDesc updateDesc = { m_geometry->indexBuffer().m_handle, m_geometry->indexOffset() * GeometrySet::IndexBufferStride,  GeometrySet::IndexBufferStride * m_numberIndecies};
@@ -106,7 +105,7 @@ namespace hpl {
             for(size_t i = 0; i < m_numberIndecies; i++) {
                 dest.Write(i, src.Get(i));
             }
-            endUpdateResource(&updateDesc, nullptr);
+            endUpdateResource(&updateDesc);
         }
 
     }
@@ -183,9 +182,9 @@ namespace hpl {
                 targetTangentIt != m_geometry->vertexStreams().end()
             );
 
-            BufferUpdateDesc positionUpdateDesc = { targetPositionIt->buffer().m_handle, (m_geometry->vertextOffset() * targetPositionIt->stride()) + m_activeCopy * (targetPositionIt->stride() * m_numberVertices), targetPositionIt->stride() * m_numberVertices};
-            BufferUpdateDesc tangentUpdateDesc = { targetTangentIt->buffer().m_handle, (m_geometry->vertextOffset() * targetTangentIt->stride()) + m_activeCopy * (targetTangentIt->stride() * m_numberVertices), targetTangentIt->stride() * m_numberVertices};
-            BufferUpdateDesc normalUpdateDesc = { targetNormalIt->buffer().m_handle, (m_geometry->vertextOffset() * targetNormalIt->stride()) + m_activeCopy * (targetNormalIt->stride() * m_numberVertices), targetNormalIt->stride() * m_numberVertices};
+            BufferUpdateDesc positionUpdateDesc = { targetPositionIt->buffer().m_handle, (m_geometry->vertexOffset() * targetPositionIt->stride()) + (m_activeCopy * targetPositionIt->stride() * m_numberVertices), targetPositionIt->stride() * m_numberVertices};
+            BufferUpdateDesc tangentUpdateDesc = { targetTangentIt->buffer().m_handle, (m_geometry->vertexOffset() * targetTangentIt->stride()) + (m_activeCopy * targetTangentIt->stride() * m_numberVertices), targetTangentIt->stride() * m_numberVertices};
+            BufferUpdateDesc normalUpdateDesc = { targetNormalIt->buffer().m_handle, (m_geometry->vertexOffset() * targetNormalIt->stride()) + (m_activeCopy * targetNormalIt->stride() * m_numberVertices), targetNormalIt->stride() * m_numberVertices};
             beginUpdateResource(&positionUpdateDesc);
             beginUpdateResource(&tangentUpdateDesc);
             beginUpdateResource(&normalUpdateDesc);
@@ -222,15 +221,15 @@ namespace hpl {
                 targetTangentView.Write(i, accmulatedTangent);
             }
 
-            endUpdateResource(&positionUpdateDesc, nullptr);
-            endUpdateResource(&tangentUpdateDesc, nullptr);
-            endUpdateResource(&normalUpdateDesc, nullptr);
+            endUpdateResource(&positionUpdateDesc);
+            endUpdateResource(&tangentUpdateDesc);
+            endUpdateResource(&normalUpdateDesc);
 		}
 
 	}
 
 
-    DrawPacket cSubMeshEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)  {
+    DrawPacket cSubMeshEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame)  {
 		DrawPacket packet;
 	    if(m_numberIndecies == 0) {
             return packet;
@@ -238,8 +237,8 @@ namespace hpl {
 
         DrawPacket::GeometrySetBinding binding{};
         packet.m_type = DrawPacket::DrawGeometryset;
-        std::copy(elements.begin(), elements.end(), binding.m_elements);
-        binding.m_numStreams = elements.size();
+        //std::copy(elements.begin(), elements.end(), binding.m_elements);
+        //binding.m_numStreams = elements.size();
         binding.m_subAllocation = m_geometry.get();
         binding.m_indexOffset = 0;
         binding.m_set = GraphicsAllocator::AllocationSet::OpaqueSet;

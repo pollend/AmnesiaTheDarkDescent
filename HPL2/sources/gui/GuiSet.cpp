@@ -22,6 +22,7 @@
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "graphics/Color.h"
 #include "graphics/Enum.h"
+#include "graphics/GraphicsAllocator.h"
 #include "graphics/RenderTarget.h"
 #include "gui/GuiTypes.h"
 #include "math/Math.h"
@@ -109,16 +110,7 @@ namespace hpl {
 		static std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> GuiUniformDescriptorSet{};
 		static std::array<std::array<SharedTexture, MAX_GUI_DRAW_CALLS>, ForgeRenderer::SwapChainLength> GuiTextures{};
         static RootSignature* GuiRootSignatnre = nullptr;
-
-        #ifdef USE_THE_FORGE_LEGACY
-		    static GPURingBuffer* GuiUniformRingBuffer = nullptr;
-		    static GPURingBuffer* GuiVertexRingBuffer = nullptr;
-		    static GPURingBuffer* GuiIndexRingBuffer = nullptr;
-        #else
-		    static GPURingBuffer GuiUniformRingBuffer {};
-		    static GPURingBuffer GuiVertexRingBuffer{};
-		    static GPURingBuffer GuiIndexRingBuffer{};
-        #endif
+		static GPURingBuffer GuiUniformRingBuffer {};
         static Sampler* GuiSampler = nullptr;
 
         static uint32_t descriptorIndex = 0;
@@ -138,23 +130,6 @@ namespace hpl {
                 samplerDesc.mAddressV = ADDRESS_MODE_CLAMP_TO_EDGE;
                 samplerDesc.mAddressW = ADDRESS_MODE_CLAMP_TO_EDGE;
                 addSampler(pipeline.Rend(), &samplerDesc, &GuiSampler);
-            }
- 			{
-                BufferDesc desc = {};
-				desc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
-                desc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-                desc.mSize = GUI_STREAM_BUFFER_VB_SIZE * sizeof(PositionTexColor);
-                desc.pName = "GUI Vertex Buffer";
-
-				addGPURingBuffer(pipeline.Rend(), &desc, &GuiVertexRingBuffer);
-            }
-            {
-                BufferDesc desc = {};
-                desc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
-                desc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-                desc.mSize = GUI_STREAM_BUFFER_IB_SIZE * sizeof(uint32_t);
-                desc.pName = "GUI Index Buffer";
-                addGPURingBuffer(pipeline.Rend(), &desc, &GuiIndexRingBuffer);
             }
 
 			ShaderLoadDesc loadDesc = {};
@@ -186,12 +161,9 @@ namespace hpl {
 				//layout and pipeline for sphere draw
 				VertexLayout vertexLayout = {};
 				vertexLayout.mAttribCount = 3;
-                #ifndef USE_THE_FORGE_LEGACY
-				    vertexLayout.mBindingCount = 3;
-                    vertexLayout.mBindings[0].mStride = sizeof(float3);
-                    vertexLayout.mBindings[1].mStride = sizeof(float2);
-                    vertexLayout.mBindings[2].mStride = sizeof(float3);
-		        #endif
+				vertexLayout.mBindingCount = 1;
+                vertexLayout.mBindings[0].mStride = sizeof(float3) + sizeof(float2) + sizeof(float4);
+
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
 				vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
 				vertexLayout.mAttribs[0].mBinding = 0;
@@ -272,8 +244,7 @@ namespace hpl {
 				}
 
 			}
-
-			addUniformGPURingBuffer(pipeline.Rend(), sizeof(UniformBlock) * MAX_GUI_DRAW_CALLS, &GuiUniformRingBuffer, true);
+            addUniformGPURingBuffer(pipeline.Rend(), sizeof(UniformBlock) * MAX_GUI_DRAW_CALLS, &GuiUniformRingBuffer, true);
 		}
 
 		void exitGui() {
@@ -688,14 +659,11 @@ namespace hpl {
 
 		size_t vertexBufferSize = m_setRenderObjects.size() * sizeof(gui::PositionTexColor) * 4;
 		size_t indexBufferSize = m_setRenderObjects.size() * sizeof(uint32_t) * 6;
-        #ifdef USE_THE_FORGE_LEGACY
-		    GPURingBufferOffset vb = getGPURingBufferOffset(gui::GuiVertexRingBuffer, vertexBufferSize);
-		    GPURingBufferOffset ib = getGPURingBufferOffset(gui::GuiIndexRingBuffer, indexBufferSize);
-        #else
-		    GPURingBufferOffset vb = getGPURingBufferOffset(&gui::GuiVertexRingBuffer, vertexBufferSize);
-		    GPURingBufferOffset ib = getGPURingBufferOffset(&gui::GuiIndexRingBuffer, indexBufferSize);
-        #endif
+        GraphicsAllocator* graphicsAllocator =  Interface<GraphicsAllocator>::Get();
 
+
+		GPURingBufferOffset vb = graphicsAllocator->allocTransientVertexBuffer(vertexBufferSize);
+		GPURingBufferOffset ib = graphicsAllocator->allocTransientIndexBuffer(indexBufferSize);
 
 		cMatrixf projectionMtx(cMatrixf::Identity);
 		cMatrixf viewMtx(cMatrixf::Identity);
@@ -724,7 +692,7 @@ namespace hpl {
 			cVector3f vProjMin(-mvVirtualSizeOffset.x, -mvVirtualSizeOffset.y, mfVirtualMinZ);
 			cVector3f vProjMax(mvVirtualSize.x-mvVirtualSizeOffset.x, mvVirtualSize.y-mvVirtualSizeOffset.y, mfVirtualMaxZ);
 
-            mat4 proj = mat4::orthographic(vProjMin.x, vProjMax.x, vProjMax.y, vProjMin.y, vProjMin.z, vProjMax.z);
+            mat4 proj = mat4::orthographicLH(vProjMin.x, vProjMax.x, vProjMax.y, vProjMin.y, vProjMin.z, vProjMax.z);
             projectionMtx = cMath::FromForgeMat(proj);
 		}
 
@@ -761,11 +729,7 @@ namespace hpl {
 			size_t indexBufferIndex = 0;
 
             uint32_t requestSize = round_up(sizeof(gui::UniformBlock), 256);
-			#ifdef USE_THE_FORGE_LEGACY
-            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(gui::GuiUniformRingBuffer, requestSize);
-            #else
-            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&gui::GuiUniformRingBuffer, requestSize);
-            #endif
+            GPURingBufferOffset uniformBlockOffset =  getGPURingBufferOffset(&gui::GuiUniformRingBuffer, requestSize);
 
 			DescriptorData params[10]{};
 			uint32_t paramCount = 0;
@@ -816,7 +780,7 @@ namespace hpl {
 			BufferUpdateDesc  updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
 			beginUpdateResource(&updateDesc);
 			(*reinterpret_cast<gui::UniformBlock*>(updateDesc.pMappedData)) = uniformBlock;
-			endUpdateResource(&updateDesc, NULL);
+			endUpdateResource(&updateDesc);
 
 			uint32_t stride = sizeof(gui::PositionTexColor);
 			cmdBindDescriptorSet(frame.m_cmd, gui::descriptorIndex, descriptorSet);
@@ -914,8 +878,8 @@ namespace hpl {
 
 		}
 
-		endUpdateResource(&vertexUpdateDesc, NULL);
-		endUpdateResource(&indexUpdateDesc, NULL);
+		endUpdateResource(&vertexUpdateDesc);
+		endUpdateResource(&indexUpdateDesc);
 
 		mBaseClipRegion.Clear();
 	}

@@ -17,16 +17,20 @@ namespace hpl {
 
         enum AllocationSet {
             OpaqueSet,
+            ParticleSet,
             NumOfAllocationSets
         };
 
         GraphicsAllocator(ForgeRenderer* renderer);
 
-        static constexpr uint32_t OpaqueVertexBufferSize = 1 << 25;
-        static constexpr uint32_t OpaqueIndexBufferSize = 1 << 23;
+        static constexpr uint32_t OpaqueVertexBufferSize = 0xf << 18;
+        static constexpr uint32_t OpaqueIndexBufferSize = 0xf << 18;
 
-        static constexpr uint32_t ImmediateVertexBufferSize = 1 << 25;
-        static constexpr uint32_t ImmediateIndexBufferSize = 1 << 23;
+        static constexpr uint32_t ParticleVertexBufferSize = 0xf << 12;
+        static constexpr uint32_t ParticleIndexBufferSize = 0xf << 12;
+
+        static constexpr uint32_t ImmediateVertexBufferSize = 0xf << 14;
+        static constexpr uint32_t ImmediateIndexBufferSize = 0xf << 14;
 
         GPURingBufferOffset allocTransientVertexBuffer(uint32_t size);
         GPURingBufferOffset allocTransientIndexBuffer(uint32_t size);
@@ -35,7 +39,7 @@ namespace hpl {
         std::array<GeometrySet, NumOfAllocationSets> m_geometrySets;
 
         ForgeRenderer* m_renderer;
-        GPURingBuffer* m_transientVertexBuffer = nullptr;
-        GPURingBuffer* m_transientIndeciesBuffer = nullptr;
+        GPURingBuffer m_transientVertexBuffer{};
+        GPURingBuffer m_transientIndeciesBuffer{};
     };
 } // namespace hpl

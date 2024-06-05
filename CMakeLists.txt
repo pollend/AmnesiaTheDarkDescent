@@ -15,7 +15,6 @@ endif()
 include("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
 add_definitions(
-    -DUSE_THE_FORGE_LEGACY
     # -DUSE_FORWARD_PLUS_BACKEND # prototype forward renderer
 )
 

@@ -1,0 +1,113 @@
+
+// This is also a good place to do non-linear depth conversion for cases where one wants the 'radius' (effectively the threshold between near-field and far-field GI), 
+// is required to be non-linear (i.e. very large outdoors environments).
+lpfloat XeGTAO_ClampDepth( float depth )
+{
+//#ifdef XE_GTAO_USE_HALF_FLOAT_PRECISION
+//    return (lpfloat)clamp( depth, 0.0, 65504.0 );
+//#else
+    return clamp( depth, 0.0, 3.402823466e+38 );
+//#endif
+}
+
+
+#define XE_GTAO_DEFAULT_FALLOFF_RANGE (0.615f  )  // distant samples contribute less
+#define XE_GTAO_DEFAULT_RADIUS_MULTIPLIER (1.457f  )  // allows us to use different value as compared to ground truth radius to counter inherent screen space biases
+#define XE_GTAO_DEFAULT_RADIUS (1.2f)  // allows us to use different value as compared to ground truth radius to counter inherent screen space biases
+
+RES(SamplerState, depthSampler, UPDATE_FREQ_NONE, s4, binding = 3); 
+
+RES(Tex2D(float), inputDepth, UPDATE_FREQ_PER_FRAME, u0, binding = 1)
+RES(RWTex2D(float4), outDepthMIP0, UPDATE_FREQ_PER_FRAME, u0, binding = 1);
+RES(RWTex2D(float4), outDepthMIP1, UPDATE_FREQ_PER_FRAME, u0, binding = 1);
+RES(RWTex2D(float4), outDepthMIP2, UPDATE_FREQ_PER_FRAME, u0, binding = 1);
+RES(RWTex2D(float4), outDepthMIP3, UPDATE_FREQ_PER_FRAME, u0, binding = 1);
+
+GroupShared(atomic_uint, workGroupOutputSlot[8][8]);
+
+CBUFFER(uniformBlock_rootcbv, UPDATE_FREQ_NONE, b2, binding = 5) {
+  DATA(float2, pixelSize, None);
+};
+
+float XeGTAO_DepthMIPFilter(float depth0, float depth1, float depth2, float  depth3)
+{
+    float maxDepth = max( max( depth0, depth1 ), max( depth2, depth3 ) );
+    const float depthRangeScaleFactor = 0.75; // found empirically :)
+    const float effectRadius = depthRangeScaleFactor * XE_GTAO_DEFAULT_RADIUS * XE_GTAO_DEFAULT_RADIUS_MULTIPLIER;
+    const float falloffRange = XE_GTAO_DEFAULT_FALLOFF_RANGE * effectRadius;
+    const float falloffFrom = effectRadius * (1.0 - XE_GTAO_DEFAULT_FALLOFF_RANGE);
+    // fadeout precompute optimisation
+    const float falloffMul = -1.0 / ( falloffRange );
+    const falloffAdd = falloffFrom / ( falloffRange ) + (lpfloat)1.0;
+
+    float weight0 = saturate( (maxDepth-depth0) * falloffMul + falloffAdd );
+    float weight1 = saturate( (maxDepth-depth1) * falloffMul + falloffAdd );
+    float weight2 = saturate( (maxDepth-depth2) * falloffMul + falloffAdd );
+    float weight3 = saturate( (maxDepth-depth3) * falloffMul + falloffAdd );
+
+    float weightSum = weight0 + weight1 + weight2 + weight3;
+    return (weight0 * depth0 + weight1 * depth1 + weight2 * depth2 + weight3 * depth3) / weightSum;
+}
+
+
+NUM_THREADS(8, 8,  1)
+void CS_MAIN( SV_DispatchThreadID(uint3) dispatchThreadID, SV_GroupThreadID(uint3) threadInGroupId, SV_GroupID(uint3) groupId) 
+{ 
+    // MIP 0
+    const uint2 baseCoord = dispatchThreadID;
+    const uint2 pixCoord = baseCoord * 2;
+    float4 depths4 = GatherRedOffsetTex2D( inputDepth, depthSampler, float2(pixCoord * Get(pixelSize)), int2(1,1) );
+	  Write2D(Get(outDepthMIP0), pixCoord + uint2(0,0), depths4.r);
+	  Write2D(Get(outDepthMIP0), pixCoord + uint2(1,0), depths4.g);
+	  Write2D(Get(outDepthMIP0), pixCoord + uint2(0,1), depths4.b);
+	  Write2D(Get(outDepthMIP0), pixCoord + uint2(1,1), depths4.a);
+
+    // MIP 1
+    float dm1 = XeGTAO_DepthMIPFilter( depth0, depth1, depth2, depth3);
+    Write2D(Get(outDepthMIP1), baseCoord, dm1);
+    Get(workGroupOutputSlot)[groupId.x][groupId.y] = dm1;
+
+	  GroupMemoryBarrier();
+
+    // MIP 2
+    if( all( ( groupThreadID.xy % 2.xx ) == 0 ) )
+    {
+        float inTL = Get(workGroupOutputSlot)[groupId.x+0][groupId.y+0];
+        float inTR = Get(workGroupOutputSlot)[groupId.x+1][groupId.y+0];
+        float inBL = Get(workGroupOutputSlot)[groupId.x+0][groupId.y+1];
+        float inBR = Get(workGroupOutputSlot)[groupId.x+1][groupId.y+1];
+        float dm2 = XeGTAO_DepthMIPFilter(inTL, inTR, inBL, inBR);
+        outDepth2[ baseCoord / 2 ] = (lpfloat)dm2;
+        g_scratchDepths[ groupThreadID.x ][ groupThreadID.y ] = dm2;
+    }
+
+	GroupMemoryBarrier();
+
+    // MIP 3
+    if( all( ( groupThreadID.xy % 4.xx ) == 0 ) )
+    {
+        lpfloat inTL = g_scratchDepths[groupId.x+0][groupId.y+0];
+        lpfloat inTR = g_scratchDepths[groupId.x+2][groupId.y+0];
+        lpfloat inBL = g_scratchDepths[groupId.x+0][groupId.y+2];
+        lpfloat inBR = g_scratchDepths[groupId.x+2][groupId.y+2];
+
+        lpfloat dm3 = XeGTAO_DepthMIPFilter( inTL, inTR, inBL, inBR, consts );
+        outDepth3[ baseCoord / 4 ] = (lpfloat)dm3;
+        g_scratchDepths[ groupThreadID.x ][ groupThreadID.y ] = dm3;
+    }
+
+	GroupMemoryBarrier();
+
+    // MIP 4
+    if( all( ( groupThreadID.xy % 8.xx ) == 0 ) )
+    {
+        lpfloat inTL = g_scratchDepths[groupThreadID.x+0][groupThreadID.y+0];
+        lpfloat inTR = g_scratchDepths[groupThreadID.x+4][groupThreadID.y+0];
+        lpfloat inBL = g_scratchDepths[groupThreadID.x+0][groupThreadID.y+4];
+        lpfloat inBR = g_scratchDepths[groupThreadID.x+4][groupThreadID.y+4];
+
+        lpfloat dm4 = XeGTAO_DepthMIPFilter( inTL, inTR, inBL, inBR, consts );
+        outDepth4[ baseCoord / 8 ] = (lpfloat)dm4;
+        //g_scratchDepths[ groupThreadID.x ][ groupThreadID.y ] = dm4;
+    }
+}

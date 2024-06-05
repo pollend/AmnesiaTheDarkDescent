@@ -1,0 +1,41 @@
+#include "scene_resource.h.fsl"
+#include "math_utils.h.fsl"
+
+
+STRUCT(PsIn)
+{
+        DATA(float4,     Position,  SV_Position);
+        DATA(float2,     uv,        TEXCOORD0);
+#if !defined(INDIRECT_ROOT_CONSTANT)
+        DATA(FLAT(uint), drawID,    TEXCOORD1);
+#endif
+};
+
+float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
+{
+    INIT_MAIN;
+
+    #if !defined(INDIRECT_ROOT_CONSTANT)
+        UniformObject obj = Get(sceneObjects)[In.drawID];
+    #else 
+        UniformObject obj = Get(sceneObjects)[Get(indirectDrawId)];
+    #endif
+  
+    DiffuseMaterial material = Get(sceneDiffuseMat)[obj.materialIndex];  
+    
+    float diffuseAlpha = 1.0;
+    float4 value;
+    const uint alphaTextureIndex = material.alphaTextureIndex;
+    if(isTextureIndexValid(alphaTextureIndex)) {
+        BeginNonUniformResourceIndex(alphaTextureIndex, SCENE_MAX_TEXTURE_COUNT);
+            diffuseAlpha = ((material.config & MATERIAL_IS_ALPHA_SINGLE_CHANNEL) > 0) ? SampleTex2D(Get(sceneTextures)[alphaTextureIndex], Get(sceneSampler), In.uv.xy).r : SampleTex2D(Get(sceneTextures)[alphaTextureIndex], Get(sceneSampler), In.uv.xy).a;
+	    EndNonUniformResourceIndex();
+    }
+
+    if(diffuseAlpha < 0.5) {
+        discard;
+    }
+
+    RETURN(float4(0,0,0,0));
+}
+

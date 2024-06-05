@@ -1631,7 +1631,7 @@ void cLuxInventory::CreateBackground()
     }
     {
 	    auto* renderer = viewport->GetRenderer();
-        auto frame = forgeRenderer->GetFrame();
+        auto& frame = forgeRenderer->GetFrame();
 	    auto screenSize = viewport->GetSize();
         auto outputRt = renderer->GetOutputImage(frame.m_frameIndex, *viewport);
         {

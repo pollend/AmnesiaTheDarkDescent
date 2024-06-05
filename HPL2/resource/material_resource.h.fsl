@@ -29,7 +29,6 @@ INLINE bool HasDissolveAlpha(uint _textureConfig)  { return (_textureConfig & (1
 INLINE bool HasCubeMapAlpha(uint _textureConfig)   { return (_textureConfig & (1 << 8)) != 0; }
 
 
-
 INLINE bool IsHeightMapSingleChannel(uint _textureConfig)   { return (_textureConfig & (1 << 9)) != 0; }
 INLINE bool IsAlphaSingleChannel(uint _textureConfig)   { return (_textureConfig & (1 << 10)) != 0; }
 

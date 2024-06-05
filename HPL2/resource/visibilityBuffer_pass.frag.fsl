@@ -1,0 +1,21 @@
+#include "scene_resource.h.fsl"
+#include "math_utils.h.fsl"
+
+STRUCT(PsIn)
+{
+	DATA(float4,     position,  SV_Position);
+#if !defined(INDIRECT_ROOT_CONSTANT)
+	DATA(FLAT(uint), drawID,   TEXCOORD0);
+#endif
+};
+
+float4 PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
+{
+	INIT_MAIN;
+	#if !defined(INDIRECT_ROOT_CONSTANT)
+        RETURN(unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(In.drawID, primitiveID))); 
+  #else 
+        RETURN(unpackUnorm4x8(SCENE_VIZ_ALPHA_ID(Get(indirectDrawId), primitiveID))); 
+  #endif
+}
+

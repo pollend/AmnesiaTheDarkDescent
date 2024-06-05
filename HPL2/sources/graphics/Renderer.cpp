@@ -68,212 +68,7 @@ namespace hpl
     eParallaxQuality iRenderer::mParallaxQuality = eParallaxQuality_Low;
     bool iRenderer::mbParallaxEnabled = true;
     bool iRenderer::mbRefractionEnabled = true;
-
-    //-----------------------------------------------------------------------
-
     int iRenderer::mlRenderFrameCount = 0;
-
-    namespace rendering::detail
-    {
-
-        cRect2l GetClipRectFromObject(iRenderable* apObject, float afPaddingPercent, cFrustum* apFrustum, const cVector2l& avScreenSize, float afHalfFovTan) {
-            cBoundingVolume* pBV = apObject->GetBoundingVolume();
-
-            cRect2l clipRect;
-            if (afHalfFovTan == 0)
-                afHalfFovTan = tan(apFrustum->GetFOV() * 0.5f);
-            cMath::GetClipRectFromBV(clipRect, *pBV, apFrustum, avScreenSize, afHalfFovTan);
-
-            // Add 20% padding on clip rect
-            int lXInc = (int)((float)clipRect.w * afHalfFovTan);
-            int lYInc = (int)((float)clipRect.h * afHalfFovTan);
-
-            clipRect.x = cMath::Max(clipRect.x - lXInc, 0);
-            clipRect.y = cMath::Max(clipRect.y - lYInc, 0);
-            clipRect.w = cMath::Min(clipRect.w + lXInc * 2, avScreenSize.x - clipRect.x);
-            clipRect.h = cMath::Min(clipRect.h + lYInc * 2, avScreenSize.y - clipRect.y);
-
-            return clipRect;
-        }
-
-        void WalkAndPrepareRenderList(iRenderableContainer* container,cFrustum* frustum, std::function<void(iRenderable*)> handler, tRenderableFlag renderableFlag) {
-
-            std::function<void(iRenderableContainerNode * childNode)> walkRenderables;
-            walkRenderables = [&](iRenderableContainerNode* childNode) {
-                childNode->UpdateBeforeUse();
-                for (auto& childNode : childNode->GetChildNodes()) {
-                    childNode->UpdateBeforeUse();
-                    eCollision frustumCollision = frustum->CollideNode(childNode);
-                    if (frustumCollision == eCollision_Outside) {
-                        continue;
-                    }
-                    if (frustum->CheckAABBNearPlaneIntersection(childNode->GetMin(), childNode->GetMax())) {
-                        cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), childNode->GetCenter());
-                        childNode->SetViewDistance(vViewSpacePos.z);
-                        childNode->SetInsideView(true);
-                    } else {
-                        // Frustum origin is outside of node. Do intersection test.
-                        cVector3f vIntersection;
-                        cMath::CheckAABBLineIntersection(
-                            childNode->GetMin(), childNode->GetMax(), frustum->GetOrigin(), childNode->GetCenter(), &vIntersection, NULL);
-                        cVector3f vViewSpacePos = cMath::MatrixMul(frustum->GetViewMatrix(), vIntersection);
-                        childNode->SetViewDistance(vViewSpacePos.z);
-                        childNode->SetInsideView(false);
-                    }
-                    walkRenderables(childNode);
-                }
-                for (auto& pObject : childNode->GetObjects()) {
-                    if (!rendering::detail::IsObjectIsVisible(pObject, renderableFlag, {})) {
-                        continue;
-                    }
-                    handler(pObject);
-                }
-            };
-            auto rootNode = container->GetRoot();
-            rootNode->UpdateBeforeUse();
-            rootNode->SetInsideView(true);
-            walkRenderables(rootNode);
-        }
-
-
-        void UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-            cRenderList* apRenderList,
-            cFrustum* frustum,
-            iRenderableContainerNode* apNode,
-            std::span<cPlanef> clipPlanes,
-            tRenderableFlag neededFlags) {
-            apNode->UpdateBeforeUse();
-
-            ///////////////////////////////////////
-            // Get frustum collision, if previous was inside, then this is too!
-            eCollision frustumCollision = frustum->CollideNode(apNode);
-
-            ////////////////////////////////
-            // Do a visible check but always iterate the root node!
-            if (apNode->GetParent()) {
-                if (frustumCollision == eCollision_Outside) {
-                    return;
-                }
-                if (detail::IsRenderableNodeIsVisible(apNode, clipPlanes) == false) {
-                    return;
-                }
-            }
-
-            ////////////////////////
-            // Iterate children
-            if (apNode->HasChildNodes()) {
-                for(auto& node: apNode->GetChildNodes()) {
-                    UpdateRenderListWalkAllNodesTestFrustumAndVisibility(apRenderList, frustum, node, clipPlanes, neededFlags);
-                }
-            }
-
-            /////////////////////////////
-            // Iterate objects
-            if (apNode->HasObjects()) {
-                for(auto& object: apNode->GetObjects()) {
-                    if (detail::IsObjectIsVisible(object, neededFlags) == false) {
-                        continue;
-                    }
-
-                    if (frustumCollision == eCollision_Inside || object->CollidesWithFrustum(frustum)) {
-                        apRenderList->AddObject(object);
-                    }
-                }
-            }
-        }
-
-        eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax)
-        {
-            if (aMax == eShadowMapResolution_High)
-            {
-                return aWanted;
-            }
-            else if (aMax == eShadowMapResolution_Medium)
-            {
-                return aWanted == eShadowMapResolution_High ? eShadowMapResolution_Medium : aWanted;
-            }
-            return eShadowMapResolution_Low;
-        }
-
-
-        bool IsRenderableNodeIsVisible(iRenderableContainerNode* apNode, std::span<cPlanef> clipPlanes) {
-            for(auto& plane: clipPlanes)
-            {
-                if (cMath::CheckPlaneAABBCollision(plane, apNode->GetMin(), apNode->GetMax(), apNode->GetCenter(), apNode->GetRadius()) ==
-                    eCollision_Outside)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        bool IsObjectVisible(iRenderable* apObject, tRenderableFlag alNeededFlags, std::span<cPlanef> occlusionPlanes)
-        {
-            if (!apObject->IsVisible())
-            {
-                return false;
-            }
-
-            if ((apObject->GetRenderFlags() & alNeededFlags) != alNeededFlags)
-            {
-                return false;
-            }
-
-            for (auto& plane : occlusionPlanes)
-            {
-                cBoundingVolume* pBV = apObject->GetBoundingVolume();
-                if (cMath::CheckPlaneBVCollision(plane, *pBV) == eCollision_Outside)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-
-        void UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-            cRenderList* apRenderList,
-            cFrustum* frustum,
-            iRenderableContainer* apContainer,
-            std::span<cPlanef> clipPlanes,
-            tRenderableFlag neededFlags) {
-            apContainer->UpdateBeforeRendering();
-
-            rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-                apRenderList,
-                frustum,
-                apContainer->GetRoot(),
-                clipPlanes,
-                neededFlags);
-        }
-
-        bool IsObjectIsVisible(
-            iRenderable* object,
-            tRenderableFlag neededFlags,
-            std::span<cPlanef> clipPlanes) {
-
-            if (object->IsVisible() == false)
-                return false;
-
-            /////////////////////////////
-            // Check flags
-            if ((object->GetRenderFlags() & neededFlags) != neededFlags)
-                return false;
-
-            if (!clipPlanes.empty())
-            {
-                cBoundingVolume* pBV = object->GetBoundingVolume();
-                for(auto& planes: clipPlanes)
-                {
-                    if (cMath::CheckPlaneBVCollision(planes, *pBV) == eCollision_Outside) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-    } // namespace rendering::detail
 
     bool cRendererNodeSortFunc::operator()(const iRenderableContainerNode* apNodeA, const iRenderableContainerNode* apNodeB) const
     {
@@ -287,13 +82,11 @@ namespace hpl
 
     cRenderSettings::cRenderSettings(bool abIsReflection)
     {
-        ////////////////////////
         // Set up General Variables
         mbIsReflection = abIsReflection;
 
         mClearColor = cColor(0, 0);
 
-        ////////////////////////
         // Set up Render Variables
         // Change this later I assume:
         mlMinimumObjectsBeforeOcclusionTesting = 0; // 8;//8 should be good default, giving a good amount of colliders, or? Clarifiction:
@@ -311,7 +104,6 @@ namespace hpl
 
         mbRenderWorldReflection = true;
 
-        ////////////////////////
         // Set up Shadow Variables
         mbRenderShadows = true;
         mfShadowMapBias = 4; // The constant bias
@@ -365,9 +157,6 @@ namespace hpl
         bool abSendFrameBufferToPostEffects,
         bool abAtStartOfRendering)
     {
-        //////////////////////////////////////////
-        // Set up variables
-        mfCurrentFrameTime = afFrameTime;
         mpCurrentSettings = apSettings;
     }
 

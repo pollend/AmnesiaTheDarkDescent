@@ -120,19 +120,13 @@ namespace hpl {
 	class cMaterial : public iResourceBase {
 	friend class iMaterialType;
 	public:
-		static constexpr uint32_t MaxMaterialID = 2048;
+        static constexpr uint32_t MaxMaterialID = 2048;
+        static constexpr uint32_t MaxParticleMaterialID = 1024;
         static constexpr bool IsTranslucent(const MaterialID id) {
             return id == MaterialID::Water ||
                 id == MaterialID::Translucent ||
                 id == MaterialID::Decal;
         }
-
-        enum TextureAntistropy {
-            Antistropy_None = 0,
-            Antistropy_8 = 1,
-            Antistropy_16 = 2,
-            Antistropy_Count = 3
-        };
 
 		struct MaterialUserVariable {
 			const char* m_name;
@@ -229,7 +223,7 @@ namespace hpl {
 		inline uint32_t Generation() { return m_generation; }
 	    inline void IncreaseGeneration() { m_generation++; }
     private:
-        TextureAntistropy m_antistropy = Antistropy_None;
+        TextureAntistropy m_antistropy = TextureAntistropy::Antistropy_None;
         eTextureWrap m_textureWrap = eTextureWrap::eTextureWrap_Clamp;
         eTextureFilter m_textureFilter = eTextureFilter::eTextureFilter_Nearest;
 

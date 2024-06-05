@@ -52,7 +52,7 @@ namespace hpl {
             inline SharedBuffer& indexBuffer() { return m_geometrySet->m_indexBuffer; }
             inline std::span<GeometryStream> vertexStreams() { return m_geometrySet->m_vertexStreams; }
             inline std::span<GeometryStream>::iterator getStreamBySemantic(ShaderSemantic semantic) {return m_geometrySet->getStreamBySemantic(semantic);}
-            inline uint32_t vertextOffset() { return m_vertexAllocation.offset; }
+            inline uint32_t vertexOffset() { return m_vertexAllocation.offset; }
             inline uint32_t indexOffset() { return m_indexAllocation.offset; }
 
         private:
@@ -77,7 +77,7 @@ namespace hpl {
         inline SharedBuffer& indexBuffer() { return m_indexBuffer; }
         void operator=(GeometrySet&& set);
         void operator=(const GeometrySet& set) = delete;
-        std::shared_ptr<GeometrySetSubAllocation> allocate(uint32_t numElements, uint32_t numIndecies);
+        std::shared_ptr<GeometrySet::GeometrySetSubAllocation> allocate(uint32_t numElements, uint32_t numIndecies);
     private:
         OffsetAllocator::Allocator m_vertexStreamAllocator;
         OffsetAllocator::Allocator m_indexStreamAllocator;

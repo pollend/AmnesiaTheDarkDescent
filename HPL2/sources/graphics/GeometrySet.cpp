@@ -22,6 +22,18 @@ namespace hpl {
         auto subAllocation = std::make_shared<GeometrySet::GeometrySetSubAllocation>();
         subAllocation->m_indexAllocation = m_indexStreamAllocator.allocate(numIndecies);
         subAllocation->m_vertexAllocation = m_vertexStreamAllocator.allocate(numElements);
+
+        auto vertexStorageReport = m_vertexStreamAllocator.storageReport();
+        auto indexStorageReport = m_indexStreamAllocator.storageReport();
+        LOGF(LogLevel::eINFO, "vertex storage total free space: %d largest region: %d", vertexStorageReport.totalFreeSpace, vertexStorageReport.largestFreeRegion);
+        LOGF(LogLevel::eINFO, "index storage total free space: %d largest region: %d", indexStorageReport.totalFreeSpace, indexStorageReport.largestFreeRegion);
+
+        ASSERT(subAllocation->m_indexAllocation.offset != OffsetAllocator::Allocation::NO_SPACE);
+        ASSERT(subAllocation->m_indexAllocation.metadata != OffsetAllocator::Allocation::NO_SPACE);
+        ASSERT(subAllocation->m_vertexAllocation.offset != OffsetAllocator::Allocation::NO_SPACE);
+        ASSERT(subAllocation->m_vertexAllocation.metadata != OffsetAllocator::Allocation::NO_SPACE);
+
+
         subAllocation->m_geometrySet = this;
 
         return subAllocation;
@@ -49,8 +61,10 @@ namespace hpl {
             vertexStream.m_buffer.Load([&](Buffer** buffer) {
                 BufferLoadDesc loadDesc = {};
                 loadDesc.ppBuffer = buffer;
-                loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
+                loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER | DESCRIPTOR_TYPE_BUFFER_RAW;
                 loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+                loadDesc.mDesc.mStructStride = vertexStream.m_stride;
+                loadDesc.mDesc.mElementCount = numElements;
                 loadDesc.mDesc.mSize = numElements * vertexStream.m_stride;
                 loadDesc.mDesc.pName = desc.m_name;
                 addResource(&loadDesc, nullptr);
@@ -60,8 +74,10 @@ namespace hpl {
         m_indexBuffer.Load([&](Buffer** buffer) {
             BufferLoadDesc loadDesc = {};
             loadDesc.ppBuffer = buffer;
-            loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
+            loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER | DESCRIPTOR_TYPE_BUFFER_RAW;
             loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+            loadDesc.mDesc.mStructStride = sizeof(uint32_t);
+            loadDesc.mDesc.mElementCount = numIndecies;
             loadDesc.mDesc.mSize = numIndecies * sizeof(uint32_t);
             loadDesc.mDesc.pName = "GeometrySet Index";
             addResource(&loadDesc, nullptr);

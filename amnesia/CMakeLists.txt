@@ -144,6 +144,10 @@ endif()
 ##    ARGS -E copy_directory  "${_HPL2_COMPILEDSHADER_}" "$<TARGET_FILE_DIR:Amnesia>/CompiledShaders"
 ##)
 copy_shader_to_target_dir(Amnesia)
+add_custom_command ( TARGET Amnesia POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+       ${CMAKE_CURRENT_SOURCE_DIR}/gpu.cfg $<TARGET_FILE_DIR:Amnesia>
+    )
 
 target_compile_definitions(Amnesia PUBLIC AMNESIA_TDD_VERSION="${AMNESIA_TDD_VERSION}")
 target_compile_definitions(Amnesia PUBLIC AMNESIA_TDD_TAG="${AMNESIA_TDD_TAG}")

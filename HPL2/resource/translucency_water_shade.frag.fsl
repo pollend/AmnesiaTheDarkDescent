@@ -1,0 +1,144 @@
+#include "scene_resource.h.fsl"
+#include "math_utils.h.fsl"
+#include "parallax_bindless.h.fsl"
+
+STRUCT(PsIn)
+{
+        DATA(float4,     Position,  SV_Position);
+        DATA(float3,     pos,       POSITION);
+        DATA(float2,     uv,        TEXCOORD0);
+#if !defined(INDIRECT_ROOT_CONSTANT)
+        DATA(FLAT(uint), drawID,    TEXCOORD1);
+#endif
+        DATA(float3,     normal,    NORMAL);
+        DATA(float3,     tangent,   TANGENT);
+        DATA(float3,     bitangent, BITANGENT);
+	    DATA(float4, Color, COLOR);
+};
+
+STRUCT(PsOut)
+{
+    DATA(float4, diffuse, SV_Target0);
+};
+
+PsOut PS_MAIN(PsIn In, SV_PrimitiveID(uint) primitiveID)
+{
+    INIT_MAIN;
+    PsOut Out;
+    #if !defined(INDIRECT_ROOT_CONSTANT)
+        UniformObject obj = Get(sceneObjects)[In.drawID];
+    #else 
+        UniformObject obj = Get(sceneObjects)[Get(indirectDrawId)];
+    #endif
+    ViewportInfo viewInfo = Get(viewport);
+
+    WaterMaterial material = Get(sceneWaterMat)[obj.materialIndex];  
+
+    float waveAft = Get(worldInfo).afT * material.waveSpeed;
+    float waveAmplitude = material.waveAmplitude * WAVE_AMPLITUDE_SCALE;
+    float waveFrequency = material.waveFreq * WAVE_FREQUENCY_SCALE;
+
+    //Get the two uv coords
+    float fT1 = waveAft * 0.8;
+    float2 vUv1 = In.uv + waveAft * 0.01f;
+    vUv1.x += sin(fT1 + vUv1.y * waveFrequency) * waveAmplitude;
+    vUv1.y += sin(fT1 + vUv1.x * waveFrequency) * waveAmplitude; 
+
+    float fT2 = waveAft * -2.6;
+    float2 vUv2 = In.uv + waveAft * -0.012f;
+    vUv2.x += sin(fT2 + vUv2.y * waveFrequency * 1.2) * waveAmplitude * 0.75;
+    vUv2.y += sin(fT2 + vUv2.x * waveFrequency * 1.2) * waveAmplitude * 0.75;
+
+    //Get the normals and combine into final normal
+    // (No need for full unpack since there is a normalize later)
+    float3 vNormal1;// = SampleTex2D(Get(normalMap), Get(materialSampler), vUv1).xyz - 0.5;
+    float3 vNormal2;// = SampleTex2D(Get(normalMap), Get(materialSampler), vUv2).xyz - 0.5;
+
+    const uint normalTextureIndex = material.normalTextureIndex;
+    BeginNonUniformResourceIndex(normalTextureIndex);
+      vNormal1 = SampleTex2D(Get(sceneTextures)[normalTextureIndex], Get(sceneSampler),  vUv1).xyz - 0.5;
+      vNormal2 = SampleTex2D(Get(sceneTextures)[normalTextureIndex], Get(sceneSampler),  vUv2).xyz - 0.5;
+    EndNonUniformResourceIndex(); 
+
+    float3 vFinalNormal = normalize(vNormal1*0.7 + vNormal2*0.3);
+
+    //Get the diffuse color
+    const uint diffuseTextureIndex = material.diffuseTextureIndex;
+    float4 surfaceColor = float4(0,0,0,0); 
+    BeginNonUniformResourceIndex(diffuseTextureIndex);
+      surfaceColor = SampleTex2D(Get(sceneTextures)[diffuseTextureIndex], Get(sceneSampler), vUv1);
+    EndNonUniformResourceIndex(); 
+
+    float4 vRefractionColor = float4(1,1,1,1);
+    float2 vDistortedScreenPos = float2(0.0,0.0);
+    if((material.config & MATERIAL_USE_REFRACTION) > 0) {
+        float fInvDist = min(1.0 / In.pos.z, 10.0);
+        vDistortedScreenPos = In.Position.xy  + (viewInfo.rect.z * vFinalNormal.xy * material.refractionScale * fInvDist);
+        vRefractionColor = SampleTex2D(Get(refractionTexture), Get(linearBorderSampler), vDistortedScreenPos * (1.0 / viewInfo.rect.zw));
+      //  if(vRefractionColor.a < 0.5) {
+      //      vRefractionColor = SampleTex2D(Get(refractionMap), Get(nearestSampler), In.Position.xy * Get(viewTexel));
+      //  }
+     }
+
+
+    float4 vReflectionColor = float4(1.0,1.0,1.0,1.0);
+    float fFresnel = 1.0;
+    if((material.config & MATERIAL_USE_REFLECTION ) > 0) {
+        //////////////////
+        //Fresnel
+        float3 vScreenNormal = normalize(vFinalNormal.x * In.tangent + vFinalNormal.y * In.bitangent + vFinalNormal.z * In.normal);
+        float3 vEyeVec = normalize(In.pos);
+
+        float afEDotN = max(dot(-vEyeVec, vScreenNormal),0.0);
+        fFresnel = Fresnel(afEDotN, material.frenselBias, material.frenselPow);
+
+        if(material.reflectionFadeEnd > 0) {
+            const float refractionFadeLength = material.reflectionFadeEnd - material.reflectionFadeStart;  
+            fFresnel *= 1.0 - clamp( (In.pos.z - material.reflectionFadeStart) / refractionFadeLength, 0.0, 1.0);
+        }
+
+        //////////////////
+        //Cubemap
+        if(isTextureIndexValid(material.cubeMapTextureIndex)) {
+            float3 vEnvUv = reflect(vEyeVec, vScreenNormal);
+            
+            vEnvUv = mul(transpose(float3x3(
+              viewInfo.viewMat[0].xyz,
+              viewInfo.viewMat[1].xyz,
+              viewInfo.viewMat[2].xyz)), vEnvUv);
+     //       vEnvUv = mul(Get(invViewRotationMat), float4(vEnvUv.x, vEnvUv.y, vEnvUv.z, 1)).xyz;
+            //vReflectionColor = SampleTexCube(Get(cubeMap),  Get(materialSampler), vEnvUv);
+        
+            const uint cubeMapTextureIndex = material.cubeMapTextureIndex; 
+            BeginNonUniformResourceIndex(cubeMapTextureIndex);
+              vReflectionColor = SampleTexCube(Get(sceneCubeTextures)[cubeMapTextureIndex], Get(sceneSampler), vEnvUv);
+            EndNonUniformResourceIndex(); 
+        } else {
+            //vReflectionColor = SampleTex2D(Get(reflectionMap)[ReflectionBuffer(Get(options))], Get(nearestSampler), vDistortedScreenPos * Get(viewTexel));
+        }
+    }
+
+
+    float3 vLightDir = normalize(float3(0.5, 0.5, 0.5));
+    float fLDotN = max(dot(vLightDir, vFinalNormal),0.0);
+    float fDiffuse =  fLDotN * 0.5 + 0.5;
+    float fSpecular = pow(fLDotN,16.0);
+
+    float fFogAmount = 0.0;
+    if ((Get(worldInfo).worldFlags & WORLD_FLAG_IS_FOG_ENABLED) > 0) {
+        fFogAmount =  pow(clamp((-In.pos.z - Get(worldInfo).worldFogStart) / Get(worldInfo).worldFogLength, 0.0, 1.0), Get(worldInfo).fogFalloffExp) * Get(worldInfo).worldFogColor.a;
+    }
+
+    if ((material.config & MATERIAL_USE_REFLECTION ) > 0) {
+        Out.diffuse.rgb = (surfaceColor.xyz * vRefractionColor.xyz + vReflectionColor.xyz * fFresnel) * (1.0-fFogAmount) + Get(worldInfo).worldFogColor.xyz*fFogAmount;
+    } else {
+        Out.diffuse.rgb = (surfaceColor.xyz * vRefractionColor.xyz * fDiffuse + float3(fSpecular, fSpecular, fSpecular)) * (1.0-fFogAmount) + Get(worldInfo).worldFogColor.xyz*fFogAmount;
+    }
+
+    Out.diffuse.w = 1.0;
+    RETURN(Out);
+}
+
+
+
+

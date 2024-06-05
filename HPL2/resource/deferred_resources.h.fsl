@@ -123,7 +123,6 @@ PUSH_CONSTANT(materialRootConstant, b0)
     DATA(float, sceneAlpha, None);
 
 };
-
 // translucency 
 INLINE uint BlendModeTrans(uint _options) { return  (_options & 0xf); } 
 INLINE uint ReflectionBuffer(uint _options) { return (_options >> 4) & 0x7; }

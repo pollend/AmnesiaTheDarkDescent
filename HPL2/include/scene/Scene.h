@@ -66,7 +66,7 @@ namespace hpl {
 		 * Called by cEngine
 		 */
 		void Render(float afFrameTime, tFlag alFlags) {} //TODO MP: this needs to be replaced
-		void Render(const ForgeRenderer::Frame&, float afFrameTime, tFlag alFlags);
+		void Render(ForgeRenderer::Frame&, float afFrameTime, tFlag alFlags);
 
 		void Update(float timeStep);
 

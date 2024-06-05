@@ -1,0 +1,50 @@
+#include "scene_resource.h.fsl"
+#include "math_utils.h.fsl"
+
+STRUCT(VSInput)
+{
+	DATA(float3, Position, POSITION);
+	DATA(float2, TexCoord, TEXCOORD0);
+	DATA(float3, Normal, NORMAL);
+	DATA(float3, Tangent, TANGENT);
+};
+
+STRUCT(VSOutput)
+{
+	DATA(float4,     Position,  SV_Position);
+	DATA(float3,     pos,       POSITION);
+	DATA(float2,     uv,        TEXCOORD0);
+#if !defined(INDIRECT_ROOT_CONSTANT)
+    DATA(FLAT(uint), drawID,    TEXCOORD1);
+#endif
+	DATA(float3,     normal,    NORMAL);
+	DATA(float3,     tangent,   TANGENT);
+	DATA(float3,     bitangent, BITANGENT);
+};
+
+VSOutput VS_MAIN(VSInput In, SV_InstanceID(uint) InstanceID)
+{
+    INIT_MAIN;
+    VSOutput Out;
+
+    #if !defined(INDIRECT_ROOT_CONSTANT)
+        Out.drawID = InstanceID; 
+        const UniformObject obj = Get(sceneObjects)[InstanceID];
+    #else 
+        const UniformObject obj = Get(sceneObjects)[Get(indirectDrawId)];
+    #endif
+    ViewportInfo viewInfo = Get(viewport);
+    float4x4 modelView = mul(viewInfo.viewMat, obj.modelMat);
+    float4x4 modelViewPrj = mul(viewInfo.projMat, modelView);
+
+    Out.pos = mul(modelView, float4(In.Position.xyz, 1.0)).xyz;
+    Out.uv = mul(obj.uvMat, float4(In.TexCoord, 0, 1.0)).xy;
+    float3x3 normalMat = ToNormalMat(obj.invModelMat, viewInfo.invViewMat);
+    Out.normal = normalize(mul(normalMat, In.Normal.xyz));
+    Out.tangent = normalize(mul(normalMat, In.Tangent.xyz));
+    Out.bitangent = normalize(mul(normalMat, cross(In.Tangent.xyz, In.Normal.xyz)));
+    Out.Position = mul(modelViewPrj, float4(In.Position.xyz, 1.0));
+
+    RETURN(Out);
+}
+

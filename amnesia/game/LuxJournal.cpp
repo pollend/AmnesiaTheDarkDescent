@@ -1892,7 +1892,7 @@ void cLuxJournal::CreateBackground()
 	auto* viewport = gpBase->mpMapHandler->GetViewport();
 	auto* renderer = viewport->GetRenderer();
 	auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-    auto frame = forgeRenderer->GetFrame();
+    auto& frame = forgeRenderer->GetFrame();
 	auto screenSize = viewport->GetSize();
     {
         iLowLevelGraphics* pLowGfx = mpGraphics->GetLowLevel();

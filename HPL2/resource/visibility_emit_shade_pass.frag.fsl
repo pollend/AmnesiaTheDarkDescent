@@ -1,0 +1,127 @@
+#include "scene_resource.h.fsl"
+#include "math_utils.h.fsl"
+#include "visiblity_defs.h.fsl"
+#include "visibility_utility.h.fsl"
+#include "math_utils.h.fsl"
+#include "parallax_bindless.h.fsl"
+
+STRUCT(PsIn)
+{
+    DATA(float4, position,  SV_Position);
+    DATA(float2, screenPos, TEXCOORD0);
+};
+
+
+float4 PS_MAIN(PsIn In)
+{
+  INIT_MAIN;
+    
+  const float4 visRaw = LoadTex2D(Get(visibilityTexture), Get(nearEdgeClampSampler), uint2(In.position.xy), 0);
+  // Unpack float4 render target data into uint to extract data
+  const uint objectId_triId = packUnorm4x8(visRaw);
+  const uint objectId = SCENE_VIZ_OBJECT_ID(objectId_triId);
+  const uint triId = SCENE_VIZ_PRIM_ID(objectId_triId);
+
+  if(objectId_triId == ~0u) {
+      discard;
+  }
+
+  UniformObject obj = Get(sceneObjects)[objectId];
+  uint startIndex = obj.indexOffset;
+  uint vertexOffset = obj.vertexOffset;
+  ViewportInfo viewInfo = Get(viewport);
+    
+  float4x4 vp = mul(viewInfo.projMat, viewInfo.viewMat);
+  float4x4 mvp = mul(vp, obj.modelMat);
+  float3x3 normalMat = ToNormalMat(obj.invModelMat, viewInfo.invViewMat);
+
+  uint triIdx0 = (triId * 3 + 0) + startIndex;
+  uint triIdx1 = (triId * 3 + 1) + startIndex;
+  uint triIdx2 = (triId * 3 + 2) + startIndex;
+
+  uint vtxIndex0 = LoadByte(Get(vtxOpaqueIndex), triIdx0 << 2) + vertexOffset;
+  uint vtxIndex1 = LoadByte(Get(vtxOpaqueIndex), triIdx1 << 2) + vertexOffset;
+  uint vtxIndex2 = LoadByte(Get(vtxOpaqueIndex), triIdx2 << 2) + vertexOffset;
+
+  // Load vertex data of the 3 vertices
+  float3 v0pos = asfloat(LoadByte4(Get(vtxOpaquePosition), vtxIndex0 * 12)).xyz;
+  float3 v1pos = asfloat(LoadByte4(Get(vtxOpaquePosition), vtxIndex1 * 12)).xyz;
+  float3 v2pos = asfloat(LoadByte4(Get(vtxOpaquePosition), vtxIndex2 * 12)).xyz;
+
+  float2 twoOverWindowSize = 1.5 / viewInfo.rect.zw; 
+  const float4 clipPos0 = mul(mvp, float4(v0pos, 1.0f));
+  const float4 clipPos1 = mul(mvp, float4(v1pos, 1.0f));
+  const float4 clipPos2 = mul(mvp, float4(v2pos, 1.0f));
+  BarycentricDeriv derivativesOut = CalcFullBary(clipPos0, clipPos1, clipPos2, In.screenPos, twoOverWindowSize);
+  
+  // TEXTURE COORD INTERPOLATION
+  GradientInterpolationResults results = Interpolate2DWithDeriv(derivativesOut, make_f3x2_cols(
+          asfloat(LoadByte4(Get(vtxOpaqueUv), vtxIndex0 * 8)).xy, // LoadByte2 is not avaliable 
+          asfloat(LoadByte4(Get(vtxOpaqueUv), vtxIndex1 * 8)).xy,
+          asfloat(LoadByte4(Get(vtxOpaqueUv), vtxIndex2 * 8)).xy 
+  ));
+  
+  float3 normal = InterpolateWithDeriv_float3x3(derivativesOut, make_f3x3_rows(
+      asfloat(LoadByte3(Get(vtxOpaqueNormal), vtxIndex0 * 12)),
+      asfloat(LoadByte3(Get(vtxOpaqueNormal), vtxIndex1 * 12)),
+      asfloat(LoadByte3(Get(vtxOpaqueNormal), vtxIndex2 * 12))
+  ));
+
+  float3 tangent = InterpolateWithDeriv_float3x3(derivativesOut, make_f3x3_rows(
+      asfloat(LoadByte3(Get(vtxOpaqueTangnet), vtxIndex0 * 12)),
+      asfloat(LoadByte3(Get(vtxOpaqueTangnet), vtxIndex1 * 12)),
+      asfloat(LoadByte3(Get(vtxOpaqueTangnet), vtxIndex2 * 12))
+  ));
+  float3 worldTangent = normalize(mul(normalMat, tangent.xyz));
+  float3 worldBitangent = normalize(mul(normalMat, cross(tangent, normal)));
+  float3 worldNormal = normalize(mul(normalMat, normal.xyz));
+
+  // Interpolate the 1/w (one_over_w) for all three vertices of the triangle using the barycentric coordinates and the delta vector
+  const float w = dot(float3(clipPos0.w, clipPos1.w, clipPos2.w), derivativesOut.m_lambda);
+
+  // Reconstruct the Z value at this screen point performing only the necessary matrix * vector multiplication operations that involve computing Z
+  //const float z = ((w * (viewInfo.zFar + viewInfo.zNear)) / (viewInfo.zFar - viewInfo.zNear)) - ((2.0 * viewInfo.zNear * viewInfo.zFar) / (viewInfo.zFar - viewInfo.zNear));
+  const float z = -w * getElem(viewInfo.projMat, 2, 2) + getElem(viewInfo.projMat, 3, 2);
+   
+  // Calculate the world position coordinates:
+  // First the projected coordinates at this point are calculated using In.screenPos and the computed Z value at this point.
+  // Then, multiplying the perspective projected coordinates by the inverse view-projection matrix (invVP) produces world coordinates
+  const float3 position = mul(viewInfo.invViewProj, float4(In.screenPos * w, z, w)).xyz;
+  const float3 viewPosition = mul(viewInfo.viewMat, float4(position, 1.0)).xyz;
+
+  float linearZ = depthLinearization(z/w, viewInfo.zNear, viewInfo.zFar);
+  float mip = pow(pow(linearZ, 0.9f) * 5.0f, 1.5f);
+  
+  float2 texCoordDX = results.dx * mip;
+  float2 texCoordDY = results.dy * mip;
+
+  uint materialIndex = obj.materialIndex;
+  DiffuseMaterial material = Get(sceneDiffuseMat)[materialIndex];  
+
+  float2 texCoord = results.interp;
+  if(isTextureIndexValid(material.heightTextureIndex)) {
+      texCoord += ParallaxAdvance(
+          results.interp, 
+          0.0,
+          32.0, 
+          material.heightMapScale * PARALLAX_MULTIPLIER,
+          viewPosition.xyz,
+          worldNormal,
+          worldTangent,
+          worldBitangent,
+          material.heightTextureIndex,
+          (material.config & MATERIAL_IS_HEIGHT_SINGLE_CHANNEL) > 0);
+  }
+  float4 diffuseColor = float4(0,0,0,0);
+  uint diffuseTextureIdx = material.diffuseTextureIndex;
+  if(isTextureIndexValid(diffuseTextureIdx)) {
+    BeginNonUniformResourceIndex(diffuseTextureIdx, SCENE_MAX_TEXTURE_COUNT);
+	    diffuseColor = SampleGradTex2D(Get(sceneTextures)[diffuseTextureIdx], Get(sceneSampler), texCoord, texCoordDX, texCoordDY);
+    EndNonUniformResourceIndex(); 
+  }
+
+  RETURN(diffuseColor);
+
+}
+
+
