@@ -113,9 +113,9 @@ namespace hpl {
 		if(mpVtxBuffer) hplDelete(mpVtxBuffer);
 	}
 
-    DrawPacket cBeam::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) {
+    DrawPacket cBeam::ResolveDrawPacket(const ForgeRenderer::Frame& frame) {
 
-	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame, elements);
+	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame);
     }
 
     void cBeam::SetSize(const cVector2f& avSize)

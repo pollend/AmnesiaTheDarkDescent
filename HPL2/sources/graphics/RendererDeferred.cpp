@@ -25,6 +25,7 @@
 #include "graphics/DrawPacket.h"
 #include "graphics/ForgeHandles.h"
 #include "graphics/MaterialResource.h"
+#include "graphics/SceneResource.h"
 #include "math/cFrustum.h"
 #include "scene/ParticleEmitter.h"
 #include "scene/Viewport.h"
@@ -103,14 +104,6 @@ namespace hpl {
     static constexpr uint32_t SSAONumOfSamples = 8;
 
     namespace detail {
-        uint32_t resolveTextureFilterGroup(cMaterial::TextureAntistropy anisotropy, eTextureWrap wrap, eTextureFilter filter) {
-            const uint32_t anisotropyGroup =
-                (static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(eTextureWrap_LastEnum)) *
-                static_cast<uint32_t>(anisotropy);
-            return anisotropyGroup +
-                ((static_cast<uint32_t>(wrap) * static_cast<uint32_t>(eTextureFilter_LastEnum)) + static_cast<uint32_t>(filter));
-        }
-
         struct DeferredLight {
         public:
             DeferredLight() = default;
@@ -182,7 +175,7 @@ namespace hpl {
                     if (frustumCollision == eCollision_Outside) {
                         return;
                     }
-                    if (rendering::detail::IsRenderableNodeIsVisible(apNode, clipPlanes) == false) {
+                    if (iRenderableContainer::IsRenderableNodeIsVisible(*apNode, clipPlanes) == false) {
                         return;
                     }
                 }
@@ -197,7 +190,7 @@ namespace hpl {
                 // Iterate objects
                 for (auto& object : apNode->GetObjects()) {
                     // Check so visible and shadow caster
-                    if (rendering::detail::IsObjectIsVisible(object, eRenderableFlag_ShadowCaster, clipPlanes) == false ||
+                    if (iRenderable::IsObjectIsVisible(*object, eRenderableFlag_ShadowCaster, clipPlanes) == false ||
                         object->GetMaterial() == NULL || cMaterial::IsTranslucent(object->GetMaterial()->Descriptor().m_id)) {
                         continue;
                     }
@@ -879,10 +872,8 @@ namespace hpl {
 
             {
                 VertexLayout vertexLayout = {};
-#ifndef USE_THE_FORGE_LEGACY
                 vertexLayout.mBindingCount = 1;
                 vertexLayout.mBindings[0].mStride = sizeof(float3);
-#endif
                 vertexLayout.mAttribCount = 1;
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
                 vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
@@ -1133,6 +1124,13 @@ namespace hpl {
         //---------------- Diffuse Pipeline  ------------------------
         {
             // z pass
+            m_zPassShadowShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
+                ShaderLoadDesc loadDesc = {};
+                loadDesc.mStages[0].pFileName = "solid_z_shadow.vert";
+                loadDesc.mStages[1].pFileName = "solid_z_shadow.frag";
+                addShader(forgeRenderer->Rend(), &loadDesc, shader);
+                return true;
+            });
             m_zPassShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
                 ShaderLoadDesc loadDesc = {};
                 loadDesc.mStages[0].pFileName = "solid_z.vert";
@@ -1301,8 +1299,8 @@ namespace hpl {
 
                 DepthStateDesc depthStateDesc = {};
                 depthStateDesc.mDepthTest = true;
-                depthStateDesc.mDepthWrite = false;
-                depthStateDesc.mDepthFunc = CMP_EQUAL;
+                depthStateDesc.mDepthWrite = true;
+                depthStateDesc.mDepthFunc = CMP_LEQUAL;
 
                 std::array colorFormats = { ColorBufferFormat, NormalBufferFormat, PositionBufferFormat, SpecularBufferFormat };
 
@@ -1537,7 +1535,7 @@ namespace hpl {
                     pipelineSettings.mDepthStencilFormat = ShadowDepthBufferFormat;
                     pipelineSettings.mSampleQuality = 0;
                     pipelineSettings.pRootSignature = m_materialRootSignature.m_handle;
-                    pipelineSettings.pShaderProgram = m_zPassShader.m_handle;
+                    pipelineSettings.pShaderProgram = m_zPassShadowShader.m_handle;
                     pipelineSettings.pRasterizerState = &rasterizerStateDesc;
                     pipelineSettings.pVertexLayout = &vertexLayout;
                     addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
@@ -1572,15 +1570,15 @@ namespace hpl {
                 });
 
                 m_materialSet.m_materialConstSet.Load(forgeRenderer->Rend(), [&](DescriptorSet** handle) {
-                    DescriptorSetDesc setDesc{ m_materialRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_NONE, MaxMaterialSamplers };
+                    DescriptorSetDesc setDesc{ m_materialRootSignature.m_handle, DESCRIPTOR_UPDATE_FREQ_NONE, hpl::resource::MaterialSceneSamplersCount };
                     addDescriptorSet(forgeRenderer->Rend(), &setDesc, handle);
                     return true;
                 });
-                for (size_t antistropy = 0; antistropy < cMaterial::Antistropy_Count; antistropy++) {
+                for (size_t antistropy = 0; antistropy < static_cast<size_t>(TextureAntistropy::Antistropy_Count); antistropy++) {
                     for (size_t textureWrap = 0; textureWrap < eTextureWrap_LastEnum; textureWrap++) {
                         for (size_t textureFilter = 0; textureFilter < eTextureFilter_LastEnum; textureFilter++) {
-                            uint32_t materialID = detail::resolveTextureFilterGroup(
-                                static_cast<cMaterial::TextureAntistropy>(antistropy),
+                            uint32_t materialID = hpl::resource::textureFilterIdx(
+                                static_cast<TextureAntistropy>(antistropy),
                                 static_cast<eTextureWrap>(textureWrap),
                                 static_cast<eTextureFilter>(textureFilter));
                             m_materialSet.m_samplers[materialID].Load(forgeRenderer->Rend(), [&](Sampler** sampler) {
@@ -1625,11 +1623,11 @@ namespace hpl {
                                     ASSERT(false && "Invalid filter");
                                     break;
                                 }
-                                switch (antistropy) {
-                                case cMaterial::Antistropy_8:
+                                switch (static_cast<TextureAntistropy>(antistropy)) {
+                                case TextureAntistropy::Antistropy_8:
                                     samplerDesc.mMaxAnisotropy = 8.0f;
                                     break;
-                                case cMaterial::Antistropy_16:
+                                case TextureAntistropy::Antistropy_16:
                                     samplerDesc.mMaxAnisotropy = 16.0f;
                                     break;
                                 default:
@@ -1973,11 +1971,7 @@ namespace hpl {
                         key.m_id = pipelineKey;
                         m_materialTranslucencyPass.m_refractionPipeline[key.m_id].Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
                             BlendStateDesc blendStateDesc{};
-#ifdef USE_THE_FORGE_LEGACY
-                            blendStateDesc.mMasks[0] = ALL;
-#else
-                                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
-#endif
+                            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
                             blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                             blendStateDesc.mIndependentBlend = false;
 
@@ -2222,11 +2216,7 @@ namespace hpl {
             blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
             blendStateDesc.mDstAlphaFactors[0] = BC_ONE;
             blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-#ifdef USE_THE_FORGE_LEGACY
-            blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
-#else
             blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
-#endif
             blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
             blendStateDesc.mIndependentBlend = false;
 
@@ -2460,7 +2450,7 @@ namespace hpl {
         uniformFrameData->afT = GetTimeCount();
         const auto fogColor = apWorld->GetFogColor();
         uniformFrameData->fogColor = float4(fogColor.r, fogColor.g, fogColor.b, fogColor.a);
-        endUpdateResource(&updatePerFrameConstantsDesc, NULL);
+        endUpdateResource(&updatePerFrameConstantsDesc);
 
         m_materialSet.m_frameIndex = (m_materialSet.m_frameIndex + 1) % MaxViewportFrameDescriptors;
         return index;
@@ -2494,7 +2484,7 @@ namespace hpl {
                 eVertexBufferElement_Position,
                 eVertexBufferElement_Texture0,
             };
-            DrawPacket drawPacket = illuminationItem->ResolveDrawPacket(frame, targets);
+            DrawPacket drawPacket = illuminationItem->ResolveDrawPacket(frame);
             if (pMaterial == nullptr || drawPacket.m_type == DrawPacket::Unknown) {
                 continue;
             }
@@ -2503,7 +2493,7 @@ namespace hpl {
             uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, illuminationItem);
             materialConst.objectId = instance;
             materialConst.m_sceneAlpha = illuminationItem->GetIlluminationAmount();
-            DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &drawPacket);
+            DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &drawPacket,targets);
             cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
             cmdDrawIndexed(cmd, drawPacket.numberOfIndecies(), 0, 0);
         }
@@ -2611,7 +2601,7 @@ namespace hpl {
                     if (deferredLight.m_insideNearPlane) {
                         castShadow = true;
 
-                        shadowMapResolution = rendering::detail::GetShadowMapResolution(
+                        shadowMapResolution = hpl::GetShadowMapResolution(
                             light->GetShadowMapResolution(), mpCurrentSettings->mMaxShadowMapResolution);
                     } else {
                         cVector3f vIntersection = pLightSpot->GetFrustum()->GetOrigin();
@@ -2621,7 +2611,7 @@ namespace hpl {
                         float fDistToLight = cMath::Vector3Dist(apFrustum->GetOrigin(), vIntersection);
 
                         castShadow = true;
-                        shadowMapResolution = rendering::detail::GetShadowMapResolution(
+                        shadowMapResolution = hpl::GetShadowMapResolution(
                             light->GetShadowMapResolution(), mpCurrentSettings->mMaxShadowMapResolution);
 
                         ///////////////////////
@@ -2763,14 +2753,14 @@ namespace hpl {
                                                            eVertexBufferElement_Texture0,
                                                            eVertexBufferElement_Normal,
                                                            eVertexBufferElement_Texture1Tangent };
-                                    DrawPacket packet = pObject->ResolveDrawPacket(frame, targets);
+                                    DrawPacket packet = pObject->ResolveDrawPacket(frame);
                                     if (packet.m_type == DrawPacket::Unknown || descriptor.m_id == MaterialID::Unknown) {
                                         return;
                                     }
                                     MaterialRootConstant materialConst = {};
                                     uint32_t instance = cmdBindMaterialAndObject(shadowMapData->m_cmd.m_handle, frame, pMaterial, pObject);
                                     materialConst.objectId = instance;
-                                    DrawPacket::cmdBindBuffers(shadowMapData->m_cmd.m_handle, frame.m_resourcePool, &packet);
+                                    DrawPacket::cmdBindBuffers(shadowMapData->m_cmd.m_handle, frame.m_resourcePool, &packet, targets);
                                     cmdBindPushConstants(
                                         shadowMapData->m_cmd.m_handle,
                                         m_materialRootSignature.m_handle,
@@ -2947,7 +2937,7 @@ namespace hpl {
                                                     m_lightIndex * sizeof(UniformLightData) };
                     beginUpdateResource(&updateDesc);
                     memcpy(updateDesc.pMappedData, &uniformObjectData, sizeof(UniformLightData));
-                    endUpdateResource(&updateDesc, NULL);
+                    endUpdateResource(&updateDesc);
 
                     updateDescriptorSet(
                         frame.m_renderer->Rend(), m_lightIndex, m_lightPerLightSet[frame.m_frameIndex].m_handle, paramCount, params);
@@ -3011,8 +3001,8 @@ namespace hpl {
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
                     ASSERT(lightShape && "Light shape not found");
                     DrawPacket packet =
-                        static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, elements);
-                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
+                        static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame);
+                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, elements);
 
                     cmdBindPipeline(cmd, options.m_invert ? m_lightStencilPipelineCW.m_handle : m_lightStencilPipelineCCW.m_handle);
                     uint32_t instance = cmdBindLightDescriptor(light); // bind light descriptor light uniforms
@@ -3115,10 +3105,10 @@ namespace hpl {
                     std::array targets = { eVertexBufferElement_Position };
                     auto lightShape = GetLightShape(light->m_light, eDeferredShapeQuality_High);
                     ASSERT(lightShape && "Light shape not found");
-                    DrawPacket packet = static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame, targets);
+                    DrawPacket packet = static_cast<LegacyVertexBuffer*>(lightShape)->resolveGeometryBinding(frame.m_currentFrame);
 
                     uint32_t instance = cmdBindLightDescriptor(light);
-                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
+                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, targets);
                     cmdBindPushConstants(cmd, m_lightPassRootSignature.m_handle, lightRootConstantIndex, &instance);
                     cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
                 }
@@ -3166,7 +3156,7 @@ namespace hpl {
                                        eVertexBufferElement_Texture0,
                                        eVertexBufferElement_Normal,
                                        eVertexBufferElement_Texture1Tangent };
-                DrawPacket packet = diffuseItem->ResolveDrawPacket(frame, targets);
+                DrawPacket packet = diffuseItem->ResolveDrawPacket(frame);
                 if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                     continue;
                 }
@@ -3175,7 +3165,7 @@ namespace hpl {
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, diffuseItem);
                 materialConst.objectId = instance;
-                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
+                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, targets);
                 cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                 cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
             }
@@ -3201,7 +3191,7 @@ namespace hpl {
             for (auto& decalItem : m_rendererList.GetRenderableItems(eRenderListType_Decal)) {
                 cMaterial* pMaterial = decalItem->GetMaterial();
                 std::array targets = { eVertexBufferElement_Position, eVertexBufferElement_Texture0, eVertexBufferElement_Color0 };
-                DrawPacket packet = decalItem->ResolveDrawPacket(frame, targets);
+                DrawPacket packet = decalItem->ResolveDrawPacket(frame);
                 if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                     continue;
                 }
@@ -3215,7 +3205,7 @@ namespace hpl {
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, decalItem);
                 materialConst.objectId = instance;
-                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
+                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, targets);
                 cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                 cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
             }
@@ -3239,6 +3229,23 @@ namespace hpl {
         AdditionalZPassOptions options) {
         ASSERT(depthBuffer && "Depth buffer not created");
         ASSERT(hiZBuffer && "Depth buffer not created");
+
+        auto isValidForPreAndPostZ = [](cMaterial* material, iRenderable* renderable ) {
+            if (!material) {
+                return false;
+            }
+            if(renderable->GetCoverageAmount() < 1.0) {
+                return false;
+            }
+            if(cMaterial::IsTranslucent(material->Descriptor().m_id)) {
+                return false;
+            }
+            if(material->GetImage(eMaterialTexture_Alpha)) {
+                return false;
+            }
+
+            return true;
+        };
 
         FenceStatus fenceStatus;
         getFenceStatus(frame.m_renderer->Rend(), m_prePassFence.m_handle, &fenceStatus);
@@ -3292,7 +3299,7 @@ namespace hpl {
                     walkRenderables(childNode, containerType);
                 }
                 for (auto& pObject : childNode->GetObjects()) {
-                    if (!rendering::detail::IsObjectIsVisible(pObject, options.objectVisibilityFlags, options.clipPlanes)) {
+                    if (!iRenderable::IsObjectIsVisible(*pObject, options.objectVisibilityFlags, options.clipPlanes)) {
                         continue;
                     }
                     const bool visibleLastFrame = (prePassRenderables.empty() || prePassRenderables.contains(pObject));
@@ -3405,24 +3412,21 @@ namespace hpl {
                 beginUpdateResource(&updateDesc);
                 reinterpret_cast<float4*>(updateDesc.pMappedData)[0] = float4(boundBoxMin.x, boundBoxMin.y, boundBoxMin.z, 0.0f);
                 reinterpret_cast<float4*>(updateDesc.pMappedData)[1] = float4(boundBoxMax.x, boundBoxMax.y, boundBoxMax.z, 0.0f);
-                endUpdateResource(&updateDesc, nullptr);
+                endUpdateResource(&updateDesc);
 
-                if (!test.m_preZPass || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
+                if (!test.m_preZPass || !isValidForPreAndPostZ(pMaterial, test.m_renderable)) {
                     continue;
                 }
 
-                std::array targets = { eVertexBufferElement_Position,
-                                       eVertexBufferElement_Texture0,
-                                       eVertexBufferElement_Normal,
-                                       eVertexBufferElement_Texture1Tangent };
-                DrawPacket packet = test.m_renderable->ResolveDrawPacket(frame, targets);
+                std::array targets = { eVertexBufferElement_Position};
+                DrawPacket packet = test.m_renderable->ResolveDrawPacket(frame);
                 if (packet.m_type == DrawPacket::Unknown) {
                     continue;
                 }
                 MaterialRootConstant materialConst = {};
                 uint32_t instance = cmdBindMaterialAndObject(m_prePassCmd.m_handle, frame, pMaterial, test.m_renderable, {});
                 materialConst.objectId = instance;
-                DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet);
+                DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet, targets);
                 cmdBindPushConstants(m_prePassCmd.m_handle, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                 cmdDrawIndexed(m_prePassCmd.m_handle, packet.numberOfIndecies(), 0, 0);
             }
@@ -3434,13 +3438,13 @@ namespace hpl {
             BufferUpdateDesc updateDesc = { m_hiZOcclusionUniformBuffer.m_handle, 0, sizeof(UniformPropBlock) };
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<UniformPropBlock*>(updateDesc.pMappedData)) = uniformPropBlock;
-            endUpdateResource(&updateDesc, nullptr);
+            endUpdateResource(&updateDesc);
             cmdEndDebugMarker(m_prePassCmd.m_handle);
         }
         {
             cmdBeginDebugMarker(m_prePassCmd.m_handle, 1, 1, 0, "Occlusion Query");
             std::array targets = { eVertexBufferElement_Position };
-            DrawPacket packet = static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, targets);
+            DrawPacket packet = static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame);
 
             uint32_t occlusionObjectIndex = getDescriptorIndexFromName(m_rootSignatureOcclusuion.m_handle, "rootConstant");
             uint32_t occlusionIndex = 0;
@@ -3457,12 +3461,12 @@ namespace hpl {
                     BufferUpdateDesc updateDesc = { m_occlusionUniformBuffer.m_handle, m_occlusionIndex * sizeof(mat4) };
                     beginUpdateResource(&updateDesc);
                     (*reinterpret_cast<mat4*>(updateDesc.pMappedData)) = mvp;
-                    endUpdateResource(&updateDesc, NULL);
+                    endUpdateResource(&updateDesc);
 
                     cmdBindPushConstants(
                         m_prePassCmd.m_handle, m_rootSignatureOcclusuion.m_handle, occlusionObjectIndex, &m_occlusionIndex);
 
-                    DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet);
+                    DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet, targets);
 
                     QueryDesc queryDesc = {};
                     queryDesc.mIndex = queryIndex++;
@@ -3586,7 +3590,8 @@ namespace hpl {
                 }
             }
             cmdEndDebugMarker(m_prePassCmd.m_handle);
-            cmdResolveQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, m_occlusionReadBackBuffer.m_handle, 0, queryIndex);
+            ASSERT(false && "API has changed");
+            //cmdResolveQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, m_occlusionReadBackBuffer.m_handle, 0, queryIndex);
             endCmd(m_prePassCmd.m_handle);
 
             // Submit the gpu work.
@@ -3646,14 +3651,11 @@ namespace hpl {
                         renderable->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
 
                     cMaterial* pMaterial = renderable->GetMaterial();
-                    if (!pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
+                    if (!isValidForPreAndPostZ(pMaterial, renderable)) {
                         continue;
                     }
-                    std::array targets = { eVertexBufferElement_Position,
-                                           eVertexBufferElement_Texture0,
-                                           eVertexBufferElement_Normal,
-                                           eVertexBufferElement_Texture1Tangent };
-                    DrawPacket drawPacket = renderable->ResolveDrawPacket(frame, targets);
+                    std::array targets = { eVertexBufferElement_Position };
+                    DrawPacket drawPacket = renderable->ResolveDrawPacket(frame);
                     if (drawPacket.m_type == DrawPacket::Unknown) {
                         continue;
                     }
@@ -3661,7 +3663,7 @@ namespace hpl {
                     MaterialRootConstant materialConst = {};
                     uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, renderable);
                     materialConst.objectId = instance;
-                    DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
+                    DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket, targets);
                     cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                     cmdDrawIndexed(cmd, drawPacket.numberOfIndecies(), 0, 0);
                 }
@@ -3697,7 +3699,7 @@ namespace hpl {
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<material::UniformMaterialBlock*>(updateDesc.pMappedData)) =
                 material::UniformMaterialBlock::CreateFromMaterial(*apMaterial);
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
 
             std::array<DescriptorData, 32> params{};
             size_t paramCount = 0;
@@ -3778,13 +3780,13 @@ namespace hpl {
                                             sizeof(cRendererDeferred::UniformObject) * index };
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<cRendererDeferred::UniformObject*>(updateDesc.pMappedData)) = uniformObjectData;
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
 
             m_materialSet.m_objectDescriptorLookup[apObject] = index;
         }
         cmdBindDescriptorSet(
             cmd,
-            detail::resolveTextureFilterGroup(apMaterial->GetTextureAntistropy(), apMaterial->GetTextureWrap(), apMaterial->GetTextureFilter()),
+           hpl::resource::textureFilterIdx(apMaterial->GetTextureAntistropy(), apMaterial->GetTextureWrap(), apMaterial->GetTextureFilter()),
             m_materialSet.m_materialConstSet.m_handle);
         cmdBindDescriptorSet(cmd, apMaterial->Index(), m_materialSet.m_perBatchSet[frame.m_frameIndex].m_handle);
         return index;
@@ -4133,7 +4135,7 @@ namespace hpl {
                     eVertexBufferElement_Position,
                     eVertexBufferElement_Texture0,
                 };
-                DrawPacket packet = illuminationItem->ResolveDrawPacket(frame, targets);
+                DrawPacket packet = illuminationItem->ResolveDrawPacket(frame);
 
                 if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                     continue;
@@ -4143,7 +4145,7 @@ namespace hpl {
                 uint32_t instance = cmdBindMaterialAndObject(frame.m_cmd, frame, pMaterial, illuminationItem);
                 materialConst.objectId = instance;
 
-                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet);
+                DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, targets);
                 cmdBindPushConstants(frame.m_cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
                 cmdDrawIndexed(frame.m_cmd, packet.numberOfIndecies(), 0, 0);
             }
@@ -4208,7 +4210,7 @@ namespace hpl {
                                                     fogIndex * sizeof(UniformFogData) };
                     beginUpdateResource(&updateDesc);
                     (*reinterpret_cast<UniformFogData*>(updateDesc.pMappedData)) = uniformData;
-                    endUpdateResource(&updateDesc, NULL);
+                    endUpdateResource(&updateDesc);
                     fogIndex++;
                 }
             }
@@ -4227,8 +4229,8 @@ namespace hpl {
 
             std::array geometryStream = { eVertexBufferElement_Position };
             DrawPacket drawPacket =
-                static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame, geometryStream);
-            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
+                static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame);
+            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket, geometryStream);
 
             {
                 std::array<DescriptorData, 1> params = {};
@@ -4254,7 +4256,7 @@ namespace hpl {
                                                 fogIndex * sizeof(UniformFogData) };
                 beginUpdateResource(&updateDesc);
                 (*reinterpret_cast<UniformFogData*>(updateDesc.pMappedData)) = uniformData;
-                endUpdateResource(&updateDesc, NULL);
+                endUpdateResource(&updateDesc);
                 fogIndex++;
             }
 
@@ -4273,7 +4275,7 @@ namespace hpl {
                 fogData->m_fogStart = apWorld->GetFogStart();
                 fogData->m_fogLength = apWorld->GetFogEnd() - apWorld->GetFogStart();
                 fogData->m_fogFalloffExp = apWorld->GetFogFalloffExp();
-                endUpdateResource(&updateDesc, NULL);
+                endUpdateResource(&updateDesc);
 
                 cmdBindDescriptorSet(frame.m_cmd, 0, m_fogPass.m_perFrameSet[frame.m_frameIndex]);
                 cmdBindPipeline(frame.m_cmd, m_fogPass.m_fullScreenPipeline.m_handle);
@@ -4607,17 +4609,9 @@ namespace hpl {
                     {
                         DrawPacket drawPacket;
                         if (isParticleEmitter) {
-                            std::array targets = { eVertexBufferElement_Position,
-                                                   eVertexBufferElement_Texture0,
-                                                   eVertexBufferElement_Color0 };
-                            drawPacket = translucencyItem->ResolveDrawPacket(frame, targets);
+                            drawPacket = translucencyItem->ResolveDrawPacket(frame);
                         } else {
-                            std::array targets = { eVertexBufferElement_Position,
-                                                   eVertexBufferElement_Texture0,
-                                                   eVertexBufferElement_Normal,
-                                                   eVertexBufferElement_Texture1Tangent,
-                                                   eVertexBufferElement_Color0 };
-                            drawPacket = translucencyItem->ResolveDrawPacket(frame, targets);
+                            drawPacket = translucencyItem->ResolveDrawPacket(frame);
                         }
                         if (drawPacket.m_type == DrawPacket::Unknown ||
                             drawPacket.numberOfIndecies() == 0) {
@@ -4635,20 +4629,29 @@ namespace hpl {
                             pMaterial->GetBlendMode() < eMaterialBlendMode_LastEnum &&
                             pMaterial->GetBlendMode() != eMaterialBlendMode_None && "Invalid blend mode");
                         if (isParticleEmitter) {
+                            std::array targets = { eVertexBufferElement_Position,
+                                                   eVertexBufferElement_Texture0,
+                                                   eVertexBufferElement_Color0 };
                             cmdBindPipeline(
                                 frame.m_cmd,
                                 m_materialTranslucencyPass.m_particlePipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]
                                     .m_handle);
+                            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket, targets);
                         } else {
+                            std::array targets = { eVertexBufferElement_Position,
+                                                   eVertexBufferElement_Texture0,
+                                                   eVertexBufferElement_Normal,
+                                                   eVertexBufferElement_Texture1Tangent,
+                                                   eVertexBufferElement_Color0 };
                             cmdBindPipeline(
                                 frame.m_cmd,
                                 (isRefraction
                                      ? m_materialTranslucencyPass.m_refractionPipeline[key.m_id].m_handle
                                      : m_materialTranslucencyPass.m_pipelines[translucencyBlendTable[pMaterial->GetBlendMode()]][key.m_id]
                                            .m_handle));
+                            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket, targets);
                         }
 
-                        DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket);
 
                         materialConst.m_options = (isFogActive ? TranslucencyFlags::UseFog : 0) |
                             (isRefraction ? TranslucencyFlags::UseRefractionTrans : 0) |
@@ -4677,7 +4680,7 @@ namespace hpl {
                                                eVertexBufferElement_Normal,
                                                eVertexBufferElement_Texture1Tangent,
                                                eVertexBufferElement_Color0 };
-                        DrawPacket packet = translucencyItem->ResolveDrawPacket(frame, targets);
+                        DrawPacket packet = translucencyItem->ResolveDrawPacket(frame);
                         if (packet.m_type == DrawPacket::Unknown) {
                             break;
                         }
@@ -4693,7 +4696,7 @@ namespace hpl {
                         key.m_field.m_hasDepthTest = pMaterial->GetDepthTest();
 
                         // LegacyVertexBuffer::cmdBindGeometry(frame.m_cmd, frame.m_resourcePool, binding);
-                        DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet);
+                        DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet, targets);
                         cmdBindPipeline(frame.m_cmd, m_materialTranslucencyPass.m_waterPipeline[key.m_id].m_handle);
                         uint32_t instance = cmdBindMaterialAndObject(
                             frame.m_cmd, frame, pMaterial, translucencyItem, std::optional{ pMatrix ? *pMatrix : cMatrixf::Identity });

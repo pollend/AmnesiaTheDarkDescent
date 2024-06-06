@@ -7,8 +7,14 @@
 
 namespace hpl {
 
-    IndexPool::IndexPool(uint32_t reserve) {
+    IndexPool::IndexPool(uint32_t reserve):
+        m_reserve(reserve) {
         m_avaliable.push_back({0, reserve - 1});
+    }
+
+    IndexPool::IndexPool():
+        m_reserve(0) {
+
     }
 
     uint32_t IndexPool::requestId() {
@@ -23,7 +29,7 @@ namespace hpl {
             entry.m_end--;
             return res;
         }
-        return UINT32_MAX;
+        return IndexPool::InvalidHandle;
     }
 
     void IndexPool::returnId(uint32_t index) {

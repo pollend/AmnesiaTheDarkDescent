@@ -95,7 +95,7 @@ namespace hpl {
                     dest.WriteRaw(((i + m_numberVertices) * gpuStream->stride()), sp);
                 }
             }
-            endUpdateResource(&updateDesc, nullptr);
+            endUpdateResource(&updateDesc);
         }
         {
             BufferUpdateDesc updateDesc = { m_geometry->indexBuffer().m_handle, m_geometry->indexOffset() * GeometrySet::IndexBufferStride,  GeometrySet::IndexBufferStride * m_numberIndecies};
@@ -106,7 +106,7 @@ namespace hpl {
             for(size_t i = 0; i < m_numberIndecies; i++) {
                 dest.Write(i, src.Get(i));
             }
-            endUpdateResource(&updateDesc, nullptr);
+            endUpdateResource(&updateDesc);
         }
 
     }
@@ -222,15 +222,15 @@ namespace hpl {
                 targetTangentView.Write(i, accmulatedTangent);
             }
 
-            endUpdateResource(&positionUpdateDesc, nullptr);
-            endUpdateResource(&tangentUpdateDesc, nullptr);
-            endUpdateResource(&normalUpdateDesc, nullptr);
+            endUpdateResource(&positionUpdateDesc);
+            endUpdateResource(&tangentUpdateDesc);
+            endUpdateResource(&normalUpdateDesc);
 		}
 
 	}
 
 
-    DrawPacket cSubMeshEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)  {
+    DrawPacket cSubMeshEntity::ResolveDrawPacket(const ForgeRenderer::Frame& frame)  {
 		DrawPacket packet;
 	    if(m_numberIndecies == 0) {
             return packet;
@@ -238,8 +238,8 @@ namespace hpl {
 
         DrawPacket::GeometrySetBinding binding{};
         packet.m_type = DrawPacket::DrawGeometryset;
-        std::copy(elements.begin(), elements.end(), binding.m_elements);
-        binding.m_numStreams = elements.size();
+        //std::copy(elements.begin(), elements.end(), binding.m_elements);
+        //binding.m_numStreams = elements.size();
         binding.m_subAllocation = m_geometry.get();
         binding.m_indexOffset = 0;
         binding.m_set = GraphicsAllocator::AllocationSet::OpaqueSet;

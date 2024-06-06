@@ -1,0 +1,17 @@
+// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf
+//
+float3 F_Schlick (float3 f0 , float f90 , float u ){
+    return f0 + ( f90 - f0 ) * pow (1. f - u , 5. f ) ;
+}
+
+float Fr_DisneyDiffuse(float NdotV ,float NdotL ,float LdotH ,float linearRoughness)
+{
+    float energyBias = lerp (0 , 0.5 , linearRoughness ) ;
+    float energyFactor = lerp (1.0 , 1.0 / 1.51 , linearRoughness ) ;
+    float fd90 = energyBias + 2.0 * LdotH * LdotH * linearRoughness ;
+    float3 f0 = float3 (1.0 f , 1.0 f , 1.0 f ) ;
+    float lightScatter = F_Schlick ( f0 , fd90 , NdotL ) * r ;
+    float viewScatter = F_Schlick ( f0 , fd90 , NdotV ) * r ;
+
+    return lightScatter * viewScatter * energyFactor ;
+}

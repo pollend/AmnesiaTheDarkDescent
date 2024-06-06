@@ -186,12 +186,9 @@ namespace hpl {
 				//layout and pipeline for sphere draw
 				VertexLayout vertexLayout = {};
 				vertexLayout.mAttribCount = 3;
-                #ifndef USE_THE_FORGE_LEGACY
-				    vertexLayout.mBindingCount = 3;
-                    vertexLayout.mBindings[0].mStride = sizeof(float3);
-                    vertexLayout.mBindings[1].mStride = sizeof(float2);
-                    vertexLayout.mBindings[2].mStride = sizeof(float3);
-		        #endif
+				vertexLayout.mBindingCount = 1;
+                vertexLayout.mBindings[0].mStride = sizeof(float3) + sizeof(float2) + sizeof(float4);
+
                 vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
 				vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
 				vertexLayout.mAttribs[0].mBinding = 0;
@@ -724,7 +721,7 @@ namespace hpl {
 			cVector3f vProjMin(-mvVirtualSizeOffset.x, -mvVirtualSizeOffset.y, mfVirtualMinZ);
 			cVector3f vProjMax(mvVirtualSize.x-mvVirtualSizeOffset.x, mvVirtualSize.y-mvVirtualSizeOffset.y, mfVirtualMaxZ);
 
-            mat4 proj = mat4::orthographic(vProjMin.x, vProjMax.x, vProjMax.y, vProjMin.y, vProjMin.z, vProjMax.z);
+            mat4 proj = mat4::orthographicLH(vProjMin.x, vProjMax.x, vProjMax.y, vProjMin.y, vProjMin.z, vProjMax.z);
             projectionMtx = cMath::FromForgeMat(proj);
 		}
 
@@ -762,9 +759,9 @@ namespace hpl {
 
             uint32_t requestSize = round_up(sizeof(gui::UniformBlock), 256);
 			#ifdef USE_THE_FORGE_LEGACY
-            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(gui::GuiUniformRingBuffer, requestSize);
+                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(gui::GuiUniformRingBuffer, requestSize);
             #else
-            GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&gui::GuiUniformRingBuffer, requestSize);
+                GPURingBufferOffset uniformBlockOffset = getGPURingBufferOffset(&gui::GuiUniformRingBuffer, requestSize);
             #endif
 
 			DescriptorData params[10]{};
@@ -816,7 +813,7 @@ namespace hpl {
 			BufferUpdateDesc  updateDesc = { uniformBlockOffset.pBuffer, uniformBlockOffset.mOffset };
 			beginUpdateResource(&updateDesc);
 			(*reinterpret_cast<gui::UniformBlock*>(updateDesc.pMappedData)) = uniformBlock;
-			endUpdateResource(&updateDesc, NULL);
+			endUpdateResource(&updateDesc);
 
 			uint32_t stride = sizeof(gui::PositionTexColor);
 			cmdBindDescriptorSet(frame.m_cmd, gui::descriptorIndex, descriptorSet);
@@ -914,8 +911,8 @@ namespace hpl {
 
 		}
 
-		endUpdateResource(&vertexUpdateDesc, NULL);
-		endUpdateResource(&indexUpdateDesc, NULL);
+		endUpdateResource(&vertexUpdateDesc);
+		endUpdateResource(&indexUpdateDesc);
 
 		mBaseClipRegion.Clear();
 	}

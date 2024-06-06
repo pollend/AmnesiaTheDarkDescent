@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <list>
 #include <vector>
 #include "graphics/Color.h"
@@ -403,8 +404,12 @@ namespace hpl {
 		eTextureType_LastEnum
 	};
 
-	//-----------------------------------------
-
+    enum class TextureAntistropy: uint8_t{
+        Antistropy_None = 0,
+        Antistropy_8 = 1,
+        Antistropy_16 = 2,
+        Antistropy_Count = 3
+    };
 
 	enum eTextureWrap
 	{
@@ -626,7 +631,6 @@ namespace hpl {
 		eShadowMapResolution_LastEnum,
 	};
 
-	//---------------------------------------
 
 	enum eShadowMapQuality
 	{
@@ -847,7 +851,9 @@ namespace hpl {
 
 	//---------------------------------------
 
-	extern tVertexElementFlag GetVertexElementFlagFromEnum(eVertexBufferElement aElement);
+    extern eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
+
+    extern tVertexElementFlag GetVertexElementFlagFromEnum(eVertexBufferElement aElement);
 	extern int GetVertexFormatByteSize(eVertexBufferElementFormat aFormat);
 	extern int GetVertexElementTextureUnit(eVertexBufferElement aElement);
 

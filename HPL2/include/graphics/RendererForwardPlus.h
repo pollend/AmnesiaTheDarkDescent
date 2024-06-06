@@ -21,11 +21,14 @@
 #include <graphics/RenderTarget.h>
 #include <graphics/Renderable.h>
 #include <graphics/Renderer.h>
+#include <graphics/SceneResource.h>
 #include <math/MathTypes.h>
 
 #include <Common_3/Graphics/Interfaces/IGraphics.h>
 #include <Common_3/Utilities/RingBuffer.h>
 #include <FixPreprocessor.h>
+
+
 
 namespace hpl {
     class RendererForwardPlus : public iRenderer {
@@ -37,8 +40,6 @@ namespace hpl {
         static constexpr TinyImageFormat SpecularBufferFormat = TinyImageFormat_R8G8_UNORM;
         static constexpr TinyImageFormat ColorBufferFormat = TinyImageFormat_R8G8B8A8_UNORM;
         static constexpr TinyImageFormat ShadowDepthBufferFormat = TinyImageFormat_D32_SFLOAT;
-
-        static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
 
         static constexpr uint32_t MaxIndirectDrawArgs = 1024;
         static constexpr uint32_t MaxViewportFrameDescriptors = 256;
@@ -153,7 +154,7 @@ namespace hpl {
 
         // light clusters
         SharedRootSignature m_lightClusterRootSignature;
-        SharedPipeline m_PointLightClusterPipeline;
+        SharedPipeline m_pointLightClusterPipeline;
         SharedPipeline m_clearClusterPipeline;
         std::array<SharedDescriptorSet, ForgeRenderer::SwapChainLength> m_perFrameLightCluster;
         std::array<SharedBuffer, ForgeRenderer::SwapChainLength> m_lightClustersBuffer;
@@ -185,7 +186,7 @@ namespace hpl {
             resource::MaterialTypes m_resource = std::monostate{};
         };
 
-        std::array<SharedSampler, MaxMaterialSamplers> m_batchSampler;
+        std::array<SharedSampler, hpl::resource::MaterialSceneSamplersCount> m_batchSampler;
         std::array<SceneMaterial, cMaterial::MaxMaterialID> m_sceneMaterial;
         IndexPool m_opaqueMaterialPool;
         TextureDescriptorPool m_sceneDescriptorPool;

@@ -62,7 +62,7 @@ namespace hpl {
 		virtual void UpdateGraphicsForFrame(float afFrameTime) override;
 
 		virtual iVertexBuffer* GetVertexBuffer() override;
-        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override;
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame) override;
 
 		virtual cBoundingVolume* GetBoundingVolume() override;
 

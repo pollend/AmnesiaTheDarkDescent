@@ -43,6 +43,9 @@ namespace hpl {
 	class iPhysicsBody;
 	class iRenderer;
 
+    namespace details::renderable {
+    }
+
 	class iRenderable : public iEntity3D
 	{
 		HPL_RTTI_IMPL_CLASS(iEntity3D, iRenderable, "{285bbdb4-de5b-4960-bf44-ae543432ff40}")
@@ -53,7 +56,7 @@ namespace hpl {
 
 		virtual cMaterial *GetMaterial()=0;
 		virtual iVertexBuffer* GetVertexBuffer()=0;
-        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) = 0;
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame) = 0;
 
 		virtual bool CollidesWithBV(cBoundingVolume *apBV);
 		virtual bool CollidesWithFrustum(cFrustum *apFrustum);
@@ -119,6 +122,10 @@ namespace hpl {
 		void SetRenderableUserData(void* apData) { mpRenderableUserData = apData; }
 		void* GetRenderableUserData() { return mpRenderableUserData; }
 
+
+        // utilities
+        static cRect2l GetClipRectFromObject(iRenderable& object, float afPaddingPercent, cFrustum* apFrustum, const cVector2l& avScreenSize);
+        static bool IsObjectIsVisible(iRenderable& object, tRenderableFlag neededFlags, std::span<cPlanef> clipPlanes = {});
 	protected:
 		virtual void OnUpdateWorldTransform() override;
 

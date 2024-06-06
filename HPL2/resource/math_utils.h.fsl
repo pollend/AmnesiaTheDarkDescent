@@ -1,0 +1,42 @@
+#ifndef _MATH_UTILITIES_H_
+#define _MATH_UTILITIES_H_
+
+#define PI 3.141592654f
+
+INLINE float3x3 ToNormalMat(float4x4 invModel, float4x4 invView) {
+    return transpose(mul(float3x3(invModel[0].xyz, invModel[1].xyz, invModel[2].xyz), float3x3(invView[0].xyz, invView[1].xyz, invView[2].xyz)));
+}
+
+float Fresnel(float afEDotN, float afFresnelBias, float afFresnelPow)
+{
+    float fFacing = 1.0 - afEDotN;
+    return max(afFresnelBias+ (1.0-afFresnelBias)* pow(abs(fFacing),afFresnelPow), 0.0); 
+}
+
+float3 WorldSpaceToTangent(float3 dir, float3 normal, float3 tangent, float3 bitangent)
+{
+    float a = dot(tangent, dir);
+    float b = dot(bitangent, dir);
+    float c = dot(normal, dir);
+
+    return float3(a,b,c);
+}
+
+// https://bartwronski.com/2017/04/13/cull-that-cone/
+float4 boundingSphereForSpotlight(in float3 origin, in float3 forward, in float size, in float angle)
+{
+    float4 boundingSphere;
+    if(angle > PI/4.0f)
+    {
+        boundingSphere.xyz = origin + cos(angle) * size * forward;
+        boundingSphere.w   = sin(angle) * size;
+    }
+    else
+    {
+        boundingSphere.xyz = origin + size / (2.0f * cos(angle)) * forward;
+        boundingSphere.w   = size / (2.0f * cos(angle));
+    }
+ 
+    return boundingSphere;
+}
+#endif

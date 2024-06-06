@@ -17,26 +17,9 @@ add_library(cpu_features OBJECT
      ${THE_FORGE_DIR}/Common_3/OS/ThirdParty/OpenSource/cpu_features/src/impl_x86_windows.c
 )
 
-
 file(GLOB BASIS_UNVERSAL_SOURCES 
     ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/*.c
     ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/transcoder/*.cpp
-    #${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/*.cpp\
-
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_astc_decomp.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_backend.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_basis_file.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_comp.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_enc.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_etc.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_frontend.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_global_selector_palette_helpers.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_gpu_texture.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_pvrtc1_4.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_resampler.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_resample_filters.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/basisu_ssim.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/lodepng.cpp
 )
 add_library(basis_universal STATIC ${BASIS_UNVERSAL_SOURCES})
 target_include_directories(basis_universal PUBLIC ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/basis_universal)
@@ -55,43 +38,28 @@ target_include_directories(ags INTERFACE  ${THE_FORGE_DIR}/Common_3/Graphics/Thi
 #    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/TinyEXR)
 
   
-add_library(astc-encoder OBJECT 
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenccli_error_metrics.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenccli_image.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenccli_image_external.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenccli_image_load_store.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenccli_platform_dependents.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_averages_and_directions.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_block_sizes.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_color_quantize.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_color_unquantize.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_compress_symbolic.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_compute_variance.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_decompress_symbolic.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_diagnostic_trace.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_entry.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_find_best_partitioning.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_ideal_endpoints_and_weights.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_image.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_integer_sequence.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_mathlib.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_mathlib_softfloat.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_partition_tables.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_percentile_tables.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_pick_best_endpoint_format.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_platform_isa_detection.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_quantization.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_symbolic_physical.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_weight_align.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/astcenc_weight_quant_xfer_tables.cpp
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/wuffs-v0.3.c
+# add_library(astc-encoder OBJECT 
+#     ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/*.c
+#     ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/astc-encoder/Source/*.cpp
+# )
+# target_include_directories(astc-encoder PRIVATE 
+#     ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/TinyEXR)
+# target_include_directories(astc-encoder  PUBLIC ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zip)
+ add_library(lz4 OBJECT 
+     ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/lz4/lz4.c
+     ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/lz4/lz4hc.c
+ )
+ target_include_directories(lz4 PUBLIC  
+     ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/lz4)
 
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/TinyEXR/miniz.c
+file(GLOB ZSTD_FILESYSTEM_SOURCES
+     ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/common/*.c
+     ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/compress/*.c
+     ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/decompress/*.c
+     ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd/decompress/huf_decompress_amd64.S
 )
-target_include_directories(astc-encoder PRIVATE 
-    ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/ThirdParty/OpenSource/TinyEXR)
-target_include_directories(astc-encoder  PUBLIC ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zip)
-
+add_library(zstd_filesystem OBJECT ${ZSTD_FILESYSTEM_SOURCES}) 
+target_include_directories(zstd_filesystem   PUBLIC ${THE_FORGE_DIR}/Common_3/Utilities/ThirdParty/OpenSource/zstd)
 
 # VulkanMemoryAllocator
 add_library(VulkanMemoryAllocator INTERFACE)
@@ -188,8 +156,8 @@ file(GLOB THE_FORGE_SOURCES
 
     ${THE_FORGE_DIR}/Common_3/Resources/ResourceLoader/*.cpp
 
-    ${THE_FORGE_DIR}/Common_3/Utilities/FileSystem/FileSystem.cpp
-    ${THE_FORGE_DIR}/Common_3/Utilities/FileSystem/SystemRun.cpp
+    ${THE_FORGE_DIR}/Common_3/Utilities/FileSystem/FileSystem.c
+    ${THE_FORGE_DIR}/Common_3/Utilities/FileSystem/SystemRun.c
     ${THE_FORGE_DIR}/Common_3/Utilities/Log/*.c
     ${THE_FORGE_DIR}/Common_3/Utilities/Math/*.c
     ${THE_FORGE_DIR}/Common_3/Utilities/MemoryTracking/*.c
@@ -221,7 +189,7 @@ target_include_directories(imgui PUBLIC ${THE_FORGE_DIR}/Common_3/ThirdParty/Ope
 
 
 add_library(TheForge STATIC ${THE_FORGE_SOURCES})
-target_link_libraries(TheForge PUBLIC cpu_features imgui astc-encoder cgltf Bstr basis_universal meshoptimizer tinydds tinyimageformat tinyktx ga)
+target_link_libraries(TheForge PUBLIC cpu_features imgui cgltf Bstr basis_universal lz4 zstd_filesystem meshoptimizer tinydds tinyimageformat tinyktx ga)
 target_include_directories(TheForge PUBLIC ${THE_FORGE_DIR})
 
 IF(CMAKE_SYSTEM_NAME MATCHES "Darwin")
@@ -241,7 +209,7 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
     file(GLOB THE_FORGE_OS_LINUX_SOURCES
         ${THE_FORGE_DIR}/Common_3/OS/Linux/*.cpp
         ${THE_FORGE_DIR}/Common_3/OS/Linux/*.c
-        ${THE_FORGE_DIR}/Common_3/Utilities/FileSystem/UnixFileSystem.cpp)
+        ${THE_FORGE_DIR}/Common_3/Utilities/FileSystem/UnixFileSystem.c)
     target_sources(TheForge PRIVATE ${THE_FORGE_OS_LINUX_SOURCES})
 
     pkg_check_modules(GTK REQUIRED gtk+-3.0)

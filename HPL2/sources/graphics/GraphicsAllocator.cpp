@@ -40,10 +40,10 @@ namespace hpl {
     }
 
     GPURingBufferOffset GraphicsAllocator::allocTransientVertexBuffer(uint32_t size) {
-        return getGPURingBufferOffset(m_transientVertexBuffer, size);
+        return getGPURingBufferOffset(&m_transientVertexBuffer, size);
     }
     GPURingBufferOffset GraphicsAllocator::allocTransientIndexBuffer(uint32_t size) {
-        return getGPURingBufferOffset(m_transientIndeciesBuffer, size);
+        return getGPURingBufferOffset(&m_transientIndeciesBuffer, size);
     }
 
     //    GraphicsAllocator::OffsetAllocHandle GraphicsAllocator::allocVertexFromSharedBuffer(uint32_t size) {

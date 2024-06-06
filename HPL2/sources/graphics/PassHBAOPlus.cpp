@@ -219,7 +219,7 @@ namespace hpl::renderer {
             BufferUpdateDesc updateDesc = { viewportData->m_constBuffer.m_handle, 0, sizeof(HBAORootConstant) };
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<HBAORootConstant *>(updateDesc.pMappedData)) = constData;
-            endUpdateResource(&updateDesc, &token);
+            endUpdateResource(&updateDesc);
             waitForToken(&token);
             {
                 std::array<DescriptorData, 3> descriptorData = {};

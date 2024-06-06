@@ -41,19 +41,11 @@ namespace hpl {
 		cDummyRenderable(tString asName);
 		virtual ~cDummyRenderable();
 
-		//////////////////////////////
-		//Properties
-
-		//////////////////////////////
-		//iEntity implementation
 		virtual tString GetEntityType() override{ return "cDummy";}
-
-		///////////////////////////////
-		//Renderable implementation:
 		virtual cMaterial *GetMaterial() override { return NULL;}
 		virtual iVertexBuffer* GetVertexBuffer() override{ return NULL;}
 
-        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override {
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame) override {
             DrawPacket packet;
             packet.m_type = DrawPacket::Unknown;
             return packet;

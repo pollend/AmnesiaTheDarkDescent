@@ -25,11 +25,17 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// GLOBAL FUNCTIONS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
+    eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax) {
+        if (aMax == eShadowMapResolution_High)
+        {
+            return aWanted;
+        }
+        else if (aMax == eShadowMapResolution_Medium)
+        {
+            return aWanted == eShadowMapResolution_High ? eShadowMapResolution_Medium : aWanted;
+        }
+        return eShadowMapResolution_Low;
+    }
 
 	tVertexElementFlag GetVertexElementFlagFromEnum(eVertexBufferElement aElement)
 	{
