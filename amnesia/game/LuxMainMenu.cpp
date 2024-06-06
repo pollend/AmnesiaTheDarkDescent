@@ -1346,7 +1346,7 @@ void cLuxMainMenu::CreateBackground()
 void cLuxMainMenu::UpdateBackground() {
     auto* forgeRenderer = Interface<ForgeRenderer>::Get();
     EngineInterface* engine = Interface<EngineInterface>::Get();
-    auto frame = forgeRenderer->GetFrame();
+    auto& frame = forgeRenderer->GetFrame();
     auto* scene = engine->GetScene();
     auto* viewport = gpBase->mpMapHandler->GetViewport();
     auto* renderer = viewport->GetRenderer();
@@ -1423,11 +1423,15 @@ void cLuxMainMenu::UpdateBackground() {
         // third copy umm need to out how to handle this
         auto requestBlur = [&](Texture* input) {
             {
-                LoadActionsDesc loadActions = {};
-                loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-                loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+                //LoadActionsDesc loadActions = {};
+                //loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+                //loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+                //cmdBindRenderTargets(frame.m_cmd, 1, &tempBlurTarget.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
+                BindRenderTargetsDesc bindRenderTargets = {};
+                bindRenderTargets.mRenderTargetCount = 1;
+                bindRenderTargets.mRenderTargets[0] = { tempBlurTarget.m_handle, LOAD_ACTION_LOAD };
+                cmdBindRenderTargets(frame.m_cmd, &bindRenderTargets);
 
-                cmdBindRenderTargets(frame.m_cmd, 1, &tempBlurTarget.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
 
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
@@ -1447,7 +1451,7 @@ void cLuxMainMenu::UpdateBackground() {
                 m_setIndex = (m_setIndex + 1) % cLuxMainMenu::BlurSetSize;
             }
             {
-                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                cmdBindRenderTargets(frame.m_cmd, NULL);
                 std::array rtBarriers = {
                     RenderTargetBarrier{ tempBlurTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
                     RenderTargetBarrier{ m_screenBlurTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
@@ -1455,11 +1459,15 @@ void cLuxMainMenu::UpdateBackground() {
                 cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
             }
             {
-                LoadActionsDesc loadActions = {};
-                loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-                loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+                //LoadActionsDesc loadActions = {};
+                //loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+                //loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+                //cmdBindRenderTargets(frame.m_cmd, 1, &m_screenBlurTarget.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
 
-                cmdBindRenderTargets(frame.m_cmd, 1, &m_screenBlurTarget.m_handle, NULL, &loadActions, NULL, NULL, -1, -1);
+                BindRenderTargetsDesc bindRenderTargets = {};
+                bindRenderTargets.mRenderTargetCount = 1;
+                bindRenderTargets.mRenderTargets[0] = { m_screenBlurTarget.m_handle, LOAD_ACTION_LOAD };
+                cmdBindRenderTargets(frame.m_cmd, &bindRenderTargets);
 
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
@@ -1479,7 +1487,7 @@ void cLuxMainMenu::UpdateBackground() {
                 m_setIndex = (m_setIndex + 1) % cLuxMainMenu::BlurSetSize;
             }
             {
-                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                cmdBindRenderTargets(frame.m_cmd, NULL);
                 std::array rtBarriers = {
                     RenderTargetBarrier{ tempBlurTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
                     RenderTargetBarrier{ m_screenBlurTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
@@ -1489,7 +1497,7 @@ void cLuxMainMenu::UpdateBackground() {
         };
         auto outputRt = renderer->GetOutputImage(frame.m_frameIndex, *viewport);
         {
-                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                cmdBindRenderTargets(frame.m_cmd, NULL);
                 std::array rtBarriers = {
                     RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
                 };
@@ -1498,7 +1506,7 @@ void cLuxMainMenu::UpdateBackground() {
 
         forgeRenderer->cmdCopyTexture(frame.m_cmd, outputRt.m_handle->pTexture, m_screenTarget.m_handle);
         {
-                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                cmdBindRenderTargets(frame.m_cmd, NULL);
                 std::array rtBarriers = {
                     RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
                 };

@@ -22,6 +22,7 @@ function(AddToolTarget target)
     if(APPLE)
         PostBuildMacBundle(${target} "${HPL2_FRAMEWORKS}" "${HPL2_LIBRARIES}")
     endif()
+    hpl_set_output_dir(${target} "") 
 
 endfunction()
 

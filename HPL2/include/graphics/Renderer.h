@@ -64,39 +64,6 @@ namespace hpl {
     class RenderCallbackMessage;
     class iRenderer;
 
-    namespace rendering::detail {
-
-        eShadowMapResolution GetShadowMapResolution(eShadowMapResolution aWanted, eShadowMapResolution aMax);
-        /**
-        * @brief Checks if the given object is occluded by the given planes.
-        * @param apObject The object to check.
-        * @param alNeededFlags The flags that the object must have to be considered.
-        * @param occlusionPlanes The planes to check against.
-        */
-        bool IsObjectVisible(iRenderable *apObject, tRenderableFlag alNeededFlags, std::span<cPlanef> occlusionPlanes);
-
-        bool IsRenderableNodeIsVisible(iRenderableContainerNode* apNode, std::span<cPlanef> clipPlanes);
-        bool IsObjectIsVisible(iRenderable* object, tRenderableFlag neededFlags, std::span<cPlanef> clipPlanes = {});
-
-        void WalkAndPrepareRenderList(iRenderableContainer* container,cFrustum* frustum, std::function<void(iRenderable*)> handler, tRenderableFlag renderableFlag);
-
-        void UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-            cRenderList* apRenderList,
-            cFrustum* frustum,
-            iRenderableContainerNode* apNode,
-            std::span<cPlanef> clipPlanes,
-            tRenderableFlag neededFlags);
-
-        void UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-            cRenderList* apRenderList,
-            cFrustum* frustum,
-            iRenderableContainer* apContainer,
-            std::span<cPlanef> clipPlanes,
-            tRenderableFlag neededFlags);
-
-        cRect2l GetClipRectFromObject(iRenderable* apObject, float afPaddingPercent, cFrustum* apFrustum, const cVector2l& avScreenSize, float afHalfFovTan);
-    }
-
     class cRenderSettings
     {
     public:
@@ -159,13 +126,13 @@ namespace hpl {
         // ensure the contents is copied to the RenderViewport
         virtual void Draw(
             Cmd* cmd,
-            const ForgeRenderer::Frame& context,
+            ForgeRenderer::Frame& context,
             cViewport& viewport,
             float afFrameTime,
             cFrustum* apFrustum,
             cWorld* apWorld,
-            cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects) = 0;
+            cRenderSettings* apSettings
+            ) = 0;
 
         void Update(float afTimeStep);
 
@@ -196,7 +163,6 @@ namespace hpl {
                             bool abSendFrameBufferToPostEffects, bool abAtStartOfRendering=true);
         cResources* mpResources;
 
-        float mfCurrentFrameTime;
         cRenderSettings *mpCurrentSettings;
 
         static int mlRenderFrameCount;

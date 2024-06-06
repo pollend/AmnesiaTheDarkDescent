@@ -452,8 +452,7 @@ namespace hpl {
     void LegacyVertexBuffer::Draw(eVertexBufferDrawType aDrawType) {
     }
 
-    DrawPacket LegacyVertexBuffer::resolveGeometryBinding(
-        uint32_t frameIndex, std::span<eVertexBufferElement> elements) {
+    DrawPacket LegacyVertexBuffer::resolveGeometryBinding(uint32_t frameIndex) {
         DrawPacket packet;
         packet.m_type = DrawPacket::DrawIndvidualBuffers;
         if(m_updateFlags) {
@@ -488,7 +487,7 @@ namespace hpl {
                         updateDesc.mDstOffset = element.m_activeCopy * updateDesc.mSize;
                         beginUpdateResource(&updateDesc);
                         std::copy(element.m_shadowData.begin(), element.m_shadowData.end(), reinterpret_cast<uint8_t*>(updateDesc.pMappedData));
-                        endUpdateResource(&updateDesc, &m_bufferSync);
+                        endUpdateResource(&updateDesc);
                     }
                 }
             }
@@ -523,22 +522,19 @@ namespace hpl {
                 updateDesc.mDstOffset = m_indexBufferActiveCopy * updateDesc.mSize;
                 beginUpdateResource(&updateDesc);
                 std::copy(m_indices.begin(), m_indices.end(), reinterpret_cast<uint32_t*>(updateDesc.pMappedData));
-                endUpdateResource(&updateDesc, &m_bufferSync);
+                endUpdateResource(&updateDesc);
             }
             m_updateIndices = false;
         }
 
         // GeometryBinding binding = {};
         packet.m_indvidual.m_numStreams = 0;
-        for (auto& targetEle : elements) {
-            auto found = std::find_if(m_vertexElements.begin(), m_vertexElements.end(), [&](auto& element) {
-                return element.m_type == targetEle;
-            });
-            ASSERT(found != m_vertexElements.end() && "Element not found");
+        for(auto& element: m_vertexElements) {
             auto& stream = packet.m_indvidual.m_vertexStream[packet.m_indvidual.m_numStreams++];
-            stream.m_buffer = &found->m_buffer;
-            stream.m_offset = found->m_activeCopy * found->m_shadowData.size();
-            stream.m_stride = found->Stride();
+            stream.m_buffer = &element.m_buffer;
+            stream.m_element = element.m_type;
+            stream.m_offset = element.m_activeCopy * element.m_shadowData.size();
+            stream.m_stride = element.Stride();
         }
         const int requestNumIndecies = GetRequestNumberIndecies();
         const uint32_t numIndecies = (requestNumIndecies >= 0) ? requestNumIndecies : static_cast<uint32_t>(m_indices.size()) ;

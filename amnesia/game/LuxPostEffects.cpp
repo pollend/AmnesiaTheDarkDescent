@@ -136,11 +136,10 @@ void cLuxPostEffect_Insanity::RenderEffect(
     uint32_t rootConstantIndex = getDescriptorIndexFromName(m_instantyRootSignature, "rootConstant");
     cmdBindPushConstants(frame.m_cmd, m_instantyRootSignature, rootConstantIndex, &param);
 
-    LoadActionsDesc loadActions = {};
-    loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-    loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-
-    cmdBindRenderTargets(frame.m_cmd, 1, &renderTarget, NULL, &loadActions, NULL, NULL, -1, -1);
+    BindRenderTargetsDesc bindRenderTargets = {};
+    bindRenderTargets.mRenderTargetCount = 1;
+    bindRenderTargets.mRenderTargets[0] = { renderTarget, LOAD_ACTION_LOAD };
+    cmdBindRenderTargets(frame.m_cmd, &bindRenderTargets );
 
     std::array<DescriptorData, 4> params = {};
     params[0].pName = "sourceInput";

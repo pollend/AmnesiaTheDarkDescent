@@ -25,11 +25,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 	iEntity3D::iEntity3D(tString asName)
 	{
 		msName = asName;
@@ -90,8 +85,6 @@ namespace hpl {
 		return m_mtxLocalTransform.GetTranslation();
 	}
 
-	//-----------------------------------------------------------------------
-
 	cMatrixf& iEntity3D::GetLocalMatrix()
 	{
 		return m_mtxLocalTransform;
@@ -108,8 +101,6 @@ namespace hpl {
 		return m_mtxWorldTransform.GetTranslation();
 	}
 
-	//-----------------------------------------------------------------------
-
 	cMatrixf& iEntity3D::GetWorldMatrix()
 	{
 		UpdateWorldTransform();
@@ -117,12 +108,15 @@ namespace hpl {
 		return m_mtxWorldTransform;
 	}
 
+    Point3 iEntity3D::GetWorldPositionP3() {
+        return cMath::ToForgePoint3(GetWorldPosition());
+    }
+
 	Matrix4 iEntity3D::GetWorldMat() {
 		UpdateWorldTransform();
 
         return cMath::ToForgeMatrix4(m_mtxWorldTransform);
     }
-	//-----------------------------------------------------------------------
 
 	void iEntity3D::SetPosition(const cVector3f& avPos)
 	{
@@ -133,16 +127,12 @@ namespace hpl {
 		SetTransformUpdated();
 	}
 
-	//-----------------------------------------------------------------------
-
 	void iEntity3D::SetMatrix(const cMatrixf& a_mtxTransform)
 	{
 		m_mtxLocalTransform = a_mtxTransform;
 
 		SetTransformUpdated();
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iEntity3D::SetWorldPosition(const cVector3f& avWorldPos)
 	{
@@ -155,8 +145,6 @@ namespace hpl {
 			SetPosition(avWorldPos);
 		}
 	}
-
-	//-----------------------------------------------------------------------
 
 	void iEntity3D::SetWorldMatrix(const cMatrixf& a_mtxWorldTransform)
 	{

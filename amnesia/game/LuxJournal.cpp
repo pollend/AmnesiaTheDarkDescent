@@ -1892,7 +1892,7 @@ void cLuxJournal::CreateBackground()
 	auto* viewport = gpBase->mpMapHandler->GetViewport();
 	auto* renderer = viewport->GetRenderer();
 	auto* forgeRenderer = Interface<ForgeRenderer>::Get();
-    auto frame = forgeRenderer->GetFrame();
+    auto& frame = forgeRenderer->GetFrame();
 	auto screenSize = viewport->GetSize();
     {
         iLowLevelGraphics* pLowGfx = mpGraphics->GetLowLevel();
@@ -1947,7 +1947,7 @@ void cLuxJournal::CreateBackground()
 
         auto outputRt = renderer->GetOutputImage(frame.m_frameIndex, *viewport);
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(frame.m_cmd, NULL);
             std::array rtBarriers = {
                 RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
             };
@@ -1955,7 +1955,7 @@ void cLuxJournal::CreateBackground()
         }
         forgeRenderer->cmdCopyTexture( frame.m_cmd, outputRt.m_handle->pTexture, m_screenTarget.m_handle);
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(frame.m_cmd, NULL);
             std::array rtBarriers = {
                 RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
                 RenderTargetBarrier{ m_screenBgTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
@@ -1964,7 +1964,10 @@ void cLuxJournal::CreateBackground()
         }
 
 	    {
-            cmdBindRenderTargets(frame.m_cmd, 1, &m_screenBgTarget.m_handle, NULL, NULL, NULL, NULL, -1, -1);
+            BindRenderTargetsDesc bindRenderTargets = {};
+            bindRenderTargets.mRenderTargetCount = 1;
+            bindRenderTargets.mRenderTargets[0] = { m_screenBgTarget.m_handle, LOAD_ACTION_LOAD };
+            cmdBindRenderTargets(frame.m_cmd, &bindRenderTargets);
 
             std::array<DescriptorData, 1> params = {};
             params[0].pName = "sourceInput";
@@ -1980,7 +1983,7 @@ void cLuxJournal::CreateBackground()
             m_setIndex = (m_setIndex + 1) % cLuxJournal::DescriptorSetSize;
 	    }
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(frame.m_cmd, NULL);
             std::array rtBarriers = {
                 RenderTargetBarrier{ m_screenBgTarget.m_handle, RESOURCE_STATE_RENDER_TARGET , RESOURCE_STATE_SHADER_RESOURCE},
             };

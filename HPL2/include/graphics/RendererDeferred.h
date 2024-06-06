@@ -356,13 +356,13 @@ namespace hpl {
 
         virtual void Draw(
             Cmd* cmd,
-            const ForgeRenderer::Frame& frame,
+            ForgeRenderer::Frame& context,
             cViewport& viewport,
             float afFrameTime,
             cFrustum* apFrustum,
             cWorld* apWorld,
-            cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects) override;
+            cRenderSettings* apSettings
+            ) override;
 
     private:
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
@@ -659,7 +659,6 @@ namespace hpl {
         SharedBuffer m_occlusionUniformBuffer;
         SharedRootSignature m_rootSignatureOcclusuion;
         SharedDescriptorSet m_descriptorOcclusionConstSet;
-        SharedBuffer m_occlusionReadBackBuffer;
         SharedShader m_shaderOcclusionQuery;
         SharedPipeline m_pipelineMaxOcclusionQuery;
         SharedPipeline m_pipelineOcclusionQuery;

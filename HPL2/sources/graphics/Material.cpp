@@ -52,11 +52,11 @@ namespace hpl {
 
     void cMaterial::SetTextureAnisotropy(float afx) {
         if (afx >= 16.0f) {
-            m_antistropy = Antistropy_16;
+            m_antistropy = TextureAntistropy::Antistropy_16;
         } else if (afx >= 8.0f) {
-            m_antistropy = Antistropy_8;
+            m_antistropy = TextureAntistropy::Antistropy_8;
         } else {
-            m_antistropy = Antistropy_None;
+            m_antistropy = TextureAntistropy::Antistropy_None;
         }
         IncreaseGeneration();
     }

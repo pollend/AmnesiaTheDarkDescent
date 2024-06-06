@@ -29,6 +29,7 @@
 #include "graphics/LowLevelGraphics.h"
 #include "graphics/VertexBuffer.h"
 #include "graphics/Renderer.h"
+#include <graphics/GraphicsBuffer.h>
 
 #include "scene/Camera.h"
 #include "math/Math.h"
@@ -42,807 +43,701 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// DATA LOADER
-	//////////////////////////////////////////////////////////////////////////
+    iParticleEmitterData::iParticleEmitterData(const tString& asName, cResources* apResources, cGraphics* apGraphics) {
+        msName = asName;
+        mpResources = apResources;
+        mpGraphics = apGraphics;
 
-	//-----------------------------------------------------------------------
+        mfWarmUpTime = 0;
+        mfWarmUpStepsPerSec = 20;
+    }
 
-	iParticleEmitterData::iParticleEmitterData(const tString &asName,cResources* apResources,
-		cGraphics *apGraphics)
-	{
-		msName = asName;
-		mpResources = apResources;
-		mpGraphics = apGraphics;
+    //-----------------------------------------------------------------------
 
-		mfWarmUpTime =0;
-		mfWarmUpStepsPerSec = 20;
-	}
+    iParticleEmitterData::~iParticleEmitterData() {
+        for (int i = 0; i < (int)mvMaterials.size(); i++) {
+            if (mvMaterials[i])
+                mpResources->GetMaterialManager()->Destroy(mvMaterials[i]);
+        }
+    }
+    //-----------------------------------------------------------------------
 
-	//-----------------------------------------------------------------------
+    void iParticleEmitterData::AddMaterial(cMaterial* apMaterial) {
+        mvMaterials.push_back(apMaterial);
+    }
 
-	iParticleEmitterData::~iParticleEmitterData()
-	{
-		for(int i=0;i<(int)mvMaterials.size();i++)
-		{
-			if(mvMaterials[i]) mpResources->GetMaterialManager()->Destroy(mvMaterials[i]);
-		}
-	}
-	//-----------------------------------------------------------------------
+    iParticleEmitter::iParticleEmitter(
+        tString asName,
+        tMaterialVec* avMaterials,
+        unsigned int alMaxParticles,
+        cVector3f avSize,
+        cGraphics* apGraphics,
+        cResources* apResources)
+        : iRenderable(asName) {
+        mpGraphics = apGraphics;
+        mpResources = apResources;
 
-	void iParticleEmitterData::AddMaterial(cMaterial *apMaterial)
-	{
-		mvMaterials.push_back(apMaterial);
-	}
+        // Create and set up particle data
+        mvParticles.resize(alMaxParticles);
+        for (int i = 0; i < (int)alMaxParticles; i++) {
+            mvParticles[i] = hplNew(cParticle, ());
+        }
+        mlMaxParticles = alMaxParticles;
+        mlNumOfParticles = 0;
 
-	//-----------------------------------------------------------------------
+        mvMaterials = avMaterials;
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
+        auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
+        auto& particleSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::ParticleSet);
+        m_geometry = particleSet.allocate(4 * mlMaxParticles * NumberActiveCopies, 6 * mlMaxParticles);
 
-	//-----------------------------------------------------------------------
+        auto positionStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+        auto colorStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR);
+        auto uvStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0);
 
-	iParticleEmitter::iParticleEmitter(tString asName,tMaterialVec *avMaterials,
-										unsigned int alMaxParticles, cVector3f avSize,
-										cGraphics *apGraphics,cResources *apResources)
-		:iRenderable(asName)
-	{
+        auto& indexStream = m_geometry->indexBuffer();
 
-		mpGraphics = apGraphics;
-		mpResources = apResources;
+        BufferUpdateDesc indexUpdateDesc = { indexStream.m_handle,
+                                             m_geometry->indexOffset() * GeometrySet::IndexBufferStride,
+                                             GeometrySet::IndexBufferStride * 6 };
+        BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle,
+                                                (m_geometry->vertexOffset() * positionStream->stride()),
+                                                positionStream->stride() * 4 * mlMaxParticles * NumberActiveCopies };
+        BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle,
+                                             (m_geometry->vertexOffset() * colorStream->stride()),
+                                             colorStream->stride() * 4 * mlMaxParticles * NumberActiveCopies };
+        BufferUpdateDesc uvUpdateDesc = { uvStream->buffer().m_handle,
+                                          (m_geometry->vertexOffset() * uvStream->stride()),
+                                          uvStream->stride() * 4 * mlMaxParticles * NumberActiveCopies };
 
-		/////////////////////////////////////
-		//Create and set up particle data
-		mvParticles.resize(alMaxParticles);
-		for(int i=0;i<(int)alMaxParticles;i++)
-		{
-			mvParticles[i] = hplNew( cParticle, () );
-		}
-		mlMaxParticles = alMaxParticles;
-		mlNumOfParticles =0;
+        beginUpdateResource(&indexUpdateDesc);
+        beginUpdateResource(&positionUpdateDesc);
+        beginUpdateResource(&colorUpdateDesc);
+        beginUpdateResource(&uvUpdateDesc);
 
-		mvMaterials = avMaterials;
+        GraphicsBuffer gpuIndexBuffer(indexUpdateDesc);
 
-		//////////////////////////////////
-		//Create vertex buffer
-		mpVtxBuffer = apGraphics->GetLowLevel()->CreateVertexBuffer(eVertexBufferType_Hardware,
-																	eVertexBufferDrawType_Tri, eVertexBufferUsageType_Stream,
-																	alMaxParticles*4, alMaxParticles*6);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
+        auto indexView = gpuIndexBuffer.CreateIndexView();
+        uint32_t appendIdx = 0;
+        for (size_t i = 0; i < alMaxParticles; i++) {
+            for (int j = 0; j < 3; j++) {
+                indexView.Write(appendIdx++, (i * 4) + j);
+            }
+            for (int j = 2; j < 5; j++) {
+                indexView.Write(appendIdx++, (i * 4) + (j == 4 ? 0 : j));
+            }
+        }
 
-		//////////////////////////////////
-		//Fill the indices with quads
-		for(int i=0;i<(int)alMaxParticles;i++)
-		{
-			int lStart = i*4;
-			for(int j=0;j<3;j++) mpVtxBuffer->AddIndex(lStart + j);
-			for(int j=2;j<5;j++) mpVtxBuffer->AddIndex(lStart + (j==4?0:j));
-		}
+        GraphicsBuffer gpuPositionBuffer(positionUpdateDesc);
+        GraphicsBuffer gpuColorBuffer(colorUpdateDesc);
+        GraphicsBuffer gpuUvBuffer(uvUpdateDesc);
 
-		//////////////////////////////////
-		//Fill with texture coords (will do for most particle systems)
-		for(int i=0;i<(int)alMaxParticles;i++)
-		{
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(1,1,0));
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(0,1,0));
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(0,0,0));
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, cVector3f(1,0,0));
-		}
+        auto positionView = gpuPositionBuffer.CreateStructuredView<float3>();
+        auto colorView = gpuColorBuffer.CreateStructuredView<float4>();
+        auto uvView = gpuUvBuffer.CreateStructuredView<float2>();
 
-		//////////////////////////////////
-		//Set default values for pos and col
-		for(int i=0;i<(int)alMaxParticles*4;i++){
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Position, 0);
-			mpVtxBuffer->AddVertexColor(eVertexBufferElement_Color0, cColor(1,1));
-		}
+        for (size_t i = 0; i < mlMaxParticles * NumberActiveCopies; i++) {
+            uvView.Write((i * 4) + 0, float2(1, 1));
+            uvView.Write((i * 4) + 1, float2(0, 1));
+            uvView.Write((i * 4) + 2, float2(0, 0));
+            uvView.Write((i * 4) + 3, float2(1, 0));
+        }
+        for (size_t i = 0; i < mlMaxParticles * NumberActiveCopies * 4; i++) {
+            colorView.Write(i, float4(1, 1, 1, 1));
+            positionView.Write(i, float3(0, 0, 0));
+        }
 
-		////////////////////////////////////
-		// Compile vertex buffer
-		mpVtxBuffer->Compile(0);
+        endUpdateResource(&indexUpdateDesc);
+        endUpdateResource(&positionUpdateDesc);
+        endUpdateResource(&colorUpdateDesc);
+        endUpdateResource(&uvUpdateDesc);
 
+        ////////////////////////////////////
+        // Setup vars
+        mlSleepCount =
+            60 * 5; // Start with high sleep count to make sure a looping particle system reaches equilibrium. 5 secs should eb enough!
 
-		////////////////////////////////////
-		//Setup vars
-		mlSleepCount = 60*5; //Start with high sleep count to make sure a looping particle system reaches equilibrium. 5 secs should eb enough!
+        mbDying = false;
+        mfFrame = 0;
 
-		mbDying = false;
-		mfFrame =0;
+        mbUpdateGfx = true;
+        mbUpdateBV = true;
 
-		mbUpdateGfx = true;
-		mbUpdateBV = true;
+        mlDirectionUpdateCount = -1;
+        mvDirection = cVector3f(0, 0, 0);
 
-		mlDirectionUpdateCount = -1;
-		mvDirection = cVector3f(0,0,0);
+        mvMaxDrawSize = 0;
 
-		mvMaxDrawSize =0;
+        mlAxisDrawUpdateCount = -1;
 
-		mlAxisDrawUpdateCount = -1;
+        mbApplyTransformToBV = false;
 
-		mbApplyTransformToBV = false;
+        mBoundingVolume.SetSize(0);
+        mBoundingVolume.SetPosition(0);
 
-		mBoundingVolume.SetSize(0);
-		mBoundingVolume.SetPosition(0);
+        mDrawType = eParticleEmitterType_FixedPoint;
+        mCoordSystem = eParticleEmitterCoordSystem_World;
 
-		mDrawType = eParticleEmitterType_FixedPoint;
-		mCoordSystem = eParticleEmitterCoordSystem_World;
+        mbUsesDirection = false; // If Direction should be udpdated
+    }
 
-		mbUsesDirection = false;	//If Direction should be udpdated
+    iParticleEmitter::~iParticleEmitter() {
+        for (int i = 0; i < (int)mvParticles.size(); i++) {
+            hplDelete(mvParticles[i]);
+        }
+    }
 
-	}
+    void iParticleEmitter::SetSubDivUV(const cVector2l& avSubDiv) {
+        // Check so that there is any subdivision and that no sub divison axis is
+        // equal or below zero
+        if ((avSubDiv.x > 1 || avSubDiv.x > 1) && (avSubDiv.x > 0 && avSubDiv.y > 0)) {
+            int lSubDivNum = avSubDiv.x * avSubDiv.y;
 
-	//-----------------------------------------------------------------------
+            mvSubDivUV.resize(lSubDivNum);
 
-	iParticleEmitter::~iParticleEmitter()
-	{
-		for(int i=0;i<(int)mvParticles.size();i++)
-		{
-			hplDelete(mvParticles[i]);
-		}
+            float fInvW = 1.0f / (float)avSubDiv.x;
+            float fInvH = 1.0f / (float)avSubDiv.y;
 
-		hplDelete(mpVtxBuffer);
-	}
+            for (int x = 0; x < avSubDiv.x; ++x)
+                for (int y = 0; y < avSubDiv.y; ++y) {
+                    int lIdx = y * avSubDiv.x + x;
 
-	//-----------------------------------------------------------------------
+                    float fX = (float)x;
+                    float fY = (float)y;
 
-	//////////////////////////////////////////////////////////////////////////
-	// PUBLIC METHODS
-	//////////////////////////////////////////////////////////////////////////
+                    cPESubDivision* pSubDiv = &mvSubDivUV[lIdx];
 
-	//-----------------------------------------------------------------------
+                    pSubDiv->mvUV[0] = cVector3f((fX + 1) * fInvW, (fY + 1) * fInvH, 0); // 1,1
+                    pSubDiv->mvUV[1] = cVector3f(fX * fInvW, (fY + 1) * fInvH, 0); // 0,1
+                    pSubDiv->mvUV[2] = cVector3f(fX * fInvW, fY * fInvH, 0); // 0,0
+                    pSubDiv->mvUV[3] = cVector3f((fX + 1) * fInvW, fY * fInvH, 0); // 1,0
+                }
+        }
+    }
 
-	void iParticleEmitter::SetSubDivUV(const cVector2l &avSubDiv)
-	{
-		//Check so that there is any subdivision and that no sub divison axis is
-		//equal or below zero
-		if( (avSubDiv.x > 1 || avSubDiv.x > 1) && (avSubDiv.x >0 && avSubDiv.y >0))
-		{
-			int lSubDivNum = avSubDiv.x * avSubDiv.y;
+    //-----------------------------------------------------------------------
 
-			mvSubDivUV.resize(lSubDivNum);
+    // Seems like this fucntion is never called any more...
+    void iParticleEmitter::UpdateLogic(float afTimeStep) {
+        if (IsActive() == false)
+            return;
 
-			float fInvW = 1.0f / (float)avSubDiv.x;
-			float fInvH = 1.0f / (float)avSubDiv.y;
+        //////////////////////////////
+        // Update sleep
+        if (IsDying() == false && iRenderer::GetRenderFrameCount() != mlRenderFrameCount) {
+            if (mlSleepCount <= 0)
+                return;
+            mlSleepCount--;
+        } else {
+            if (mlSleepCount < 10)
+                mlSleepCount = 10;
+        }
 
-			for(int x=0; x < avSubDiv.x; ++x)
-				for(int y=0; y < avSubDiv.y; ++y)
-				{
-					int lIdx = y*avSubDiv.x + x;
+        //////////////////////////////
+        // Update vars
+        mbUpdateGfx = true;
+        mbUpdateBV = true;
 
-					float fX = (float)x;
-					float fY = (float)y;
+        //////////////////////////////
+        // Update direction
+        if (mbUsesDirection) {
+            if (mlDirectionUpdateCount != GetMatrixUpdateCount()) {
+                mlDirectionUpdateCount = GetMatrixUpdateCount();
+                cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
+                mvDirection = mtxInv.GetUp();
+            }
+        }
 
-					cPESubDivision *pSubDiv = &mvSubDivUV[lIdx];
+        UpdateMotion(afTimeStep);
 
-					pSubDiv->mvUV[0] = cVector3f( (fX +1)*fInvW,	(fY +1)*fInvH,0);	//1,1
-					pSubDiv->mvUV[1] = cVector3f( fX*fInvW,			(fY +1)*fInvH,0);	//0,1
-					pSubDiv->mvUV[2] = cVector3f( fX*fInvW,			fY*fInvH,0);		//0,0
-					pSubDiv->mvUV[3] = cVector3f( (fX +1)*fInvW,	fY*fInvH,0);		//1,0
-				}
-		}
+        SetTransformUpdated();
+    }
 
-	}
+    void iParticleEmitter::KillInstantly() {
+        mlMaxParticles = 0;
+        mlNumOfParticles = 0;
+        mbDying = true;
+    }
 
-	//-----------------------------------------------------------------------
+    cMaterial* iParticleEmitter::GetMaterial() {
+        return (*mvMaterials)[(int)mfFrame];
+    }
 
-	//Seems like this fucntion is never called any more...
-	void iParticleEmitter::UpdateLogic(float afTimeStep)
-	{
-		if(IsActive()==false) return;
-
-		//////////////////////////////
-		// Update sleep
-		if(IsDying()==false && iRenderer::GetRenderFrameCount() != mlRenderFrameCount)
-		{
-			if(mlSleepCount <= 0)return;
-			mlSleepCount--;
-		}
-		else
-		{
-			if(mlSleepCount<10) mlSleepCount =10;
-		}
-
-		//////////////////////////////
-		// Update vars
-		mbUpdateGfx = true;
-		mbUpdateBV = true;
-
-		//////////////////////////////
-		// Update direction
-		if(mbUsesDirection)
-		{
-			if(mlDirectionUpdateCount != GetMatrixUpdateCount())
-			{
-				mlDirectionUpdateCount = GetMatrixUpdateCount();
-				cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
-				mvDirection = mtxInv.GetUp();
-			}
-		}
-
-		UpdateMotion(afTimeStep);
-
-		SetTransformUpdated();
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iParticleEmitter::KillInstantly()
-	{
-		mlMaxParticles = 0;
-		mlNumOfParticles = 0;
-		mbDying = true;
-	}
-
-	//-----------------------------------------------------------------------
-
-	cMaterial* iParticleEmitter::GetMaterial()
-	{
-		return (*mvMaterials)[(int)mfFrame];
-	}
-
-	//-----------------------------------------------------------------------
-
-	static inline void SetCol(float *apCol, const cColor &aCol)
-	{
-		apCol[0] = aCol.r;
-		apCol[1] = aCol.g;
-		apCol[2] = aCol.b;
-		apCol[3] = aCol.a;
-	}
-
-	static inline void SetPos(float *apPos, const cVector3f &aPos)
-	{
-		apPos[0] = aPos.x;
-		apPos[1] = aPos.y;
-		apPos[2] = aPos.z;
-	}
-
-	static inline void SetTex(float *apTex, const cVector3f &aPos)
-	{
-		apTex[0] = aPos.x;
-		apTex[1] = aPos.y;
-		apTex[2] = aPos.z;
-	}
-
-	bool iParticleEmitter::UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime)
-	{
-		//if(mbUpdateGfx == false) return;
-
-		//////////////////////////
-		// Get Data
-		float *pPosArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
-		float *pColArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
+    bool iParticleEmitter::UpdateGraphicsForViewport(cFrustum* apFrustum, float afFrameTime) {
+        if(mlMaxParticles == 0) {
+            return true;
+        }
+        ASSERT(mlNumOfParticles <= mlMaxParticles);
 
 
-		//////////////////////////
-		// Set up color mul
+        m_activeCopy = (m_activeCopy + 1) % NumberActiveCopies;
+
+        auto positionStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+        auto colorStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR);
+        auto uvStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0);
+
+
+        BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle,
+                                                positionStream->stride() * ((mlMaxParticles * m_activeCopy * 4) + m_geometry->vertexOffset()),
+                                                positionStream->stride() * mlNumOfParticles * 4 };
+        BufferUpdateDesc textureUpdateDesc = { uvStream->buffer().m_handle,
+                                               uvStream->stride() * ((mlMaxParticles * m_activeCopy * 4) + m_geometry->vertexOffset()),
+                                               uvStream->stride() * mlNumOfParticles * 4 };
+        BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle,
+                                             colorStream->stride() * ((mlMaxParticles * m_activeCopy * 4) + m_geometry->vertexOffset()),
+                                             colorStream->stride() * mlNumOfParticles * 4 };
+
+        // Set up color mul
         cColor colorMul = mpParentSystem->mColor;
 
-		//Set alpha based on fade distance.
-		if(mpParentSystem->mbFadeAtDistance)
-		{
-			float fDistSqr = cMath::Vector3DistSqr(mpParentSystem->GetBoundingVolume()->GetWorldCenter(), apFrustum->GetOrigin());
-			float fMinStart = mpParentSystem->mfMinFadeDistanceStart;
-			float fMaxStart = mpParentSystem->mfMaxFadeDistanceStart;
-			float fMinEnd = mpParentSystem->mfMinFadeDistanceEnd;
-			float fMaxEnd = mpParentSystem->mfMaxFadeDistanceEnd;
-
-			///////////
-			// Below min
-			if(fMinStart >0 && fDistSqr < fMinStart* fMinStart)
-			{
-				if(fDistSqr <= fMinEnd * fMinEnd)
-				{
-					colorMul.a = 0;
-				}
-				else
-				{
-					float fDist = sqrt(fDistSqr);
-                    colorMul.a *= (fDist - fMinEnd)/(fMinStart - fMinEnd);
-				}
-			}
-			///////////
-			// Above max
-			if(fMaxStart >0 && fDistSqr > fMaxStart* fMaxStart)
-			{
-				if(fDistSqr >= fMaxEnd * fMaxEnd)
-				{
-					colorMul.a = 0;
-				}
-				else
-				{
-					float fDist = sqrt(fDistSqr);
-					colorMul.a *= 1 - (fDist - fMaxStart)/(fMaxEnd - fMaxStart);
-				}
-			}
-		}
-		//Change color based on alpha
-		if(mbMultiplyRGBWithAlpha)
-		{
-			colorMul.r *= colorMul.a;
-			colorMul.g *= colorMul.a;
-			colorMul.b *= colorMul.a;
-		}
-
-		//////////////////////////////
-		// If alpha is 0, skip rendering anything
-		if(colorMul.a <= 0)
-		{
-			mpVtxBuffer->SetElementNum(0);
-			return false;
-		}
-
-		//////////////////////////////
-		// RENDERING
-
-		if ( mPEType == ePEType_Beam)
-		{
-			//				for (int i=0; i<(int)mlNumOfParticles; i++)
-			//				{
-			//					cParticle *pParticle = mvParticles[i];
-
-			//					for (int j = 0; j < (int) pParticle->mvBeamPoints->size(); j++)
-			//					{
-
-			//					}
-			//				}
-
-		}
-		else
-		{
-			//////////////////////////////////////////////////
-			// SUB DIVISION SET UP
-			if(mvSubDivUV.size() > 1)
-			{
-				float *pTexArray = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Texture0);
-
-				for(int i=0;i<(int)mlNumOfParticles;i++)
-				{
-					cParticle *pParticle = mvParticles[i];
-
-					cPESubDivision &subDiv = mvSubDivUV[pParticle->mlSubDivNum];
-
-					SetTex(&pTexArray[i*12 + 0*3],subDiv.mvUV[0]);
-					SetTex(&pTexArray[i*12 + 1*3],subDiv.mvUV[1]);
-					SetTex(&pTexArray[i*12 + 2*3],subDiv.mvUV[2]);
-					SetTex(&pTexArray[i*12 + 3*3],subDiv.mvUV[3]);
-
-					/*SetTex(&pTexArray[i*12 + 0*3], cVector3f(1,1,0));
-					SetTex(&pTexArray[i*12 + 1*3], cVector3f(0,1,0));
-					SetTex(&pTexArray[i*12 + 2*3], cVector3f(0,0,0));
-					SetTex(&pTexArray[i*12 + 3*3], cVector3f(1,0,0));*/
-				}
-			}
-
-			//////////////////////////////////////////////////
-			// FIXED POINT
-			if(mDrawType == eParticleEmitterType_FixedPoint)
-			{
-				cVector3f vAdd[4] = {
-					cVector3f( mvDrawSize.x,-mvDrawSize.y,0),
-						cVector3f(-mvDrawSize.x,-mvDrawSize.y,0),
-						cVector3f(-mvDrawSize.x, mvDrawSize.y,0),
-						cVector3f( mvDrawSize.x, mvDrawSize.y,0)
-				};
-
-				//If this is a reflection, need to invert the ordering.
-				if(apFrustum->GetInvertsCullMode())
-				{
-					for(int i=0; i<4; ++i)	vAdd[i].y = -vAdd[i].y;
-				}
-
-				// NEW
-
-				// ---
-
-
-				int lVtxStride = mpVtxBuffer->GetElementNum(eVertexBufferElement_Position);
-				int lVtxQuadSize = lVtxStride*4;
-
-				for(int i=0;i<(int)mlNumOfParticles;i++)
-				{
-					cParticle *pParticle = mvParticles[i];
-
-					//This is not the fastest thing possible...
-					cVector3f vParticlePos = pParticle->mvPos;
-
-					if(mCoordSystem == eParticleEmitterCoordSystem_Local){
-						vParticlePos = cMath::MatrixMul(mpParentSystem->GetWorldMatrix(), vParticlePos);
-					}
-
-					cVector3f vPos = cMath::MatrixMul(apFrustum->GetViewMatrix(), vParticlePos);
-					cColor finalColor = pParticle->mColor * colorMul;
-
-					SetPos(&pPosArray[i*lVtxQuadSize + 0*lVtxStride], vPos + vAdd[0]);
-					SetCol(&pColArray[i*16 + 0*4], finalColor);
-
-					SetPos(&pPosArray[i*lVtxQuadSize + 1*lVtxStride], vPos + vAdd[1]);
-					SetCol(&pColArray[i*16 + 1*4], finalColor);
-
-					SetPos(&pPosArray[i*lVtxQuadSize + 2*lVtxStride], vPos + vAdd[2]);
-					SetCol(&pColArray[i*16 + 2*4], finalColor);
-
-					SetPos(&pPosArray[i*lVtxQuadSize + 3*lVtxStride], vPos + vAdd[3]);
-					SetCol(&pColArray[i*16 + 3*4], finalColor);
-				}
-			}
-			//////////////////////////////////////////////////
-			// DYNAMIC POINT
-			else if(mDrawType == eParticleEmitterType_DynamicPoint)
-			{
-				cVector3f vAdd[4] = {
-						cVector3f( mvDrawSize.x,-mvDrawSize.y,0),
-						cVector3f(-mvDrawSize.x,-mvDrawSize.y,0),
-						cVector3f(-mvDrawSize.x, mvDrawSize.y,0),
-						cVector3f( mvDrawSize.x, mvDrawSize.y,0)
-				};
-
-				//If this is a reflection, need to invert the ordering.
-				if(apFrustum->GetInvertsCullMode())
-				{
-					for(int i=0; i<4; ++i)	vAdd[i].y = -vAdd[i].y;
-				}
-
-				int lVtxStride = mpVtxBuffer->GetElementNum(eVertexBufferElement_Position);
-				int lVtxQuadSize = lVtxStride*4;
-
-				for(int i=0;i<(int)mlNumOfParticles;i++)
-				{
-					cParticle *pParticle = mvParticles[i];
-
-					//This is not the fastest thing possible
-					cVector3f vParticlePos = pParticle->mvPos;
-
-
-					if(mCoordSystem == eParticleEmitterCoordSystem_Local){
-						vParticlePos = cMath::MatrixMul(mpParentSystem->GetWorldMatrix(), vParticlePos);
-					}
-
-					cVector3f vPos = cMath::MatrixMul(apFrustum->GetViewMatrix(), vParticlePos);
-
-
-					// NEW
-
-					cVector3f vParticleSize = pParticle->mvSize;
-					cColor finalColor = pParticle->mColor * colorMul;
-
-					if ( mbUsePartSpin )
-					{
-						cMatrixf mtxRotationMatrix = cMath::MatrixRotateZ(pParticle->mfSpin);
-
-
-						SetPos(&pPosArray[i*lVtxQuadSize + 0*lVtxStride], vPos + cMath::MatrixMul(mtxRotationMatrix, vAdd[0]*vParticleSize));
-						SetCol(&pColArray[i*16 + 0*4], finalColor);
-
-						SetPos(&pPosArray[i*lVtxQuadSize + 1*lVtxStride], vPos + cMath::MatrixMul(mtxRotationMatrix, vAdd[1]*vParticleSize));
-						SetCol(&pColArray[i*16 + 1*4], finalColor);
-
-						SetPos(&pPosArray[i*lVtxQuadSize + 2*lVtxStride], vPos + cMath::MatrixMul(mtxRotationMatrix, vAdd[2]*vParticleSize));
-						SetCol(&pColArray[i*16 + 2*4], finalColor);
-
-						SetPos(&pPosArray[i*lVtxQuadSize + 3*lVtxStride], vPos + cMath::MatrixMul(mtxRotationMatrix, vAdd[3]*vParticleSize));
-						SetCol(&pColArray[i*16 + 3*4], finalColor);
-
-					}
-					else
-					{
-						//--
-
-						SetPos(&pPosArray[i*lVtxQuadSize + 0*lVtxStride], vPos + vAdd[0]*vParticleSize);
-						SetCol(&pColArray[i*16 + 0*4], finalColor);
-
-						SetPos(&pPosArray[i*lVtxQuadSize + 1*lVtxStride], vPos + vAdd[1]*vParticleSize);
-						SetCol(&pColArray[i*16 + 1*4], finalColor);
-
-						SetPos(&pPosArray[i*lVtxQuadSize + 2*lVtxStride], vPos + vAdd[2]*vParticleSize);
-						SetCol(&pColArray[i*16 + 2*4], finalColor);
-
-						SetPos(&pPosArray[i*lVtxQuadSize + 3*lVtxStride], vPos + vAdd[3]*vParticleSize);
-						SetCol(&pColArray[i*16 + 3*4], finalColor);
-
-					}
-				}
-			}
-			//////////////////////////////////////////////////
-			// LINE
-			else if(mDrawType == eParticleEmitterType_Line)
-			{
-				int lVtxStride = mpVtxBuffer->GetElementNum(eVertexBufferElement_Position);
-				int lVtxQuadSize = lVtxStride*4;
-
-				for(int i=0;i<(int)mlNumOfParticles;i++)
-				{
-					cParticle *pParticle = mvParticles[i];
-
-					//This is not the fastest thing possible...
-
-					cVector3f vParticlePos1 = pParticle->mvPos;
-					cVector3f vParticlePos2 = pParticle->mvLastPos;
-
-					if(mCoordSystem == eParticleEmitterCoordSystem_Local){
-						vParticlePos1 = cMath::MatrixMul(mpParentSystem->GetWorldMatrix(), vParticlePos1);
-						vParticlePos2 = cMath::MatrixMul(mpParentSystem->GetWorldMatrix(), vParticlePos2);
-					}
-
-					cVector3f vPos1 = cMath::MatrixMul(apFrustum->GetViewMatrix(), vParticlePos1);
-					cVector3f vPos2 = cMath::MatrixMul(apFrustum->GetViewMatrix(), vParticlePos2);
-
-					cVector3f vDirY;
-					cVector2f vDirX;
-
-					if(vPos1 == vPos2)
-					{
-						vDirY = cVector3f(0,1,0);
-						vDirX = cVector2f(1,0);
-					}
-					else
-					{
-						vDirY = vPos1 - vPos2;
-						vDirY.Normalize();
-						vDirX = cVector2f(vDirY.y,-vDirY.x);
-						vDirX.Normalize();
-					}
-
-					vDirX = vDirX * mvDrawSize.x * pParticle->mvSize.x;
-					vDirY = vDirY * mvDrawSize.y * pParticle->mvSize.y;
-
-					if(apFrustum->GetInvertsCullMode()) vDirY = vDirY*-1;
-
-					cColor finalColor = pParticle->mColor * colorMul;
-
-					SetPos(&pPosArray[i*lVtxQuadSize + 0*lVtxStride], vPos2 + vDirY*-1 + vDirX);
-					SetCol(&pColArray[i*16 + 0*4], finalColor);
-
-					SetPos(&pPosArray[i*lVtxQuadSize + 1*lVtxStride], vPos2 + vDirY*-1 + vDirX*-1);
-					SetCol(&pColArray[i*16 + 1*4], finalColor);
-
-					SetPos(&pPosArray[i*lVtxQuadSize + 2*lVtxStride], vPos1 + vDirY + vDirX*-1);
-					SetCol(&pColArray[i*16 + 2*4], finalColor);
-
-					SetPos(&pPosArray[i*lVtxQuadSize + 3*lVtxStride], vPos1 + vDirY + vDirX);
-					SetCol(&pColArray[i*16 + 3*4], finalColor);
-				}
-			}
-			//////////////////////////////////////////////////
-			// AXIS
-			else if(mDrawType == eParticleEmitterType_Axis)
-			{
-				if(mlAxisDrawUpdateCount != GetMatrixUpdateCount())
-				{
-					mlAxisDrawUpdateCount = GetMatrixUpdateCount();
-					cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
-					mvRight = mtxInv.GetRight();
-					mvForward = mtxInv.GetForward();
-				}
-
-				cVector3f vAdd[4];
-				/*=
-				{
-				mvRight		 +	mvForward * 1,
-				mvRight * -1 +	mvForward * 1,
-				mvRight * -1 +	mvForward * -1,
-				mvRight		 +	mvForward * -1
-				};*/
-
-				int lVtxStride = mpVtxBuffer->GetElementNum(eVertexBufferElement_Position);
-				int lVtxQuadSize = lVtxStride*4;
-
-				for(int i=0;i<(int)mlNumOfParticles;i++)
-				{
-					cParticle *pParticle = mvParticles[i];
-
-					//This is not the fastest thing possible
-					cVector3f vParticlePos = pParticle->mvPos;
-
-
-					if(mCoordSystem == eParticleEmitterCoordSystem_Local){
-						vParticlePos = cMath::MatrixMul(mpParentSystem->GetWorldMatrix(), vParticlePos);
-					}
-
-					cVector3f vPos = vParticlePos;//cMath::MatrixMul(apCamera->GetViewMatrix(), vParticlePos);
-					cVector2f &vSize = pParticle->mvSize;
-
-					vAdd[0] = mvRight	* vSize.x	 +	mvForward * vSize.y;
-					vAdd[1] = mvRight * -vSize.x	 +	mvForward * vSize.y;
-					vAdd[2] = mvRight * -vSize.x	 +	mvForward * -vSize.y;
-					vAdd[3] = mvRight	* vSize.x	 +	mvForward * -vSize.y;
-
-					cColor finalColor = pParticle->mColor * colorMul;
-
-					SetPos(&pPosArray[i*lVtxQuadSize + 0*lVtxStride], vPos + vAdd[0]);
-					SetCol(&pColArray[i*16 + 0*4], finalColor);
-
-					SetPos(&pPosArray[i*lVtxQuadSize + 1*lVtxStride], vPos + vAdd[1]);
-					SetCol(&pColArray[i*16 + 1*4], finalColor);
-
-					SetPos(&pPosArray[i*lVtxQuadSize + 2*lVtxStride], vPos + vAdd[2]);
-					SetCol(&pColArray[i*16 + 2*4], finalColor);
-
-					SetPos(&pPosArray[i*lVtxQuadSize + 3*lVtxStride], vPos + vAdd[3]);
-					SetCol(&pColArray[i*16 + 3*4], finalColor);
-				}
-			}
-
-			mpVtxBuffer->SetElementNum(mlNumOfParticles * 6);
-
-			//Update the vertex buffer data
-
-			if(mvSubDivUV.size() > 1)
-				mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Color0 | eVertexElementFlag_Texture0, false);
-			else
-				mpVtxBuffer->UpdateData(eVertexElementFlag_Position | eVertexElementFlag_Color0, false);
-
-		}
-
-		return true;
-	}
-
-
-	DrawPacket iParticleEmitter::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)
-	{
-	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame, elements);
-	}
-
-	iVertexBuffer* iParticleEmitter::GetVertexBuffer()
-	{
-		return mpVtxBuffer;
-	}
-
-	//-----------------------------------------------------------------------
-
-	bool iParticleEmitter::IsVisible()
-	{
-		if(IsActive()==false) return false;
-		return mbIsVisible;
-	}
-
-	//-----------------------------------------------------------------------
-
-	cBoundingVolume* iParticleEmitter::GetBoundingVolume()
-	{
-		if(mbUpdateBV)
-		{
+        // Set alpha based on fade distance.
+        if (mpParentSystem->mbFadeAtDistance) {
+            float fDistSqr = cMath::Vector3DistSqr(mpParentSystem->GetBoundingVolume()->GetWorldCenter(), apFrustum->GetOrigin());
+            float fMinStart = mpParentSystem->mfMinFadeDistanceStart;
+            float fMaxStart = mpParentSystem->mfMaxFadeDistanceStart;
+            float fMinEnd = mpParentSystem->mfMinFadeDistanceEnd;
+            float fMaxEnd = mpParentSystem->mfMaxFadeDistanceEnd;
+
+            // Below min
+            if (fMinStart > 0 && fDistSqr < fMinStart * fMinStart) {
+                if (fDistSqr <= fMinEnd * fMinEnd) {
+                    colorMul.a = 0;
+                } else {
+                    float fDist = sqrt(fDistSqr);
+                    colorMul.a *= (fDist - fMinEnd) / (fMinStart - fMinEnd);
+                }
+            }
+            // Above max
+            if (fMaxStart > 0 && fDistSqr > fMaxStart * fMaxStart) {
+                if (fDistSqr >= fMaxEnd * fMaxEnd) {
+                    colorMul.a = 0;
+                } else {
+                    float fDist = sqrt(fDistSqr);
+                    colorMul.a *= 1 - (fDist - fMaxStart) / (fMaxEnd - fMaxStart);
+                }
+            }
+        }
+        // Change color based on alpha
+        if (mbMultiplyRGBWithAlpha) {
+            colorMul.r *= colorMul.a;
+            colorMul.g *= colorMul.a;
+            colorMul.b *= colorMul.a;
+        }
+
+        // If alpha is 0, skip rendering anything
+        m_numberParticlesRender = mlNumOfParticles;
+        if (colorMul.a <= 0) {
+            m_numberParticlesRender = 0;
+            return false;
+        }
+
+        if (mPEType == ePEType_Beam) {
+            // something something beam Idunno
+        } else {
+
+            if (mvSubDivUV.size() > 1) {
+                beginUpdateResource(&textureUpdateDesc);
+                GraphicsBuffer gpuUvBuffer(textureUpdateDesc);
+                auto textureView = gpuUvBuffer.CreateStructuredView<float2>();
+
+                for (uint32_t i = 0; i < mlNumOfParticles; i++) {
+                    cParticle* pParticle = mvParticles[i];
+
+                    cPESubDivision& subDiv = mvSubDivUV[pParticle->mlSubDivNum];
+                    textureView.Write((i * 4) + 0, float2(subDiv.mvUV[0].x, subDiv.mvUV[0].y));
+                    textureView.Write((i * 4) + 1, float2(subDiv.mvUV[1].x, subDiv.mvUV[1].y));
+                    textureView.Write((i * 4) + 2, float2(subDiv.mvUV[2].x, subDiv.mvUV[2].y));
+                    textureView.Write((i * 4) + 3, float2(subDiv.mvUV[3].x, subDiv.mvUV[3].y));
+                }
+                endUpdateResource(&textureUpdateDesc);
+            }
+
+            // FIXED POINT
+            switch (mDrawType) {
+            case eParticleEmitterType_FixedPoint:
+                {
+                    beginUpdateResource(&positionUpdateDesc);
+                    beginUpdateResource(&colorUpdateDesc);
+                    GraphicsBuffer gpuPositionBuffer(positionUpdateDesc);
+                    GraphicsBuffer gpuColorBuffer(colorUpdateDesc);
+                    auto positionView = gpuPositionBuffer.CreateStructuredView<float3>();
+                    auto colorView = gpuColorBuffer.CreateStructuredView<float4>();
+
+                    cVector3f vAdd[4] = { cVector3f(mvDrawSize.x, -mvDrawSize.y, 0),
+                                          cVector3f(-mvDrawSize.x, -mvDrawSize.y, 0),
+                                          cVector3f(-mvDrawSize.x, mvDrawSize.y, 0),
+                                          cVector3f(mvDrawSize.x, mvDrawSize.y, 0) };
+
+                    // If this is a reflection, need to invert the ordering.
+                    if (apFrustum->GetInvertsCullMode()) {
+                        for (int i = 0; i < 4; ++i)
+                            vAdd[i].y = -vAdd[i].y;
+                    }
+
+                    for (uint32_t i = 0; i < mlNumOfParticles; i++) {
+                        cParticle* pParticle = mvParticles[i];
+
+                        // This is not the fastest thing possible...
+                        cVector3f vParticlePos = pParticle->mvPos;
+
+                        if (mCoordSystem == eParticleEmitterCoordSystem_Local) {
+                            vParticlePos = cMath::MatrixMul(mpParentSystem->GetWorldMatrix(), vParticlePos);
+                        }
+
+                        cVector3f vPos = cMath::MatrixMul(apFrustum->GetViewMatrix(), vParticlePos);
+                        cColor finalColor = pParticle->mColor * colorMul;
+
+                        positionView.Write((i * 4) + 0, v3ToF3(cMath::ToForgeVec3(vPos + vAdd[0])));
+                        positionView.Write((i * 4) + 1, v3ToF3(cMath::ToForgeVec3(vPos + vAdd[1])));
+                        positionView.Write((i * 4) + 2, v3ToF3(cMath::ToForgeVec3(vPos + vAdd[2])));
+                        positionView.Write((i * 4) + 3, v3ToF3(cMath::ToForgeVec3(vPos + vAdd[3])));
+
+                        colorView.Write((i * 4) + 0, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                        colorView.Write((i * 4) + 1, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                        colorView.Write((i * 4) + 2, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                        colorView.Write((i * 4) + 3, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                    }
+
+                    endUpdateResource(&positionUpdateDesc);
+                    endUpdateResource(&colorUpdateDesc);
+                    break;
+                }
+            case eParticleEmitterType_DynamicPoint:
+                {
+                    beginUpdateResource(&positionUpdateDesc);
+                    beginUpdateResource(&colorUpdateDesc);
+                    GraphicsBuffer gpuPositionBuffer(positionUpdateDesc);
+                    GraphicsBuffer gpuColorBuffer(colorUpdateDesc);
+                    auto positionView = gpuPositionBuffer.CreateStructuredView<float3>();
+                    auto colorView = gpuColorBuffer.CreateStructuredView<float4>();
+
+                    cVector3f vAdd[4] = { cVector3f(mvDrawSize.x, -mvDrawSize.y, 0),
+                                          cVector3f(-mvDrawSize.x, -mvDrawSize.y, 0),
+                                          cVector3f(-mvDrawSize.x, mvDrawSize.y, 0),
+                                          cVector3f(mvDrawSize.x, mvDrawSize.y, 0) };
+
+                    // If this is a reflection, need to invert the ordering.
+                    if (apFrustum->GetInvertsCullMode()) {
+                        for (int i = 0; i < 4; ++i)
+                            vAdd[i].y = -vAdd[i].y;
+                    }
+
+                    for (uint32_t i = 0; i < mlNumOfParticles; i++) {
+                        cParticle* pParticle = mvParticles[i];
+
+                        // This is not the fastest thing possible
+                        cVector3f vParticlePos = pParticle->mvPos;
+
+                        if (mCoordSystem == eParticleEmitterCoordSystem_Local) {
+                            vParticlePos = cMath::MatrixMul(mpParentSystem->GetWorldMatrix(), vParticlePos);
+                        }
+
+                        cVector3f vPos = cMath::MatrixMul(apFrustum->GetViewMatrix(), vParticlePos);
+
+                        cVector3f vParticleSize = pParticle->mvSize;
+                        cColor finalColor = pParticle->mColor * colorMul;
+
+                        if (mbUsePartSpin) {
+                            cMatrixf mtxRotationMatrix = cMath::MatrixRotateZ(pParticle->mfSpin);
+
+                            positionView.Write(
+                                (i * 4) + 0,
+                                v3ToF3(cMath::ToForgeVec3(vPos + cMath::MatrixMul(mtxRotationMatrix, vAdd[0] * vParticleSize))));
+                            positionView.Write(
+                                (i * 4) + 1,
+                                v3ToF3(cMath::ToForgeVec3(vPos + cMath::MatrixMul(mtxRotationMatrix, vAdd[1] * vParticleSize))));
+                            positionView.Write(
+                                (i * 4) + 2,
+                                v3ToF3(cMath::ToForgeVec3(vPos + cMath::MatrixMul(mtxRotationMatrix, vAdd[2] * vParticleSize))));
+                            positionView.Write(
+                                (i * 4) + 3,
+                                v3ToF3(cMath::ToForgeVec3(vPos + cMath::MatrixMul(mtxRotationMatrix, vAdd[3] * vParticleSize))));
+
+                            colorView.Write((i * 4) + 0, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                            colorView.Write((i * 4) + 1, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                            colorView.Write((i * 4) + 2, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                            colorView.Write((i * 4) + 3, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+
+                        } else {
+                            positionView.Write((i * 4) + 0, v3ToF3(cMath::ToForgeVec3(vPos + vAdd[0] * vParticleSize)));
+                            positionView.Write((i * 4) + 1, v3ToF3(cMath::ToForgeVec3(vPos + vAdd[1] * vParticleSize)));
+                            positionView.Write((i * 4) + 2, v3ToF3(cMath::ToForgeVec3(vPos + vAdd[2] * vParticleSize)));
+                            positionView.Write((i * 4) + 3, v3ToF3(cMath::ToForgeVec3(vPos + vAdd[3] * vParticleSize)));
+
+                            colorView.Write((i * 4) + 0, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                            colorView.Write((i * 4) + 1, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                            colorView.Write((i * 4) + 2, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                            colorView.Write((i * 4) + 3, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                        }
+                    }
+
+                    endUpdateResource(&positionUpdateDesc);
+                    endUpdateResource(&colorUpdateDesc);
+                    break;
+                }
+            case eParticleEmitterType_Line:
+                {
+                    beginUpdateResource(&positionUpdateDesc);
+                    beginUpdateResource(&colorUpdateDesc);
+                    GraphicsBuffer gpuPositionBuffer(positionUpdateDesc);
+                    GraphicsBuffer gpuColorBuffer(colorUpdateDesc);
+                    auto positionView = gpuPositionBuffer.CreateStructuredView<float3>();
+                    auto colorView = gpuColorBuffer.CreateStructuredView<float4>();
+
+                    for (uint32_t i = 0; i < mlNumOfParticles; i++) {
+                        cParticle* pParticle = mvParticles[i];
+
+                        // This is not the fastest thing possible...
+
+                        cVector3f vParticlePos1 = pParticle->mvPos;
+                        cVector3f vParticlePos2 = pParticle->mvLastPos;
+
+                        if (mCoordSystem == eParticleEmitterCoordSystem_Local) {
+                            vParticlePos1 = cMath::MatrixMul(mpParentSystem->GetWorldMatrix(), vParticlePos1);
+                            vParticlePos2 = cMath::MatrixMul(mpParentSystem->GetWorldMatrix(), vParticlePos2);
+                        }
+
+                        cVector3f vPos1 = cMath::MatrixMul(apFrustum->GetViewMatrix(), vParticlePos1);
+                        cVector3f vPos2 = cMath::MatrixMul(apFrustum->GetViewMatrix(), vParticlePos2);
+
+                        cVector3f vDirY;
+                        cVector2f vDirX;
+
+                        if (vPos1 == vPos2) {
+                            vDirY = cVector3f(0, 1, 0);
+                            vDirX = cVector2f(1, 0);
+                        } else {
+                            vDirY = vPos1 - vPos2;
+                            vDirY.Normalize();
+                            vDirX = cVector2f(vDirY.y, -vDirY.x);
+                            vDirX.Normalize();
+                        }
+
+                        vDirX = vDirX * mvDrawSize.x * pParticle->mvSize.x;
+                        vDirY = vDirY * mvDrawSize.y * pParticle->mvSize.y;
+
+                        if (apFrustum->GetInvertsCullMode())
+                            vDirY = vDirY * -1;
+
+                        cColor finalColor = pParticle->mColor * colorMul;
+
+                        positionView.Write((i * 4) + 0, v3ToF3(cMath::ToForgeVec3(vPos2 + vDirY * -1 + vDirX)));
+                        positionView.Write((i * 4) + 1, v3ToF3(cMath::ToForgeVec3(vPos2 + vDirY * -1 + vDirX * -1)));
+                        positionView.Write((i * 4) + 2, v3ToF3(cMath::ToForgeVec3(vPos1 + vDirY + vDirX * -1)));
+                        positionView.Write((i * 4) + 3, v3ToF3(cMath::ToForgeVec3(vPos1 + vDirY + vDirX)));
+
+                        colorView.Write((i * 4) + 0, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                        colorView.Write((i * 4) + 1, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                        colorView.Write((i * 4) + 2, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                        colorView.Write((i * 4) + 3, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                    }
+
+                    endUpdateResource(&positionUpdateDesc);
+                    endUpdateResource(&colorUpdateDesc);
+
+                    break;
+                }
+            case eParticleEmitterType_Axis: {
+                    beginUpdateResource(&positionUpdateDesc);
+                    beginUpdateResource(&colorUpdateDesc);
+                    GraphicsBuffer gpuPositionBuffer(positionUpdateDesc);
+                    GraphicsBuffer gpuColorBuffer(colorUpdateDesc);
+                    auto positionView = gpuPositionBuffer.CreateStructuredView<float3>();
+                    auto colorView = gpuColorBuffer.CreateStructuredView<float4>();
+
+                    if (mlAxisDrawUpdateCount != GetMatrixUpdateCount()) {
+                        mlAxisDrawUpdateCount = GetMatrixUpdateCount();
+                        cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
+                        mvRight = mtxInv.GetRight();
+                        mvForward = mtxInv.GetForward();
+                    }
+
+                    cVector3f vAdd[4];
+
+                    for (int i = 0; i < (int)mlNumOfParticles; i++) {
+                        cParticle* pParticle = mvParticles[i];
+
+                        // This is not the fastest thing possible
+                        cVector3f vParticlePos = pParticle->mvPos;
+
+                        if (mCoordSystem == eParticleEmitterCoordSystem_Local) {
+                            vParticlePos = cMath::MatrixMul(mpParentSystem->GetWorldMatrix(), vParticlePos);
+                        }
+
+                        cVector3f vPos = vParticlePos; // cMath::MatrixMul(apCamera->GetViewMatrix(), vParticlePos);
+                        cVector2f& vSize = pParticle->mvSize;
+
+                        vAdd[0] = mvRight * vSize.x + mvForward * vSize.y;
+                        vAdd[1] = mvRight * -vSize.x + mvForward * vSize.y;
+                        vAdd[2] = mvRight * -vSize.x + mvForward * -vSize.y;
+                        vAdd[3] = mvRight * vSize.x + mvForward * -vSize.y;
+
+                        cColor finalColor = pParticle->mColor * colorMul;
+
+                        positionView.Write((i * 4) + 0, v3ToF3(cMath::ToForgeVec3(vPos + vAdd[0])));
+                        positionView.Write((i * 4) + 1, v3ToF3(cMath::ToForgeVec3(vPos + vAdd[1])));
+                        positionView.Write((i * 4) + 2, v3ToF3(cMath::ToForgeVec3(vPos + vAdd[2])));
+                        positionView.Write((i * 4) + 3, v3ToF3(cMath::ToForgeVec3(vPos + vAdd[3])));
+
+                        colorView.Write((i * 4) + 0, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                        colorView.Write((i * 4) + 1, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                        colorView.Write((i * 4) + 2, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                        colorView.Write((i * 4) + 3, float4(finalColor.r, finalColor.g, finalColor.b, finalColor.a));
+                    }
+
+                    endUpdateResource(&positionUpdateDesc);
+                    endUpdateResource(&colorUpdateDesc);
+                    break;
+                }
+            }
+
+        }
+
+        return true;
+    }
+
+    DrawPacket iParticleEmitter::ResolveDrawPacket(const ForgeRenderer::Frame& frame) {
+        DrawPacket packet;
+        if (m_numberParticlesRender == 0) {
+            return packet;
+        }
+
+        DrawPacket::GeometrySetBinding binding{};
+        packet.m_type = DrawPacket::DrawGeometryset;
+        binding.m_subAllocation = m_geometry.get();
+        binding.m_set = GraphicsAllocator::AllocationSet::ParticleSet;
+        binding.m_indexOffset = 0;
+        binding.m_numIndices = m_numberParticlesRender * 6;
+        binding.m_vertexOffset = (mlMaxParticles * m_activeCopy * 4);
+        packet.m_unified = binding;
+        return packet;
+    }
+
+    iVertexBuffer* iParticleEmitter::GetVertexBuffer() {
+        return nullptr;
+    }
+
+    bool iParticleEmitter::IsVisible() {
+        if (IsActive() == false)
+            return false;
+        return mbIsVisible;
+    }
+
+    cBoundingVolume* iParticleEmitter::GetBoundingVolume() {
+        if (mbUpdateBV) {
             cVector3f vMin;
-			cVector3f vMax;
+            cVector3f vMax;
 
-			if(mlNumOfParticles >0)
-			{
-				//Make a bounding volume that encompasses start pos too!
-				vMin = GetWorldPosition();
-				vMax = GetWorldPosition();
+            if (mlNumOfParticles > 0) {
+                // Make a bounding volume that encompasses start pos too!
+                vMin = GetWorldPosition();
+                vMax = GetWorldPosition();
 
-				for(int i=0;i<(int)mlNumOfParticles;i++)
-				{
-					cParticle *pParticle = mvParticles[i];
+                for (int i = 0; i < (int)mlNumOfParticles; i++) {
+                    cParticle* pParticle = mvParticles[i];
 
-					//X
-					if(pParticle->mvPos.x < vMin.x)		 vMin.x = pParticle->mvPos.x;
-					else if(pParticle->mvPos.x > vMax.x) vMax.x = pParticle->mvPos.x;
+                    // X
+                    if (pParticle->mvPos.x < vMin.x)
+                        vMin.x = pParticle->mvPos.x;
+                    else if (pParticle->mvPos.x > vMax.x)
+                        vMax.x = pParticle->mvPos.x;
 
-					//Y
-					if(pParticle->mvPos.y < vMin.y)		 vMin.y = pParticle->mvPos.y;
-					else if(pParticle->mvPos.y > vMax.y) vMax.y = pParticle->mvPos.y;
+                    // Y
+                    if (pParticle->mvPos.y < vMin.y)
+                        vMin.y = pParticle->mvPos.y;
+                    else if (pParticle->mvPos.y > vMax.y)
+                        vMax.y = pParticle->mvPos.y;
 
-					//Z
-					if(pParticle->mvPos.z < vMin.z)		 vMin.z = pParticle->mvPos.z;
-					else if(pParticle->mvPos.z > vMax.z) vMax.z = pParticle->mvPos.z;
-				}
-			}
-			else
-			{
-				vMin = GetWorldPosition();
-				vMax = GetWorldPosition();;
-			}
+                    // Z
+                    if (pParticle->mvPos.z < vMin.z)
+                        vMin.z = pParticle->mvPos.z;
+                    else if (pParticle->mvPos.z > vMax.z)
+                        vMax.z = pParticle->mvPos.z;
+                }
+            } else {
+                vMin = GetWorldPosition();
+                vMax = GetWorldPosition();
+                ;
+            }
 
-			/////////////////////////7
-			// Add size for axis
-			if(mDrawType == eParticleEmitterType_Axis)
-			{
-				if(mlAxisDrawUpdateCount != GetMatrixUpdateCount())
-				{
-					mlAxisDrawUpdateCount = GetMatrixUpdateCount();
-					cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
-					mvRight = mtxInv.GetRight();
-					mvForward = mtxInv.GetForward();
-				}
+            /////////////////////////7
+            // Add size for axis
+            if (mDrawType == eParticleEmitterType_Axis) {
+                if (mlAxisDrawUpdateCount != GetMatrixUpdateCount()) {
+                    mlAxisDrawUpdateCount = GetMatrixUpdateCount();
+                    cMatrixf mtxInv = cMath::MatrixInverse(GetWorldMatrix());
+                    mvRight = mtxInv.GetRight();
+                    mvForward = mtxInv.GetForward();
+                }
 
-				cVector3f vAdd = mvRight*mvMaxDrawSize.x + mvForward*mvMaxDrawSize.y;
+                cVector3f vAdd = mvRight * mvMaxDrawSize.x + mvForward * mvMaxDrawSize.y;
 
-				vMax += vAdd;
-				vMin -= vAdd;
-			}
-			/////////////////////////7
-			// Add size for other particle types.
-			else
-			{
-				vMax += cVector3f(mvMaxDrawSize.x,mvMaxDrawSize.y, mvMaxDrawSize.x);
-				vMin -= cVector3f(mvMaxDrawSize.x,mvMaxDrawSize.y, mvMaxDrawSize.x);
-			}
+                vMax += vAdd;
+                vMin -= vAdd;
+            }
+            /////////////////////////7
+            // Add size for other particle types.
+            else {
+                vMax += cVector3f(mvMaxDrawSize.x, mvMaxDrawSize.y, mvMaxDrawSize.x);
+                vMin -= cVector3f(mvMaxDrawSize.x, mvMaxDrawSize.y, mvMaxDrawSize.x);
+            }
 
-			mBoundingVolume.SetLocalMinMax(vMin, vMax);
+            mBoundingVolume.SetLocalMinMax(vMin, vMax);
 
-			//Log("Min: (%f, %f, %f) Max: (%f, %f, %f)\n", vMin.x, vMin.y, vMin.z, vMax.x,vMax.y,vMax.z);
+            // Log("Min: (%f, %f, %f) Max: (%f, %f, %f)\n", vMin.x, vMin.y, vMin.z, vMax.x,vMax.y,vMax.z);
 
-			if(mCoordSystem == eParticleEmitterCoordSystem_Local)
-			{
-				mBoundingVolume.SetTransform(mpParentSystem->GetWorldMatrix());
-			}
+            if (mCoordSystem == eParticleEmitterCoordSystem_Local) {
+                mBoundingVolume.SetTransform(mpParentSystem->GetWorldMatrix());
+            }
 
-			mbUpdateBV = false;
-		}
+            mbUpdateBV = false;
+        }
 
-		return &mBoundingVolume;
-	}
+        return &mBoundingVolume;
+    }
 
-	//-----------------------------------------------------------------------
+    cMatrixf* iParticleEmitter::GetModelMatrix(cFrustum* apFrustum) {
+        if (apFrustum) {
+            if (mDrawType == eParticleEmitterType_Axis) {
+                m_mtxTemp = cMatrixf::Identity;
+            }
+            // This is really not good...
+            else if (mCoordSystem == eParticleEmitterCoordSystem_World) {
+                m_mtxTemp = cMath::MatrixInverse(apFrustum->GetViewMatrix());
+            } else {
+                m_mtxTemp = cMath::MatrixInverse(apFrustum->GetViewMatrix());
+                // m_mtxTemp = cMath::MatrixMul(cMath::MatrixInverse(apCamera->GetViewMatrix()),
+                //								GetWorldMatrix());
+            }
 
-	cMatrixf* iParticleEmitter::GetModelMatrix(cFrustum *apFrustum)
-	{
-		if(apFrustum)
-		{
-			if(mDrawType == eParticleEmitterType_Axis)
-			{
-				m_mtxTemp = cMatrixf::Identity;
-			}
-			//This is really not good...
-			else if(mCoordSystem == eParticleEmitterCoordSystem_World)
-			{
-				m_mtxTemp = cMath::MatrixInverse(apFrustum->GetViewMatrix());
-			}
-			else
-			{
-				m_mtxTemp = cMath::MatrixInverse(apFrustum->GetViewMatrix());
-				//m_mtxTemp = cMath::MatrixMul(cMath::MatrixInverse(apCamera->GetViewMatrix()),
-				//								GetWorldMatrix());
-			}
+            // m_mtxTemp.SetTranslation(cVector3f(0,0,0));//GetWorldMatrix().GetTranslation());
 
-			//m_mtxTemp.SetTranslation(cVector3f(0,0,0));//GetWorldMatrix().GetTranslation());
+            // m_mtxTemp = cMatrixf::Identity;
 
-			//m_mtxTemp = cMatrixf::Identity;
+            // cMatrixf mtxCam = apCamera->GetViewMatrix();
+            // Log("MATRIX: %s\n",mtxCam.ToString().c_str());
 
-			//cMatrixf mtxCam = apCamera->GetViewMatrix();
-			//Log("MATRIX: %s\n",mtxCam.ToString().c_str());
+            return &m_mtxTemp;
 
-			return &m_mtxTemp;
+        } else {
+            return &GetWorldMatrix();
+        }
+    }
 
-		}
-		else
-		{
-			return &GetWorldMatrix();
-		}
-	}
+    cParticle* iParticleEmitter::CreateParticle() {
+        if (mlNumOfParticles == mlMaxParticles)
+            return NULL;
+        ++mlNumOfParticles;
+        return mvParticles[mlNumOfParticles - 1];
+    }
 
-	//-----------------------------------------------------------------------
+    void iParticleEmitter::SwapRemove(unsigned int alIndex) {
+        if (alIndex < mlNumOfParticles - 1) {
+            cParticle* pTemp = mvParticles[alIndex];
+            mvParticles[alIndex] = mvParticles[mlNumOfParticles - 1];
+            mvParticles[mlNumOfParticles - 1] = pTemp;
+        }
+        mlNumOfParticles--;
+    }
 
-	//////////////////////////////////////////////////////////////////////////
-	// PROTECTED METHODS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
-	cParticle* iParticleEmitter::CreateParticle()
-	{
-		if(mlNumOfParticles == mlMaxParticles) return NULL;
-		++mlNumOfParticles;
-		return mvParticles[mlNumOfParticles-1];
-	}
-
-	//-----------------------------------------------------------------------
-
-	void iParticleEmitter::SwapRemove(unsigned int alIndex)
-	{
-		if(alIndex < mlNumOfParticles-1)
-		{
-			cParticle* pTemp = mvParticles[alIndex];
-			mvParticles[alIndex] = mvParticles[mlNumOfParticles-1];
-			mvParticles[mlNumOfParticles-1] = pTemp;
-		}
-		mlNumOfParticles--;
-	}
-
-	//-----------------------------------------------------------------------
-
-	//-----------------------------------------------------------------------
-}
+} // namespace hpl

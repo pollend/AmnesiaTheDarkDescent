@@ -143,11 +143,15 @@ namespace hpl
         uint32_t rootConstantIndex = getDescriptorIndexFromName(mpRadialBlurType->m_rootSignature.m_handle, "rootConstant");
         cmdBindPushConstants(frame.m_cmd, mpRadialBlurType->m_rootSignature.m_handle, rootConstantIndex, &params);
 
-        LoadActionsDesc loadActions = {};
-        loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-        loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+        //LoadActionsDesc loadActions = {};
+        //loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+        //loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+        //cmdBindRenderTargets(frame.m_cmd, 1, &renderTarget, NULL, &loadActions, NULL, NULL, -1, -1);
 
-        cmdBindRenderTargets(frame.m_cmd, 1, &renderTarget, NULL, &loadActions, NULL, NULL, -1, -1);
+        BindRenderTargetsDesc bindRenderTargets = {};
+        bindRenderTargets.mRenderTargetCount = 1;
+        bindRenderTargets.mRenderTargets[0] = { renderTarget, LOAD_ACTION_LOAD };
+        cmdBindRenderTargets(frame.m_cmd, &bindRenderTargets);
 
         std::array<DescriptorData, 1> descData = {};
         descData[0].pName = "sourceInput";

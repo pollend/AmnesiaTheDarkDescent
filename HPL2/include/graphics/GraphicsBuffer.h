@@ -239,10 +239,8 @@ namespace hpl {
                     case BufferType::MappedBuffer:
                         switch(m_indexType) {
                             case IndexBufferType::Uint32:
-                                ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * sizeof(uint32_t))) < m_asset->m_buffer.end());
                                 return *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + (m_byteOffset + (index * sizeof(uint32_t))));
                             case IndexBufferType::Uint16:
-                                ASSERT(m_asset->m_buffer.begin() + (m_byteOffset + (index * sizeof(uint16_t))) < m_asset->m_buffer.end());
                                 return *reinterpret_cast<uint16_t*>(reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + (m_byteOffset + (index * sizeof(uint16_t))));
                         }
                         break;
@@ -399,8 +397,10 @@ namespace hpl {
                         ASSERT(m_asset->m_buffer.begin() + targetOffset < m_asset->m_buffer.end());
                         return *reinterpret_cast<T*>(m_asset->m_buffer.data() + targetOffset);
                     }
-                    case BufferType::MappedBuffer: {
-                        ASSERT(false);
+                    case BufferType::MappedBuffer:
+                    {
+                        ASSERT(m_asset->m_mapped.m_size == 0 ||  targetOffset < m_asset->m_mapped.m_size);
+                        return *reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + targetOffset);
                         break;
                     }
                 }

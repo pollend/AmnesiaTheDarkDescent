@@ -1631,11 +1631,11 @@ void cLuxInventory::CreateBackground()
     }
     {
 	    auto* renderer = viewport->GetRenderer();
-        auto frame = forgeRenderer->GetFrame();
+        auto& frame = forgeRenderer->GetFrame();
 	    auto screenSize = viewport->GetSize();
         auto outputRt = renderer->GetOutputImage(frame.m_frameIndex, *viewport);
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(frame.m_cmd, NULL);
             std::array rtBarriers = {
                 RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
             };
@@ -1643,7 +1643,7 @@ void cLuxInventory::CreateBackground()
         }
         forgeRenderer->cmdCopyTexture(frame.m_cmd, outputRt.m_handle->pTexture, m_screenTarget.m_handle);
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(frame.m_cmd, NULL);
             std::array rtBarriers = {
                 RenderTargetBarrier{ m_screenTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
                 RenderTargetBarrier{ m_screenBgTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
@@ -1652,7 +1652,10 @@ void cLuxInventory::CreateBackground()
         }
 
 	    {
-            cmdBindRenderTargets(frame.m_cmd, 1, &m_screenBgTarget.m_handle, NULL, NULL, NULL, NULL, -1, -1);
+            BindRenderTargetsDesc bindRenderTargets = {};
+            bindRenderTargets.mRenderTargetCount = 1;
+            bindRenderTargets.mRenderTargets[0] = { m_screenBgTarget.m_handle, LOAD_ACTION_LOAD };
+            cmdBindRenderTargets(frame.m_cmd, &bindRenderTargets);
 
             std::array<DescriptorData, 1> params = {};
             params[0].pName = "sourceInput";
@@ -1668,7 +1671,7 @@ void cLuxInventory::CreateBackground()
             m_setIndex = (m_setIndex + 1) % cLuxInventory::DescriptorSetSize;
 	    }
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(frame.m_cmd, NULL);
             std::array rtBarriers = {
                 RenderTargetBarrier{ m_screenBgTarget.m_handle, RESOURCE_STATE_RENDER_TARGET , RESOURCE_STATE_SHADER_RESOURCE},
             };

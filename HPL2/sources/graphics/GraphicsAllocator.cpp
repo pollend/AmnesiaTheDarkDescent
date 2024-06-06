@@ -20,6 +20,14 @@ namespace hpl {
             };
             m_geometrySets[AllocationSet::OpaqueSet] = GeometrySet(OpaqueVertexBufferSize, OpaqueIndexBufferSize, streamDesc);
         }
+        {
+            std::array streamDesc = {
+                GeometrySet::GeometryStreamDesc("opaque_position", ShaderSemantic::SEMANTIC_POSITION, sizeof(float3)),
+                GeometrySet::GeometryStreamDesc("opaque_uv0", ShaderSemantic::SEMANTIC_TEXCOORD0, sizeof(float2)),
+                GeometrySet::GeometryStreamDesc("opaque_color", ShaderSemantic::SEMANTIC_COLOR, sizeof(float4)),
+            };
+            m_geometrySets[AllocationSet::ParticleSet] = GeometrySet(ParticleVertexBufferSize, ParticleIndexBufferSize, streamDesc);
+        }
 
         {
             BufferDesc desc = {};
@@ -40,18 +48,9 @@ namespace hpl {
     }
 
     GPURingBufferOffset GraphicsAllocator::allocTransientVertexBuffer(uint32_t size) {
-        return getGPURingBufferOffset(m_transientVertexBuffer, size);
+        return getGPURingBufferOffset(&m_transientVertexBuffer, size);
     }
     GPURingBufferOffset GraphicsAllocator::allocTransientIndexBuffer(uint32_t size) {
-        return getGPURingBufferOffset(m_transientIndeciesBuffer, size);
+        return getGPURingBufferOffset(&m_transientIndeciesBuffer, size);
     }
-
-    //    GraphicsAllocator::OffsetAllocHandle GraphicsAllocator::allocVertexFromSharedBuffer(uint32_t size) {
-    //        OffsetAllocator::Allocation alloc = m_vertexBufferAllocator.allocate(size);
-    //        return OffsetAllocHandle(&m_vertexBufferAllocator, alloc, m_sharedVertexBuffer);
-    //    }
-    //    GraphicsAllocator::OffsetAllocHandle  GraphicsAllocator::allocIndeciesFromSharedBuffer(uint32_t size) {
-    //        OffsetAllocator::Allocation alloc = m_indexBufferAllocator.allocate(size);
-    //        return OffsetAllocHandle(&m_indexBufferAllocator, alloc, m_sharedIndexBuffer);
-    //    }
 } // namespace hpl

@@ -82,7 +82,7 @@ namespace hpl {
         for (auto& buffer : m_frameBufferUniform) {
             buffer.Load([&](Buffer** buffer) {
                 BufferLoadDesc desc = {};
-                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER | DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
                 desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
                 desc.mDesc.mFirstElement = 0;
@@ -134,10 +134,8 @@ namespace hpl {
         m_pipeline.Load(forgeRenderer->Rend(), [&](Pipeline** pipline) {
             std::array colorFormats = { TinyImageFormat_R8G8B8A8_UNORM };
             VertexLayout vertexLayout = {};
-#ifndef USE_THE_FORGE_LEGACY
             vertexLayout.mBindingCount = 1;
             vertexLayout.mBindings[0].mStride = sizeof(float3);
-#endif
             vertexLayout.mAttribCount = 1;
             vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
             vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
@@ -146,7 +144,7 @@ namespace hpl {
             vertexLayout.mAttribs[0].mOffset = 0;
 
             RasterizerStateDesc rasterizerStateDesc = {};
-            rasterizerStateDesc.mCullMode = CULL_MODE_BOTH;
+            //rasterizerStateDesc.mCullMode = CULL_MODE_BOTH;
             rasterizerStateDesc.mFillMode = FILL_MODE_WIREFRAME;
 
             DepthStateDesc depthStateDesc = {};
@@ -160,11 +158,7 @@ namespace hpl {
             blendStateDesc.mSrcAlphaFactors[0] = BC_ONE;
             blendStateDesc.mDstAlphaFactors[0] = BC_ZERO;
             blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-#ifdef USE_THE_FORGE_LEGACY
-            blendStateDesc.mMasks[0] = RED | GREEN | BLUE;
-#else
             blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_RED | ColorMask::COLOR_MASK_GREEN | ColorMask::COLOR_MASK_BLUE;
-#endif
             blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
             blendStateDesc.mIndependentBlend = false;
 
@@ -204,7 +198,7 @@ namespace hpl {
             uniformObjectData.m_modelMat = cMath::ToForgeMatrix4(modelMat);
             beginUpdateResource(&updateDesc);
             (*reinterpret_cast<ObjectUniform*>(updateDesc.pMappedData)) = uniformObjectData;
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
 
             m_objectDescriptorLookup[apObject] = index;
         }
@@ -221,16 +215,15 @@ namespace hpl {
 
     void cRendererWireFrame::Draw(
         Cmd* cmd,
-        const ForgeRenderer::Frame& frame,
+        ForgeRenderer::Frame& frame,
         cViewport& viewport,
         float afFrameTime,
         cFrustum* apFrustum,
         cWorld* apWorld,
-        cRenderSettings* apSettings,
-        bool abSendFrameBufferToPostEffects) {
+        cRenderSettings* apSettings) {
         auto* forgeRenderer = Interface<ForgeRenderer>::Get();
         // keep around for the moment ...
-        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, abSendFrameBufferToPostEffects);
+        BeginRendering(afFrameTime, apFrustum, apWorld, apSettings, false);
 
         if (frame.m_currentFrame != m_activeFrame) {
             m_objectIndex = 0;
@@ -277,10 +270,10 @@ namespace hpl {
 
         m_rendererList.BeginAndReset(afFrameTime, apFrustum);
         std::array<cPlanef, 0> occlusionPlanes = {};
-        rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-            &m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Static), occlusionPlanes, 0);
-        rendering::detail::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
-            &m_rendererList, apFrustum, apWorld->GetRenderableContainer(eWorldContainerType_Dynamic), occlusionPlanes, 0);
+        cRenderList::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+            m_rendererList, *apFrustum, *apWorld->GetRenderableContainer(eWorldContainerType_Static)->GetRoot(), occlusionPlanes, 0);
+        cRenderList::UpdateRenderListWalkAllNodesTestFrustumAndVisibility(
+            m_rendererList, *apFrustum, *apWorld->GetRenderableContainer(eWorldContainerType_Dynamic)->GetRoot(), occlusionPlanes, 0);
 
         m_rendererList.End(eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Decal | eRenderListCompileFlag_Translucent);
 
@@ -291,11 +284,11 @@ namespace hpl {
             PerFrameUniform uniformData;
             uniformData.m_viewProject = ((apFrustum->GetProjectionType() == eProjectionType_Perspective ? Matrix4::identity() : correctionMatrix) * matMainFrustumProj) * matMainFrustumView ;
             (*reinterpret_cast<PerFrameUniform*>(updateDesc.pMappedData)) = uniformData;
-            endUpdateResource(&updateDesc, NULL);
+            endUpdateResource(&updateDesc);
         }
 
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(frame.m_cmd, NULL);
             std::array rtBarriers = {
                 RenderTargetBarrier{ common->m_outputBuffer[frame.m_frameIndex].m_handle,
                                      RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET,
@@ -304,13 +297,19 @@ namespace hpl {
             cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
         }
         uint32_t rootConstantIndex = getDescriptorIndexFromName(m_rootSignature.m_handle, "rootConstant");
-        std::array targets = {
-            common->m_outputBuffer[frame.m_frameIndex].m_handle,
-        };
-        LoadActionsDesc loadActions = {};
-        loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
-        loadActions.mClearColorValues[0] =  ClearValue { .r = apSettings->mClearColor.r, .g = apSettings->mClearColor.g, .b = apSettings->mClearColor.b, .a = apSettings->mClearColor.a };
-        cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), NULL, &loadActions, NULL, NULL, -1, -1);
+        // std::array targets = {
+        //     common->m_outputBuffer[frame.m_frameIndex].m_handle,
+        // };
+        // LoadActionsDesc loadActions = {};
+        // loadActions.mLoadActionsColor[0] = LOAD_ACTION_CLEAR;
+        // loadActions.mClearColorValues[0] =  ClearValue { .r = apSettings->mClearColor.r, .g = apSettings->mClearColor.g, .b = apSettings->mClearColor.b, .a = apSettings->mClearColor.a };
+        // cmdBindRenderTargets(frame.m_cmd, targets.size(), targets.data(), NULL, &loadActions, NULL, NULL, -1, -1);
+
+        BindRenderTargetsDesc bindRenderTargetsDesc = {};
+        bindRenderTargetsDesc.mRenderTargetCount = 1;
+        bindRenderTargetsDesc.mRenderTargets[0] = { .pRenderTarget = common->m_outputBuffer[frame.m_frameIndex].m_handle, .mLoadAction = LOAD_ACTION_CLEAR, .mClearValue = { .r = apSettings->mClearColor.r, .g = apSettings->mClearColor.g, .b = apSettings->mClearColor.b, .a = apSettings->mClearColor.a } };
+        cmdBindRenderTargets(frame.m_cmd, &bindRenderTargetsDesc);
+
         cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
         cmdSetScissor(frame.m_cmd, 0, 0, common->m_size.x, common->m_size.y);
 
@@ -320,13 +319,13 @@ namespace hpl {
         for (auto& diffuseItem : m_rendererList.GetRenderableItems(eRenderListType_Diffuse)) {
             cMaterial* pMaterial = diffuseItem->GetMaterial();
             std::array targets = { eVertexBufferElement_Position };
-            DrawPacket packet = diffuseItem->ResolveDrawPacket(frame, targets);
+            DrawPacket packet = diffuseItem->ResolveDrawPacket(frame);
             if (pMaterial == nullptr || packet.m_type == DrawPacket::Unknown) {
                 continue;
             }
             ASSERT(pMaterial->Descriptor().m_id == MaterialID::SolidDiffuse && "Invalid material type");
 
-            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet);
+            DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &packet, targets);
             uint32_t objectIndex = prepareObjectData(frame, diffuseItem);
             cmdBindPushConstants(frame.m_cmd, m_rootSignature.m_handle, rootConstantIndex, &objectIndex);
             cmdDrawIndexed(frame.m_cmd, packet.numberOfIndecies(), 0, 0);
@@ -354,7 +353,7 @@ namespace hpl {
         m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, common->m_outputBuffer[frame.m_frameIndex], invalidTarget);
 
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(frame.m_cmd,NULL);
             std::array rtBarriers = {
                 RenderTargetBarrier{ common->m_outputBuffer[frame.m_frameIndex].m_handle,
                                       RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE,

@@ -118,11 +118,7 @@ private:
     UniqueViewportData<LuxPostEffectData> m_boundPostEffectData;
 
     // outline effect
-    #ifdef USE_THE_FORGE_LEGACY
-        GPURingBuffer* m_uniformBuffer;
-    #else
-        GPURingBuffer m_uniformBuffer;
-    #endif
+    GPURingBuffer m_uniformBuffer;
     Sampler* m_diffuseSampler;
 
     std::array<DescriptorSet*, ForgeRenderer::SwapChainLength> m_perObjectDescriptorSet;

@@ -2,7 +2,7 @@
 /// Copyright 2023 Michael Pollind
 /// SPDX-License-Identifier: GPL-3.0
 
-RES(RWTex2D(float), depthInput[16], UPDATE_FREQ_PER_FRAME, u1, binding = 6);
+RES(RWTex2D(float), depthInput[16], UPDATE_FREQ_PER_FRAME, u1, binding = 7);
 
 PUSH_CONSTANT(uRootConstants, b0)
 {

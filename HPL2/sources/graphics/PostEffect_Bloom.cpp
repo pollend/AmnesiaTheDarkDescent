@@ -23,15 +23,9 @@
 #include "graphics/ForgeHandles.h"
 #include "graphics/Graphics.h"
 
-#include "graphics/FrameBuffer.h"
-#include "graphics/Image.h"
-#include "graphics/LowLevelGraphics.h"
 #include "graphics/PostEffectComposite.h"
-#include "graphics/RenderTarget.h"
-#include "graphics/Texture.h"
 
 #include "math/MathTypes.h"
-#include "system/PreprocessParser.h"
 #include <memory>
 
 namespace hpl
@@ -227,7 +221,7 @@ namespace hpl
             ASSERT(input && "Invalid input texture");
             uint32_t blurPostEffectConstIndex = getDescriptorIndexFromName(mpBloomType->m_blurSignature.m_handle, "rootConstant");
             {
-                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                cmdBindRenderTargets(frame.m_cmd, NULL);
                 std::array rtBarriers = {
                     RenderTargetBarrier{ bloomData->m_blurTargets[0].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
                     RenderTargetBarrier{ bloomData->m_blurTargets[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
@@ -235,11 +229,16 @@ namespace hpl
                 cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
             }
             {
-                LoadActionsDesc loadActions = {};
-                loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-                loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
                 auto& blurTarget = bloomData->m_blurTargets[0].m_handle;
-                cmdBindRenderTargets(frame.m_cmd, 1, &blurTarget , NULL, &loadActions, NULL, NULL, -1, -1);
+                //LoadActionsDesc loadActions = {};
+                //loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+                //loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+                //cmdBindRenderTargets(frame.m_cmd, 1, &blurTarget , NULL, &loadActions, NULL, NULL, -1, -1);
+
+                BindRenderTargetsDesc bindRenderTargets = {};
+                bindRenderTargets.mRenderTargetCount = 1;
+                bindRenderTargets.mRenderTargets[0] = { blurTarget, LOAD_ACTION_LOAD };
+                cmdBindRenderTargets(frame.m_cmd, &bindRenderTargets );
 
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
@@ -253,12 +252,13 @@ namespace hpl
 
                 cmdBindDescriptorSet(frame.m_cmd, mpBloomType->m_setIndex, mpBloomType->m_perFrameDescriptorSets[frame.m_frameIndex].m_handle);
                 float2 blurScale = float2(mParams.mfBlurSize, 0.0f);
+                cmdBindPushConstants(frame.m_cmd, mpBloomType->m_blurSignature.m_handle, blurPostEffectConstIndex, &blurScale);
                 cmdDraw(frame.m_cmd, 3, 0);
 
                 mpBloomType->m_setIndex = (mpBloomType->m_setIndex + 1) % cPostEffectType_Bloom::DescriptorSetSize;
             }
             {
-                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                cmdBindRenderTargets(frame.m_cmd, NULL);
                 std::array rtBarriers = {
                     RenderTargetBarrier{
                         bloomData->m_blurTargets[0].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
@@ -268,12 +268,17 @@ namespace hpl
                 cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
             }
             {
-                LoadActionsDesc loadActions = {};
-                loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-                loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-
                 auto& blurTarget = bloomData->m_blurTargets[1].m_handle;
-                cmdBindRenderTargets(frame.m_cmd, 1, &blurTarget, NULL, &loadActions, NULL, NULL, -1, -1);
+                //LoadActionsDesc loadActions = {};
+                //loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+                //loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+                //cmdBindRenderTargets(frame.m_cmd, 1, &blurTarget, NULL, &loadActions, NULL, NULL, -1, -1);
+
+                BindRenderTargetsDesc bindRenderTargets = {};
+                bindRenderTargets.mRenderTargetCount = 1;
+                bindRenderTargets.mRenderTargets[0] = { blurTarget, LOAD_ACTION_LOAD };
+                cmdBindRenderTargets(frame.m_cmd, &bindRenderTargets );
+
 
                 std::array<DescriptorData, 1> params = {};
                 params[0].pName = "sourceInput";
@@ -301,7 +306,7 @@ namespace hpl
         }
         cmdEndDebugMarker(frame.m_cmd);
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(frame.m_cmd, NULL);
             std::array rtBarriers = {
                 RenderTargetBarrier{
                     bloomData->m_blurTargets[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
@@ -315,11 +320,14 @@ namespace hpl
         }
         {
             cmdBeginDebugMarker(frame.m_cmd, 0, 1, 0, "Bloom Add");
-            LoadActionsDesc loadActions = {};
-            loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-            loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-
-            cmdBindRenderTargets(frame.m_cmd, 1, &renderTarget, NULL, &loadActions, NULL, NULL, -1, -1);
+            //LoadActionsDesc loadActions = {};
+            //loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+            //loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+            //cmdBindRenderTargets(frame.m_cmd, 1, &renderTarget, NULL, &loadActions, NULL, NULL, -1, -1);
+            BindRenderTargetsDesc bindRenderTargets = {};
+            bindRenderTargets.mRenderTargetCount = 1;
+            bindRenderTargets.mRenderTargets[0] = { renderTarget, LOAD_ACTION_LOAD };
+            cmdBindRenderTargets(frame.m_cmd, &bindRenderTargets);
 
             std::array<DescriptorData, 2> params = {};
             params[0].pName = "sourceInput";
@@ -340,7 +348,7 @@ namespace hpl
             cmdEndDebugMarker(frame.m_cmd);
         }
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(frame.m_cmd, NULL);
             std::array rtBarriers = {
                 RenderTargetBarrier{
                     bloomData->m_blurTargets[1].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },

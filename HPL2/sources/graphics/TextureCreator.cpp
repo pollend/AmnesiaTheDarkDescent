@@ -19,6 +19,7 @@
 
 #include "graphics/TextureCreator.h"
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "graphics/Image.h"
 #include "system/LowLevelSystem.h"
 
@@ -78,7 +79,7 @@ namespace hpl {
             // Generate all the different sample collections
             TextureUpdateDesc update = {*ppTexture};
             beginUpdateResource(&update);
-
+            auto subResource = update.getSubresourceUpdateDesc(0, 0);
             for (size_t sample_num = 0; sample_num < vOffsetsVec.size(); ++sample_num) {
                 ////////////////////////////
                 // Fills a square "grid" size, and then normalizes each pos to be 0 - 1
@@ -139,13 +140,13 @@ namespace hpl {
                 for (int depth = 0; depth < vTextureSize.z; ++depth) {
                     int lOffset = depth * vTextureSize.x * vTextureSize.y * 4 + (int)sample_num * 4;
 
-                    update.pMappedData[lOffset + 0] = static_cast<uint8_t>(vOffsets[(depth * 2)].x * 255.0f);
-                    update.pMappedData[lOffset + 1] = static_cast<uint8_t>(vOffsets[(depth * 2)].y * 255.0f);
-                    update.pMappedData[lOffset + 2] = static_cast<uint8_t>(vOffsets[(depth * 2) + 1].x * 255.0f);
-                    update.pMappedData[lOffset + 3] = static_cast<uint8_t>(vOffsets[(depth * 2) + 1].y * 255.0f);
+                    subResource.pMappedData[lOffset + 0] = static_cast<uint8_t>(vOffsets[(depth * 2)].x * 255.0f);
+                    subResource.pMappedData[lOffset + 1] = static_cast<uint8_t>(vOffsets[(depth * 2)].y * 255.0f);
+                    subResource.pMappedData[lOffset + 2] = static_cast<uint8_t>(vOffsets[(depth * 2) + 1].x * 255.0f);
+                    subResource.pMappedData[lOffset + 3] = static_cast<uint8_t>(vOffsets[(depth * 2) + 1].y * 255.0f);
                 }
             }
-            endUpdateResource(&update, nullptr);
+            endUpdateResource(&update);
         }
 
         void GenerateScatterDiskMap2D(int alSize, int alSamples, bool abSortSamples, Texture** ppTexture) {
@@ -182,7 +183,7 @@ namespace hpl {
             textureLoadDesc.pDesc = &desc;
             addResource(&textureLoadDesc, nullptr);
 
-            TextureUpdateDesc update = {*ppTexture};
+            TextureUpdateDesc update = {*ppTexture, 0, 1, 0, 1, RESOURCE_STATE_COMMON};
             beginUpdateResource(&update);
 
             ////////////////////////////
@@ -243,12 +244,13 @@ namespace hpl {
 
                 ///////////////////////////////
                 // Add the samples to the texture data
+                auto subResource = update.getSubresourceUpdateDesc(0, 0);
                 for (int depth = 0; depth < vTextureSize.z; ++depth) {
                     size_t lOffset = (depth * vTextureSize.x * vTextureSize.y) * 4 + (sample_num * 4);
-                    update.pMappedData[lOffset + 0] = static_cast<uint8_t>(vOffsets[(depth * 2)].x * 255.0f);
-                    update.pMappedData[lOffset + 1] = static_cast<uint8_t>(vOffsets[(depth * 2)].y * 255.0f);
-                    update.pMappedData[lOffset + 2] = static_cast<uint8_t>(vOffsets[(depth * 2) + 1].x * 255.0f);
-                    update.pMappedData[lOffset + 3] = static_cast<uint8_t>(vOffsets[(depth * 2) + 1].y * 255.0f);
+                    subResource.pMappedData[lOffset + 0] = static_cast<uint8_t>(vOffsets[(depth * 2)].x * 255.0f);
+                    subResource.pMappedData[lOffset + 1] = static_cast<uint8_t>(vOffsets[(depth * 2)].y * 255.0f);
+                    subResource.pMappedData[lOffset + 2] = static_cast<uint8_t>(vOffsets[(depth * 2) + 1].x * 255.0f);
+                    subResource.pMappedData[lOffset + 3] = static_cast<uint8_t>(vOffsets[(depth * 2) + 1].y * 255.0f);
 
                     // unsigned char* pPixelData = &vTextureData[lOffset];
 
@@ -263,7 +265,7 @@ namespace hpl {
                     // pPixelData[3] = (int)(vOffsets[lSample + 1].y * 255.0f);
                 }
             }
-            endUpdateResource(&update, nullptr);
+            endUpdateResource(&update);
 
         }
 

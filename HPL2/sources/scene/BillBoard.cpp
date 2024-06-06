@@ -19,6 +19,8 @@
 
 #include "scene/BillBoard.h"
 
+#include "graphics/GraphicsBuffer.h"
+#include "graphics/MeshUtility.h"
 #include "impl/LegacyVertexBuffer.h"
 #include "impl/tinyXML/tinyxml.h"
 
@@ -43,20 +45,11 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
-
 	cBillboard::cBillboard(const tString asName,const cVector2f& avSize,eBillboardType aType, cResources *apResources,cGraphics *apGraphics) :
 	iRenderable(asName)
 	{
 		mpMaterialManager = apResources->GetMaterialManager();
 		mpLowLevelGraphics = apGraphics->GetLowLevel();
-
-		// m_occlusionCurrent = bgfx::createOcclusionQuery();
-		// m_occlusionMax = bgfx::createOcclusionQuery();
 
 		mvSize = avSize;
 		mvAxis = cVector3f(0,1,0);
@@ -71,42 +64,92 @@ namespace hpl {
 
 		mlLastRenderCount = -1;
 
-		mpVtxBuffer = mpLowLevelGraphics->CreateVertexBuffer(eVertexBufferType_Hardware,eVertexBufferDrawType_Tri, eVertexBufferUsageType_Dynamic,4,6);
+        auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
+        auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
+        const uint32_t numberIndecies = 6 * (mType == eBillboardType_FixedAxis ? 2 : 1);
+        m_geometry = opaqueSet.allocate(cBillboard::NumberVerts * 2, numberIndecies);
 
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float,4);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Normal,eVertexBufferElementFormat_Float,3);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Color0,eVertexBufferElementFormat_Float,4);
-		mpVtxBuffer->CreateElementArray(eVertexBufferElement_Texture0,eVertexBufferElementFormat_Float,3);
+        {
+            std::array<float3, cBillboard::NumberVerts> positionCoords = { float3((mvSize.x / 2), -(mvSize.y / 2), 0.0f),
+                                                                           float3(-(mvSize.x / 2), -(mvSize.y / 2), 0.0f),
+                                                                           float3(-(mvSize.x / 2), (mvSize.y / 2), 0.0f),
+                                                                           float3((mvSize.x / 2), (mvSize.y / 2), 0.0f) };
 
-		cVector3f vCoords[4] = {cVector3f((mvSize.x/2),-(mvSize.y/2),0),
-								cVector3f(-(mvSize.x/2),-(mvSize.y/2),0),
-								cVector3f(-(mvSize.x/2),(mvSize.y/2),0),
-								cVector3f((mvSize.x/2),(mvSize.y/2),0)};
+            std::array<float2, cBillboard::NumberVerts> texcoords = { (float2(1.0f, -1.0f) + float2(1, 1)) / 2.0f, // Bottom left
+                                                                      (float2(-1.0f, -1.0f) + float2(1, 1)) / 2.0f, // Bottom right
+                                                                      (float2(-1.0f, 1.0f) + float2(1, 1)) / 2.0f, // Top left
+                                                                      (float2(1.0f, 1.0f) + float2(1, 1)) / 2.0f }; // Top right
 
-		cVector3f vTexCoords[4] = {cVector3f(1,-1,0),
-								cVector3f(-1,-1,0),
-								cVector3f(-1,1,0),
-								cVector3f(1,1,0)};
-		for(int i=0;i<4;i++)
-		{
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Position, vCoords[i]);
-			mpVtxBuffer->AddVertexColor(eVertexBufferElement_Color0, cColor(1,1,1,1));
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Texture0, (vTexCoords[i] + cVector2f(1,1))/2 );
-			mpVtxBuffer->AddVertexVec3f(eVertexBufferElement_Normal,cVector3f(0,0,1));
-		}
+            auto& indexStream = m_geometry->indexBuffer();
+            auto positionStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+            auto normalStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL);
+            auto colorStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR);
+            auto textureStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0);
+            auto tangentStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
 
-		for(int i=0;i<3;i++) mpVtxBuffer->AddIndex(i);
-		for(int i=2;i<5;i++) mpVtxBuffer->AddIndex(i==4?0:i);
+            BufferUpdateDesc indexUpdateDesc = { indexStream.m_handle, GeometrySet::IndexBufferStride * m_geometry->indexOffset(), GeometrySet::IndexBufferStride * numberIndecies };
+            BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle, positionStream->stride() * m_geometry->vertexOffset(), positionStream->stride() * cBillboard::NumberVerts * 2 };
+            BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle, normalStream->stride() * m_geometry->vertexOffset(), normalStream->stride() * cBillboard::NumberVerts * 2};
+            BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle, colorStream->stride() * m_geometry->vertexOffset(), colorStream->stride() * cBillboard::NumberVerts * 2};
+            BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle, textureStream->stride() * m_geometry->vertexOffset(), textureStream->stride() * cBillboard::NumberVerts * 2};
+            BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle, tangentStream->stride() * m_geometry->vertexOffset(), tangentStream->stride() * cBillboard::NumberVerts * 2};
 
-		//If the type is fixed, then we need a backside too
-		//To do this, just all all the same indices in reversed order.
-		if(mType == eBillboardType_FixedAxis)
-		{
-			for(int i=2; i>=0; i--) mpVtxBuffer->AddIndex(i);
-			for(int i=4; i>=2; i--) mpVtxBuffer->AddIndex(i==4?0:i);
-		}
+            beginUpdateResource(&indexUpdateDesc);
+            beginUpdateResource(&positionUpdateDesc);
+            beginUpdateResource(&normalUpdateDesc);
+            beginUpdateResource(&colorUpdateDesc);
+            beginUpdateResource(&textureUpdateDesc);
+            beginUpdateResource(&tangentUpdateDesc);
 
-		mpVtxBuffer->Compile(eVertexCompileFlag_CreateTangents);
+            GraphicsBuffer gpuIndexBuffer(indexUpdateDesc);
+            GraphicsBuffer gpuPositionBuffer(positionUpdateDesc);
+            GraphicsBuffer gpuNormalBuffer(normalUpdateDesc);
+            GraphicsBuffer gpuColorBuffer(colorUpdateDesc);
+            GraphicsBuffer gpuTextureBuffer(textureUpdateDesc);
+            GraphicsBuffer gpuTangentBuffer(tangentUpdateDesc);
+
+            auto indexView = gpuIndexBuffer.CreateIndexView();
+            {
+                uint32_t index = 0;
+                for (int i = 0; i < 3; i++) {
+                    indexView.Write(index++, i);
+                }
+                for (int i = 2; i < 5; i++) {
+                    indexView.Write(index++, i == 4 ? 0 : i);
+                }
+                if (mType == eBillboardType_FixedAxis) {
+                    for (int i = 2; i >= 0; i--) {
+                        indexView.Write(index++, i);
+                    }
+                    for (int i = 4; i >= 2; i--) {
+                        indexView.Write(index++, i == 4 ? 0 : i);
+                    }
+                }
+
+                for (size_t copyIdx = 0; copyIdx < 2; copyIdx++) {
+                    auto positionView = gpuPositionBuffer.CreateStructuredView<float3>(positionStream->stride() * copyIdx * cBillboard::NumberVerts) ;
+                    auto normalView = gpuNormalBuffer.CreateStructuredView<float3>(normalStream->stride() * copyIdx * cBillboard::NumberVerts);
+                    auto colorView = gpuColorBuffer.CreateStructuredView<float4>(colorStream->stride() * copyIdx * cBillboard::NumberVerts);
+                    auto textureView = gpuTextureBuffer.CreateStructuredView<float2>(textureStream->stride() * copyIdx * cBillboard::NumberVerts);
+                    auto tangentView = gpuTangentBuffer.CreateStructuredView<float3>(tangentStream->stride() * copyIdx * cBillboard::NumberVerts);
+                    for (size_t i = 0; i < cBillboard::NumberVerts; i++) {
+                        positionView.Write(i, positionCoords[i]);
+                        normalView.Write(i, float3(0.0f, 0.0f, 1.0f));
+                        colorView.Write(i, float4(1,1,1,1));
+                        textureView.Write(i, texcoords[i]);
+                    }
+                    Matrix4 trans = Matrix4::identity();
+                    hpl::MeshUtility::MikkTSpaceGenerate(4, 6, &indexView, &positionView, &textureView, &normalView, &tangentView);
+                }
+            }
+
+            endUpdateResource(&indexUpdateDesc);
+            endUpdateResource(&positionUpdateDesc);
+            endUpdateResource(&normalUpdateDesc);
+            endUpdateResource(&colorUpdateDesc);
+            endUpdateResource(&textureUpdateDesc);
+            endUpdateResource(&tangentUpdateDesc);
+        }
 
 		mbIsHalo = false;
 		mvHaloSourceSize = 1;
@@ -122,39 +165,103 @@ namespace hpl {
 	cBillboard::~cBillboard()
 	{
 		if(mpMaterial) mpMaterialManager->Destroy(mpMaterial);
-		if(mpVtxBuffer) hplDelete(mpVtxBuffer);
+		//if(mpVtxBuffer) hplDelete(mpVtxBuffer);
 		if(mpHaloSourceBV) hplDelete(mpHaloSourceBV);
 
 	}
 
 
-    DrawPacket cBillboard::ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements)  {
-	    return static_cast<LegacyVertexBuffer*>(mpVtxBuffer)->resolveGeometryBinding(frame.m_currentFrame, elements);
+    DrawPacket cBillboard::ResolveDrawPacket(const ForgeRenderer::Frame& frame)  {
+	    if((frame.m_currentFrame - m_frameIndex) >= ForgeRenderer::SwapChainLength - 1 && m_dirtyBuffer) {
+	        m_frameIndex = frame.m_currentFrame;
+	        m_activeCopy = (m_activeCopy + 1) % 2;
+	        m_dirtyBuffer = false;
+
+            auto positionStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+            auto textureStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0);
+            auto colorStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_COLOR);
+
+            BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle,
+                positionStream->stride() * (m_geometry->vertexOffset() + (cBillboard::NumberVerts * m_activeCopy)),
+                positionStream->stride() * cBillboard::NumberVerts};
+            BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle,
+                textureStream->stride() * (m_geometry->vertexOffset() + (cBillboard::NumberVerts * m_activeCopy)),
+                textureStream->stride() * cBillboard::NumberVerts};
+            BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle,
+                colorStream->stride() * (m_geometry->vertexOffset() + (cBillboard::NumberVerts * m_activeCopy)),
+                colorStream->stride() * cBillboard::NumberVerts};
+
+            beginUpdateResource(&positionUpdateDesc);
+            beginUpdateResource(&textureUpdateDesc);
+            beginUpdateResource(&colorUpdateDesc);
+
+            GraphicsBuffer gpuPositionBuffer(positionUpdateDesc);
+            GraphicsBuffer gpuTextureBuffer(textureUpdateDesc);
+            GraphicsBuffer gpuColorBuffer(colorUpdateDesc);
+
+            auto positionView = gpuPositionBuffer.CreateStructuredView<float3>();
+            auto textureView = gpuTextureBuffer.CreateStructuredView<float2>();
+            auto colorView = gpuColorBuffer.CreateStructuredView<float4>();
+
+            std::array<float3, cBillboard::NumberVerts> positionCoords = { float3((mvSize.x / 2.0f), -(mvSize.y / 2.0f), 0.0f),
+                                                                           float3(-(mvSize.x / 2.0f), -(mvSize.y / 2.0f), 0.0f),
+                                                                           float3(-(mvSize.x / 2.0f), (mvSize.y / 2.0f), 0.0f),
+                                                                           float3((mvSize.x / 2.0f), (mvSize.y / 2.0f), 0.0f) };
+
+            std::array<float2, cBillboard::NumberVerts> texcoords = { (float2(1.0f, -1.0f) + float2(1, 1)) / 2.0f, // Bottom left
+                                                                      (float2(-1.0f, -1.0f) + float2(1, 1)) / 2.0f, // Bottom right
+                                                                      (float2(-1.0f, 1.0f) + float2(1, 1)) / 2.0f, // Top left
+                                                                      (float2(1.0f, 1.0f) + float2(1, 1)) / 2.0f }; // Top right
+            for (size_t i = 0; i < cBillboard::NumberVerts; i++) {
+                positionView.Write(i, positionCoords[i]);
+                colorView.Write(i, float4(mColor.r * mfHaloAlpha, mColor.g * mfHaloAlpha, mColor.b * mfHaloAlpha, mColor.a * mfHaloAlpha));
+                textureView.Write(i, texcoords[i]);
+            }
+
+            endUpdateResource(&positionUpdateDesc);
+            endUpdateResource(&textureUpdateDesc);
+            endUpdateResource(&colorUpdateDesc);
+	    }
+
+        DrawPacket packet;
+
+        DrawPacket::GeometrySetBinding binding{};
+        packet.m_type = DrawPacket::DrawGeometryset;
+        binding.m_subAllocation = m_geometry.get();
+        binding.m_indexOffset = 0;
+        binding.m_set = GraphicsAllocator::AllocationSet::OpaqueSet;
+        binding.m_numIndices = 6 * (mType == eBillboardType_FixedAxis ? 2 : 0);
+        binding.m_vertexOffset = (m_activeCopy * cBillboard::NumberVerts);
+        packet.m_unified = binding;
+        return packet;
     }
 
     void cBillboard::SetSize(const cVector2f& avSize)
 	{
+	    m_dirtyBuffer = true;
 		mvSize = avSize;
 		mBoundingVolume.SetSize(cVector3f(mvSize.x, mvSize.y, mvSize.x));
 
-		float *pPos = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
+	   // float *pPos = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Position);
 
-		cVector3f vCoords[4] = {cVector3f((mvSize.x/2),-(mvSize.y/2),0),
-								cVector3f(-(mvSize.x/2),-(mvSize.y/2),0),
-								cVector3f(-(mvSize.x/2),(mvSize.y/2),0),
-								cVector3f((mvSize.x/2),(mvSize.y/2),0)};
+	   // cVector3f vCoords[4] = {cVector3f((mvSize.x/2),-(mvSize.y/2),0),
+	   // 						cVector3f(-(mvSize.x/2),-(mvSize.y/2),0),
+	   // 						cVector3f(-(mvSize.x/2),(mvSize.y/2),0),
+	   // 						cVector3f((mvSize.x/2),(mvSize.y/2),0)};
 
-		for(int i=0; i<4;++i)
-		{
-			pPos[0] = vCoords[i].x;
-			pPos[1] = vCoords[i].y;
-			pPos[2] = vCoords[i].z;
-			pPos+=4;
-		}
+	   // for(int i=0; i<4;++i)
+	   // {
+	   // 	pPos[0] = vCoords[i].x;
+	   // 	pPos[1] = vCoords[i].y;
+	   // 	pPos[2] = vCoords[i].z;
+	   // 	pPos+=4;
+	   // }
 
-		mpVtxBuffer->UpdateData(eVertexElementFlag_Position,false);
+	   // mpVtxBuffer->UpdateData(eVertexElementFlag_Position,false);
 
-		if(mType == eBillboardType_Axis) SetAxis(mvAxis);
+		if(mType == eBillboardType_Axis) {
+		    SetAxis(mvAxis);
+	    }
 
 		SetTransformUpdated();
 	}
@@ -185,21 +292,21 @@ namespace hpl {
 	void cBillboard::SetColor(const cColor &aColor)
 	{
 		if(mColor == aColor) return;
-
+        m_dirtyBuffer = true;
 		mColor = aColor;
 
-		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
+	   // float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
 
-		for(int i=0; i<4;++i)
-		{
-			pColors[0] = mColor.r * mfHaloAlpha;
-			pColors[1] = mColor.g * mfHaloAlpha;
-			pColors[2] = mColor.b * mfHaloAlpha;
-			pColors[3] = mColor.a * mfHaloAlpha;
-			pColors+=4;
-		}
+	   // for(int i=0; i<4;++i)
+	   // {
+	   // 	pColors[0] = mColor.r * mfHaloAlpha;
+	   // 	pColors[1] = mColor.g * mfHaloAlpha;
+	   // 	pColors[2] = mColor.b * mfHaloAlpha;
+	   // 	pColors[3] = mColor.a * mfHaloAlpha;
+	   // 	pColors+=4;
+	   // }
 
-		mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
+	   // mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
 	}
 
 	//-----------------------------------------------------------------------
@@ -212,19 +319,20 @@ namespace hpl {
 		}
 
 		mfHaloAlpha = afX;
+        m_dirtyBuffer = true;
 
-		float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
+	 //   float *pColors = mpVtxBuffer->GetFloatArray(eVertexBufferElement_Color0);
 
-		for(int i=0; i<4;++i)
-		{
-			pColors[0] = mColor.r * mfHaloAlpha;
-			pColors[1] = mColor.g * mfHaloAlpha;
-			pColors[2] = mColor.b * mfHaloAlpha;
-			pColors[3] = mColor.a * mfHaloAlpha;
-			pColors+=4;
-		}
+	 //   for(int i=0; i<4;++i)
+	 //   {
+	 //   	pColors[0] = mColor.r * mfHaloAlpha;
+	 //   	pColors[1] = mColor.g * mfHaloAlpha;
+	 //   	pColors[2] = mColor.b * mfHaloAlpha;
+	 //   	pColors[3] = mColor.a * mfHaloAlpha;
+	 //   	pColors+=4;
+	 //   }
 
-		mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
+	 //   mpVtxBuffer->UpdateData(eVertexElementFlag_Color0,false);
 	}
 
 	//-----------------------------------------------------------------------

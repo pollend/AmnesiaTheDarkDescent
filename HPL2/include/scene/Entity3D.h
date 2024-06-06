@@ -76,6 +76,7 @@ namespace hpl {
 		cMatrixf& GetLocalMatrix();
 		Matrix4 GetLocalMat();
 
+		Point3 GetWorldPositionP3();
 		cVector3f GetWorldPosition();
 		cMatrixf& GetWorldMatrix();
 		Matrix4 GetWorldMat();

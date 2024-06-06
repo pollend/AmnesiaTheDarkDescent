@@ -43,7 +43,7 @@ namespace hpl {
 		mfFOV = cMath::ToRad(70.0f);
 		mfAspect = 4.0f/3.0f;
 		mfFarClipPlane = 1000.0f;
-		mfNearClipPlane = 0.05f;
+		mfNearClipPlane = 0.5f;
 
 		mvViewSize = cVector2f(2 * mfAspect, 2);
 
@@ -378,6 +378,7 @@ namespace hpl {
 			// Perspective projection
 			if(mProjectionType == eProjectionType_Perspective)
 			{
+
 				m_mtxProjection = cMath::MatrixPerspectiveProjection(mfNearClipPlane, mfFarClipPlane, mfFOV, mfAspect, mbInfFarPlane);
 			}
 			//////////////////////////////////////////////
