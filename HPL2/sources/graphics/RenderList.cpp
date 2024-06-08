@@ -93,13 +93,6 @@ namespace hpl {
             return pMatA->GetAlphaMode() < pMatB->GetAlphaMode();
         }
 
-        //////////////////////////
-        // If alpha, sort by texture (we know alpha is same for both materials, so can just test one)
-        //if (pMatA->GetAlphaMode() == eMaterialAlphaMode_Trans) {
-        //    if (pMatA->GetImage(eMaterialTexture_Diffuse) != pMatB->GetImage(eMaterialTexture_Diffuse)) {
-        //        return pMatA->GetImage(eMaterialTexture_Diffuse) < pMatB->GetImage(eMaterialTexture_Diffuse);
-        //    }
-        //}
 
         //////////////////////////
         // View space depth, no need to test further since Z should almost never be the same for two objects.

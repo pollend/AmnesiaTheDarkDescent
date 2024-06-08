@@ -3196,6 +3196,147 @@ namespace hpl {
             cmdEndDebugMarker(cmd);
         }
     }
+    void cRendererDeferred::cmdPreZ(
+        Cmd* cmd,
+        cWorld* apWorld,
+        const ForgeRenderer::Frame& frame,
+        cRenderList& renderList,
+        float frameTime,
+        RenderTarget* depthBuffer,
+        cFrustum* apFrustum,
+        uint32_t frameDescriptorIndex,
+        cMatrixf viewMat,
+        cMatrixf projectionMat,
+        AdditionalZPassOptions options) {
+        cmdBeginDebugMarker(cmd, 0, 1, 0, "Pre Z");
+
+        BindRenderTargetsDesc bindRenderTargets = { 0 };
+        bindRenderTargets.mDepthStencil = { .pDepthStencil = depthBuffer,
+                                            .mLoadAction = LOAD_ACTION_CLEAR,
+                                            .mClearValue = { .depth = 1.0f, .stencil = 0 } };
+        cmdBindRenderTargets(cmd, &bindRenderTargets);
+
+        cmdSetViewport(
+            cmd,
+            0.0f,
+            0.0f,
+            static_cast<float>(depthBuffer->mWidth),
+            static_cast<float>(depthBuffer->mHeight),
+            0.0f,
+            1.0f);
+        cmdSetScissor(cmd, 0, 0, static_cast<float>(depthBuffer->mWidth), static_cast<float>(depthBuffer->mHeight));
+        cmdBindPipeline(cmd, options.m_invert ? m_zPassPipelineCW.m_handle : m_zPassPipelineCCW.m_handle);
+
+        cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
+
+        const uint32_t materialObjectIndex = getDescriptorIndexFromName(m_materialRootSignature.m_handle, "materialRootConstant");
+        for(auto& renderable: renderList.GetRenderableItems(eRenderListType_Z)) {
+            if (!iRenderable::IsObjectIsVisible(*renderable, options.objectVisibilityFlags, options.clipPlanes)) {
+                continue;
+            }
+
+            cMaterial* pMaterial = renderable->GetMaterial();
+            std::array targets = { eVertexBufferElement_Position,
+                                   eVertexBufferElement_Texture0,
+                                   eVertexBufferElement_Normal,
+                                   eVertexBufferElement_Texture1Tangent };
+            DrawPacket packet = renderable->ResolveDrawPacket(frame);
+            if (packet.m_type == DrawPacket::Unknown) {
+                continue;
+            }
+            MaterialRootConstant materialConst = {};
+            uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, renderable, {});
+            materialConst.objectId = instance;
+            DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, targets);
+            cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
+            cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
+        }
+
+        //uint32_t queryIndex = 0;
+        //{
+        //    cmdBeginDebugMarker(m_prePassCmd.m_handle, 1, 1, 0, "Occlusion Query");
+        //    std::array targets = { eVertexBufferElement_Position };
+        //    DrawPacket packet = static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame);
+
+        //    uint32_t occlusionObjectIndex = getDescriptorIndexFromName(m_rootSignatureOcclusuion.m_handle, "rootConstant");
+        //    uint32_t occlusionIndex = 0;
+        //    cMatrixf viewProj = cMath::MatrixMul(projectionMat, viewMat);
+
+        //    cmdBindDescriptorSet(m_prePassCmd.m_handle, 0, m_descriptorOcclusionConstSet.m_handle);
+        //    for (auto& query : renderList.GetOcclusionQueryItems()) {
+        //        if (TypeInfo<hpl::cBillboard>::IsType(*query)) {
+        //            cBillboard* pBillboard = static_cast<cBillboard*>(query.m_renderable);
+
+        //            auto mvp = cMath::ToForgeMatrix4(cMath::MatrixMul(
+        //                viewProj, cMath::MatrixMul(pBillboard->GetWorldMatrix(), cMath::MatrixScale(pBillboard->GetHaloSourceSize()))));
+
+        //            BufferUpdateDesc updateDesc = { m_occlusionUniformBuffer.m_handle, m_occlusionIndex * sizeof(mat4) };
+        //            beginUpdateResource(&updateDesc);
+        //            (*reinterpret_cast<mat4*>(updateDesc.pMappedData)) = mvp;
+        //            endUpdateResource(&updateDesc);
+
+        //            cmdBindPushConstants(
+        //                m_prePassCmd.m_handle, m_rootSignatureOcclusuion.m_handle, occlusionObjectIndex, &m_occlusionIndex);
+
+        //            DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet, targets);
+
+        //            QueryDesc queryDesc = {};
+        //            queryDesc.mIndex = queryIndex++;
+        //            cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineOcclusionQuery.m_handle);
+        //            cmdBeginQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
+        //            cmdDrawIndexed(m_prePassCmd.m_handle, packet.numberOfIndecies(), 0, 0);
+        //            cmdEndQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
+        //            query.m_queryIndex = queryDesc.mIndex;
+
+        //            queryDesc.mIndex = queryIndex++;
+        //            cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineMaxOcclusionQuery.m_handle);
+        //            cmdBeginQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
+        //            cmdDrawIndexed(m_prePassCmd.m_handle, packet.numberOfIndecies(), 0, 0);
+        //            cmdEndQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
+        //            query.m_maxQueryIndex = queryDesc.mIndex;
+
+        //            m_occlusionIndex = (m_occlusionIndex + 1) % MaxOcclusionDescSize;
+        //        }
+        //    }
+        //    cmdEndDebugMarker(m_prePassCmd.m_handle);
+        //}
+
+        //for (size_t i = 0; i < uniformTest.size(); i++) {
+        //    auto& test = uniformTest[i];
+        //    cMaterial* pMaterial = test.m_renderable->GetMaterial();
+
+        //    ASSERT(uniformTest.size() < MaxObjectTest && "Too many renderables");
+        //    auto* pBoundingVolume = test.m_renderable->GetBoundingVolume();
+
+        //    BufferUpdateDesc updateDesc = { m_hiZBoundBoxBuffer.m_handle, i * (2 * sizeof(float4)), sizeof(float4) * 2 };
+        //    auto boundBoxMin = pBoundingVolume->GetMin();
+        //    auto boundBoxMax = pBoundingVolume->GetMax();
+        //    beginUpdateResource(&updateDesc);
+        //    reinterpret_cast<float4*>(updateDesc.pMappedData)[0] = float4(boundBoxMin.x, boundBoxMin.y, boundBoxMin.z, 0.0f);
+        //    reinterpret_cast<float4*>(updateDesc.pMappedData)[1] = float4(boundBoxMax.x, boundBoxMax.y, boundBoxMax.z, 0.0f);
+        //    endUpdateResource(&updateDesc);
+
+        //    if (!test.m_preZPass || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
+        //        continue;
+        //    }
+
+        //    std::array targets = { eVertexBufferElement_Position,
+        //                           eVertexBufferElement_Texture0,
+        //                           eVertexBufferElement_Normal,
+        //                           eVertexBufferElement_Texture1Tangent };
+        //    DrawPacket packet = test.m_renderable->ResolveDrawPacket(frame);
+        //    if (packet.m_type == DrawPacket::Unknown) {
+        //        continue;
+        //    }
+        //    MaterialRootConstant materialConst = {};
+        //    uint32_t instance = cmdBindMaterialAndObject(m_prePassCmd.m_handle, frame, pMaterial, test.m_renderable, {});
+        //    materialConst.objectId = instance;
+        //    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, targets);
+        //    cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
+        //    cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
+        //}
+        cmdEndDebugMarker(cmd);
+    }
 
     void cRendererDeferred::cmdPreAndPostZ(
         Cmd* cmd,
@@ -3347,12 +3488,6 @@ namespace hpl {
             });
 
             cmdBeginDebugMarker(m_prePassCmd.m_handle, 0, 1, 0, "Pre Z");
-            // LoadActionsDesc loadActions = {};
-            // loadActions.mLoadActionsColor[0] = LOAD_ACTION_DONTCARE;
-            // loadActions.mLoadActionDepth = LOAD_ACTION_CLEAR;
-            // loadActions.mLoadActionStencil = LOAD_ACTION_DONTCARE;
-            // loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
-            // cmdBindRenderTargets(m_prePassCmd.m_handle, 0, NULL, depthBuffer, &loadActions, NULL, NULL, -1, -1);
 
             BindRenderTargetsDesc bindRenderTargets = {0};
             bindRenderTargets.mDepthStencil = { .pDepthStencil = depthBuffer, .mLoadAction = LOAD_ACTION_CLEAR, .mClearValue = { .depth = 1.0f, .stencil = 0 } };
@@ -3613,12 +3748,6 @@ namespace hpl {
 
 
         cmdBeginDebugMarker(cmd, 0, 1, 0, "Post Z");
-        // LoadActionsDesc loadActions = {};
-        // loadActions.mLoadActionsColor[0] = LOAD_ACTION_DONTCARE;
-        // loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-        // loadActions.mLoadActionStencil = LOAD_ACTION_DONTCARE;
-        // loadActions.mClearDepth = { .depth = 1.0f, .stencil = 0 };
-        // cmdBindRenderTargets(cmd, 0, NULL, depthBuffer, &loadActions, NULL, NULL, -1, -1);
         BindRenderTargetsDesc bindRenderTargets = {0};
         bindRenderTargets.mDepthStencil = { .pDepthStencil = depthBuffer, .mLoadAction = LOAD_ACTION_LOAD, .mClearValue = { .depth = 1.0f, .stencil = 0 }};
         cmdBindRenderTargets(cmd, &bindRenderTargets);
@@ -3986,26 +4115,89 @@ namespace hpl {
         frame.m_resourcePool->Push(currentGBuffer.m_refractionImage);
         // Setup far plane coordinates
 
-        ///////////////////////////
+        // setup render list
+        {
+            m_rendererList.BeginAndReset(afFrameTime, apFrustum);
+            auto* dynamicContainer = apWorld->GetRenderableContainer(eWorldContainerType_Dynamic);
+            auto* staticContainer = apWorld->GetRenderableContainer(eWorldContainerType_Static);
+            dynamicContainer->UpdateBeforeRendering();
+            staticContainer->UpdateBeforeRendering();
+
+            auto prepareObjectHandler = [&](iRenderable* pObject) {
+                if (!iRenderable::IsObjectIsVisible(*pObject, eRenderableFlag_VisibleInNonReflection, {})) {
+                    return;
+                }
+
+                cMaterial* pMaterial = pObject->GetMaterial();
+
+                if (pObject && pObject->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
+                    pObject->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
+                    pObject->UpdateGraphicsForFrame(afFrameTime);
+                }
+
+                if (pMaterial && pMaterial->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
+                    pMaterial->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
+                    pMaterial->UpdateBeforeRendering(afFrameTime);
+                }
+                ////////////////////////////////////////
+                // Update per viewport specific and set amtrix point
+                // Skip this for non-decal translucent! This is because the water rendering might mess it up otherwise!
+                if (pMaterial == NULL || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id) == false ||
+                    pMaterial->Descriptor().m_id == MaterialID::Decal) {
+                    // skip rendering if the update return false
+                    if (pObject->UpdateGraphicsForViewport(apFrustum, afFrameTime) == false) {
+                        return;
+                    }
+
+                    pObject->SetModelMatrixPtr(pObject->GetModelMatrix(apFrustum));
+                }
+                // Only set a matrix used for sorting. Calculate the proper in the trans rendering!
+                else {
+                    pObject->SetModelMatrixPtr(pObject->GetModelMatrix(NULL));
+                }
+
+                m_rendererList.AddObject(pObject);
+            };
+            iRenderableContainer::WalkRenderableContainer(
+                *dynamicContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+            iRenderableContainer::WalkRenderableContainer(
+                *staticContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+            m_rendererList.End(
+                eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
+                eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea | eRenderListCompileFlag_Z);
+        }
+
+        cmdPreZ(frame.m_cmd,
+                apWorld,
+                frame,
+                m_rendererList,
+                afFrameTime,
+                currentGBuffer.m_depthBuffer.m_handle,
+                apFrustum,
+                mainFrameIndex,
+                mainFrustumView,
+                mainFrustumProj,
+                {});
+
         // Occlusion testing
-        m_rendererList.BeginAndReset(afFrameTime, apFrustum);
-        cmdPreAndPostZ(
-            frame.m_cmd,
-            apWorld,
-            currentGBuffer.m_preZPassRenderables,
-            frame,
-            m_rendererList,
-            afFrameTime,
-            currentGBuffer.m_depthBuffer.m_handle,
-            currentGBuffer.m_hizDepthBuffer.m_handle,
-            apFrustum,
-            mainFrameIndex,
-            mainFrustumView,
-            mainFrustumProj,
-            {});
-        m_rendererList.End(
-            eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
-            eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
+        //m_rendererList.BeginAndReset(afFrameTime, apFrustum);
+        //cmdPreAndPostZ(
+        //    frame.m_cmd,
+        //    apWorld,
+        //    currentGBuffer.m_preZPassRenderables,
+        //    frame,
+        //    m_rendererList,
+        //    afFrameTime,
+        //    currentGBuffer.m_depthBuffer.m_handle,
+        //    currentGBuffer.m_hizDepthBuffer.m_handle,
+        //    apFrustum,
+        //    mainFrameIndex,
+        //    mainFrustumView,
+        //    mainFrustumProj,
+        //    {});
+        //m_rendererList.End(
+        //    eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
+        //    eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
 
         {
             cmdBindRenderTargets(frame.m_cmd, NULL);
@@ -4489,15 +4681,60 @@ namespace hpl {
 
                         beginCmd(resolveReflectionBuffer.m_cmd.m_handle);
                         m_reflectionRendererList.BeginAndReset(afFrameTime, &reflectFrustum);
-                        cmdPreAndPostZ(
+                        auto* dynamicContainer = apWorld->GetRenderableContainer(eWorldContainerType_Dynamic);
+                        auto* staticContainer = apWorld->GetRenderableContainer(eWorldContainerType_Static);
+                        dynamicContainer->UpdateBeforeRendering();
+                        staticContainer->UpdateBeforeRendering();
+                        auto prepareObjectHandler = [&](iRenderable* pObject) {
+                            if (!iRenderable::IsObjectIsVisible(*pObject, eRenderableFlag_VisibleInReflection, {})) {
+                                return;
+                            }
+
+                            cMaterial* pMaterial = pObject->GetMaterial();
+
+                            if (pObject && pObject->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
+                                pObject->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
+                                pObject->UpdateGraphicsForFrame(afFrameTime);
+                            }
+
+                            if (pMaterial && pMaterial->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
+                                pMaterial->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
+                                pMaterial->UpdateBeforeRendering(afFrameTime);
+                            }
+                            ////////////////////////////////////////
+                            // Update per viewport specific and set amtrix point
+                            // Skip this for non-decal translucent! This is because the water rendering might mess it up otherwise!
+                            if (pMaterial == NULL || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id) == false ||
+                                pMaterial->Descriptor().m_id == MaterialID::Decal) {
+                                // skip rendering if the update return false
+                                if (pObject->UpdateGraphicsForViewport(apFrustum, afFrameTime) == false) {
+                                    return;
+                                }
+
+                                pObject->SetModelMatrixPtr(pObject->GetModelMatrix(apFrustum));
+                            }
+                            // Only set a matrix used for sorting. Calculate the proper in the trans rendering!
+                            else {
+                                pObject->SetModelMatrixPtr(pObject->GetModelMatrix(NULL));
+                            }
+
+                            m_reflectionRendererList.AddObject(pObject);
+                        };
+                        iRenderableContainer::WalkRenderableContainer(
+                            *dynamicContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+                        iRenderableContainer::WalkRenderableContainer(
+                            *staticContainer, apFrustum, prepareObjectHandler, eRenderableFlag_VisibleInNonReflection);
+                        m_reflectionRendererList.End(
+                            eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
+                            eRenderListCompileFlag_Illumination | eRenderListCompileFlag_Z);
+
+                        cmdPreZ(
                             resolveReflectionBuffer.m_cmd.m_handle,
                             apWorld,
-                            resolveReflectionBuffer.m_buffer.m_preZPassRenderables,
                             frame,
                             m_reflectionRendererList,
                             afFrameTime,
                             resolveReflectionBuffer.m_buffer.m_depthBuffer.m_handle,
-                            resolveReflectionBuffer.m_buffer.m_hizDepthBuffer.m_handle,
                             &reflectFrustum,
                             reflectionFrameDescIndex,
                             reflectionFrustumView,
@@ -4508,9 +4745,6 @@ namespace hpl {
                                 .m_invert = true,
                                 .m_disableOcclusionQueries = true,
                             });
-                        m_reflectionRendererList.End(
-                            eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
-                            eRenderListCompileFlag_Illumination);
 
                         {
                             cmdBindRenderTargets(resolveReflectionBuffer.m_cmd.m_handle, NULL);

@@ -249,7 +249,6 @@ namespace hpl {
 
 		bool mbAutoDestroyTextures = true;
 		bool mbDepthTest = true;
-
 	};
 
 };

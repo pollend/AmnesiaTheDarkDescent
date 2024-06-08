@@ -430,6 +430,21 @@ namespace hpl {
             bool m_invert = false;
             bool m_disableOcclusionQueries = false;
         };
+
+        void cmdPreZ(
+            Cmd* cmd,
+            cWorld* apWorld,
+            const ForgeRenderer::Frame& frame,
+            cRenderList& renderList,
+            float frameTime,
+            RenderTarget* depthBuffer,
+            cFrustum* apFrustum,
+            uint32_t frameDescriptorIndex,
+            cMatrixf viewMat,
+            cMatrixf projectionMat,
+            AdditionalZPassOptions flags);
+
+
         void cmdPreAndPostZ(
             Cmd* cmd,
             cWorld* apWorld,

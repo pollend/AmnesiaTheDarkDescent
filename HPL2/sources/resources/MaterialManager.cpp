@@ -106,7 +106,9 @@ namespace hpl {
     }
 
     void cMaterialManager::Update(float afTimeStep) {
-    }
+
+
+}
 
     void cMaterialManager::Unload(iResourceBase* apResource) {
     }
