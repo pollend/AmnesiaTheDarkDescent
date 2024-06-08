@@ -741,6 +741,19 @@ namespace hpl {
                 addResource(&desc, nullptr);
                 return true;
             });
+            m_occlusionDebugBuffer.Load([&](Buffer** buf) {
+                BufferLoadDesc desc = {};
+                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_RW_BUFFER;
+                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+                desc.mDesc.mElementCount = cRendererDeferred::MaxObjectTest;
+                desc.mDesc.mStructStride = sizeof(float4) * 2;
+                desc.mDesc.mSize = sizeof(float4) * 2 * cRendererDeferred::MaxObjectTest;
+                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+                desc.pData = nullptr;
+                desc.ppBuffer = buf;
+                addResource(&desc, nullptr);
+                return true;
+            });
             m_rootSignatureHIZOcclusion.Load(forgeRenderer->Rend(), [&](RootSignature** sig) {
                 std::array shaders = { m_ShaderHIZGenerate.m_handle, m_shaderTestOcclusion.m_handle };
                 RootSignatureDesc rootSignatureDesc = {};
@@ -3289,6 +3302,7 @@ namespace hpl {
                         pMaterial->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
                         pMaterial->UpdateBeforeRendering(frameTime);
                     }
+
                     ////////////////////////////////////////
                     // Update per viewport specific and set amtrix point
                     // Skip this for non-decal translucent! This is because the water rendering might mess it up otherwise!
@@ -3383,9 +3397,10 @@ namespace hpl {
                 auto boundBoxMin = pBoundingVolume->GetMin();
                 auto boundBoxMax = pBoundingVolume->GetMax();
                 beginUpdateResource(&updateDesc);
-                reinterpret_cast<float4*>(updateDesc.pMappedData)[0] = float4(boundBoxMin.x, boundBoxMin.y, boundBoxMin.z, 0.0f);
+                reinterpret_cast<float4*>(updateDesc.pMappedData)[0] = float4(boundBoxMin.x, boundBoxMin.y, boundBoxMin.z, pBoundingVolume->GetRadius());
                 reinterpret_cast<float4*>(updateDesc.pMappedData)[1] = float4(boundBoxMax.x, boundBoxMax.y, boundBoxMax.z, 0.0f);
                 endUpdateResource(&updateDesc);
+
 
                 if (!test.m_preZPass || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
                     continue;
@@ -3408,7 +3423,7 @@ namespace hpl {
             }
 
             uniformPropBlock.maxMipLevel = hiZBuffer->mMipLevels - 1;
-            uniformPropBlock.depthDim = uint2(depthBuffer->mWidth, depthBuffer->mHeight);
+            uniformPropBlock.depthDim = float2(depthBuffer->mWidth, depthBuffer->mHeight);
             uniformPropBlock.numObjects = uniformTest.size();
 
             BufferUpdateDesc updateDesc = { m_hiZOcclusionUniformBuffer.m_handle, 0, sizeof(UniformPropBlock) };

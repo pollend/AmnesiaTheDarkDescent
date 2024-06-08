@@ -7,7 +7,7 @@ RES(Buffer(float4), occlusionBoxBuffer, UPDATE_FREQ_PER_FRAME, t1, binding = 3);
 
 CBUFFER(objectUniformBlock, UPDATE_FREQ_PER_FRAME, b0, binding = 5)
 { 
-    DATA(uint2, depthDim, None);
+    DATA(float2, depthDim, None);
     DATA(uint, numObjects, None);
     DATA(int, maxMipLevel, None);
 };
@@ -30,6 +30,15 @@ CBUFFER(perFrameConstants, UPDATE_FREQ_PER_FRAME, b1, binding = 6)
     DATA(float2, viewportSize, None);
 };
 
+STRUCT(DebugData) {
+    DATA(float4, box, None);
+    DATA(float, mip, None);
+    DATA(float, minZ, None);
+    DATA(float, maxZ, None);
+    DATA(bool, res, None);
+};
+
+RES(RWBuffer(DebugData), testBuffer, UPDATE_FREQ_PER_FRAME, t1, binding = 7);
 
 NUM_THREADS(128, 1,  1)
 void CS_MAIN(SV_DispatchThreadID(uint3) did)
@@ -44,7 +53,7 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
     float3 bboxMax = Get(occlusionBoxBuffer)[(2 * did.x) + 1].xyz;
 
     //Adapted from http://blog.selfshadow.com/publications/practical-visibility/
-    float3 boxCorners[] = {
+    const float3 boxCorners[] = {
         float3(bboxMax.x,bboxMax.y,bboxMax.z),
 		float3(bboxMax.x,bboxMax.y,bboxMin.z),
 		float3(bboxMax.x,bboxMin.y,bboxMax.z),
@@ -58,11 +67,12 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
     float minZ = 1.0;
     float2 minXY = float2(1.0, 1.0);
     float2 maxXY = float2(0.0, 0.0);
+    
     UNROLL
-    for (uint k = 0; k < 8; k++)
+    for (int k = 0; k < 8; k++)
     {
         //transform World space aaBox to NDC
-        float4 clipPos = mul(Get(viewProjMat), float4(boxCorners[k].xyz, 1.0));
+        float4 clipPos = mul( Get(viewProjMat),float4(boxCorners[k].xyz, 1.0));
 	    if(clipPos.z > clipPos.w 
             || clipPos.x < -clipPos.w 
             || clipPos.x > clipPos.w 
@@ -80,46 +90,83 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
         
         minXY = min(clipPos.xy, minXY);
         maxXY = max(clipPos.xy, maxXY);
-        minZ = saturate(min(minZ, clipPos.z));
+        minZ = (min(minZ, clipPos.z));
     }
-    if(distance(minXY, maxXY) >= .4 || distance(minXY, maxXY) >= .4) {
+   
+     if(distance(minXY.x, maxXY.x) >= .4 || distance(minXY.y, maxXY.y) >= .4) {
         Get(occlusionTest)[did.x] = true;  
         return;
     }
+    float4 boxUVs = float4(minXY, maxXY);
 
-    int2 rtSize = int2(Get(viewportSize).xy);
-    int2 size = int2((maxXY - minXY) * rtSize);
-    float mip = floor(log2(max(size.x, size.y)));
+    // Calculate hi-Z buffer mip
+    float2 size = ceil((maxXY - minXY) * Get(depthDim).xy);
+    float mip = ceil(log2(max(size.x, size.y))); 
 
-    mip = clamp(mip, 0, Get(maxMipLevel));
-    
+    mip = clamp(mip, 0.0, Get(maxMipLevel));
+
     // Texel footprint for the lower (finer-grained) level
-    float level_lower = max(mip - 1, 0);
-    float2 scale = exp2(-level_lower).xx;
-    float2 a = floor(minXY.xy * scale);
-    float2 b = ceil(maxXY.xy * scale);
+    float level_lower = max(mip - 1.0, 0);
+    float scale = exp2(-level_lower);
+    float2 a = floor(boxUVs.xy*scale);
+    float2 b = ceil(boxUVs.zw*scale);
     float2 dims = b - a;
-    
+
     // Use the lower level if we only touch <= 2 texels in both dimensions
-    if (dims.x <= 2.0 && dims.y <= 2.0)  {
+    if (dims.x <= 2 && dims.y <= 2)
         mip = level_lower;
-    }
    
-    const uint2 maxSamples = uint2(16, 16);
+    const uint2 maxSamples = uint2(10, 10);
     const float2 XYSize = (maxXY - minXY);
     const float2 steps =  XYSize / float2(maxSamples); 
-    
-    float maxDepth = 0.0;
-    float yPos = minXY.y;
-    UNROLL
-    for(uint i = 0; i < maxSamples.y; i++) {
-        float xPos = minXY.x;
-        UNROLL
-        for(uint j = 0; j < maxSamples.x; j++) {
-            maxDepth = max(maxDepth, SampleLvlTex2D(Get(depthTest), Get(depthSampler), float2(xPos, yPos), mip).r);
-            xPos += steps.x;
-        }
-        yPos += steps.y;
-    }
-    Get(occlusionTest)[did.x] = minZ <= (maxDepth + 0.00015); 
+   
+  float maxDepth = 0.0;
+  float yPos = minXY.y;
+  UNROLL
+  for(uint i = 0; i < maxSamples.y; i++) {
+      float xPos = minXY.x;
+      UNROLL
+      for(uint j = 0; j < maxSamples.x; j++) {
+          maxDepth = max(maxDepth, SampleLvlTex2D(Get(depthTest), Get(depthSampler), float2(xPos, yPos), mip).r);
+          xPos += steps.x;
+      }
+      yPos += steps.y;
+  }
+  Get(occlusionTest)[did.x] = minZ <= (maxDepth + 0.0015); 
+
+
+    //float4 depth = float4(SampleLvlTex2D(Get(depthTest), Get(depthSampler), boxUVs.xy, mip).r,
+    //                 SampleLvlTex2D(Get(depthTest), Get(depthSampler), boxUVs.zy, mip).r,
+    //                 SampleLvlTex2D(Get(depthTest), Get(depthSampler), boxUVs.xw, mip).r,
+    //                 SampleLvlTex2D(Get(depthTest), Get(depthSampler), boxUVs.zw, mip).r
+    //                );
+
+
+    //float maxDepth = max(max(max(depth.x, depth.y), depth.z), depth.w);
+    //Get(occlusionTest)[did.x] = minZ <= (maxDepth + 0.0015); 
+
+   // float width = (maxXY.x - minXY.x) * Get(depthDim).x;
+   // float height = (maxXY.y - minXY.y) * Get(depthDim).y;
+   // float mip = floor(log2(max(width, height)));
+   // 
+   // //// Texel footprint for the lower (finer-grained) level
+   // float level_lower = max(mip - 1, 0);
+   // float2 scale = exp2(-level_lower).xx;
+   // float2 a = floor(minXY.xy * scale);
+   // float2 b = ceil(maxXY.xy * scale);
+   // float2 dims = b - a;
+   // 
+   // // Use the lower level if we only touch <= 2 texels in both dimensions
+   // if (dims.x <= 2.0 && dims.y <= 2.0)  {
+   //     mip = level_lower;
+   // }
+
+   // 
+   // float maxDepth = max(
+   //     max(SampleLvlTex2D(Get(depthTest), Get(depthSampler), float2(minXY.x,minXY.y), mip).r,
+   //         SampleLvlTex2D(Get(depthTest), Get(depthSampler), float2(minXY.x,maxXY.y), mip).r),
+   //     max(SampleLvlTex2D(Get(depthTest), Get(depthSampler), float2(maxXY.x,minXY.y), mip).r,
+   //         SampleLvlTex2D(Get(depthTest), Get(depthSampler), float2(maxXY.x,maxXY.y) ,mip).r)
+   // );
+  
 }

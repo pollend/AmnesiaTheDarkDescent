@@ -26,20 +26,20 @@ void CS_MAIN(SV_DispatchThreadID(uint3) did)
         
         float maxDepth = max(max(t1, t2), max(t3, t4));
 
-        // if we are reducing an odd-width texture then fetch the edge texels
-        if (((screenSize.x & 1) != 0) && (did.x == screenSize.x-3)) {
-            // if both edges are odd, fetch the top-left corner texel
-            if (((screenSize.y & 1) != 0) && (did.y == screenSize.y-3)) {
-                maxDepth = max(maxDepth, LoadRWTex2D(Get(depthInput)[lastMip], (did.xy * 2) + int2(2,2)).x);
-            }
-            maxDepth = max(maxDepth, LoadRWTex2D(Get(depthInput)[lastMip], (did.xy * 2) + int2(2,0)).x);        
-            maxDepth = max(maxDepth, LoadRWTex2D(Get(depthInput)[lastMip], (did.xy * 2) + int2(2,1)).x);
-        }
-        // if we are reducing an odd-height texture then fetch the edge texels
-        if (((screenSize.y & 1) != 0) && (did.y == screenSize.y-3)) {
-            maxDepth = max(maxDepth, LoadRWTex2D(Get(depthInput)[lastMip], (did.xy * 2) + int2(0,2)).x);      
-            maxDepth = max(maxDepth, LoadRWTex2D(Get(depthInput)[lastMip], (did.xy * 2) + int2(1,2)).x);
-        }
+       // // if we are reducing an odd-width texture then fetch the edge texels
+       // if (((screenSize.x & 1) != 0) && (did.x == screenSize.x-3)) {
+       //     // if both edges are odd, fetch the top-left corner texel
+       //     if (((screenSize.y & 1) != 0) && (did.y == screenSize.y-3)) {
+       //         maxDepth = max(maxDepth, LoadRWTex2D(Get(depthInput)[lastMip], (did.xy * 2) + int2(2,2)).x);
+       //     }
+       //     maxDepth = max(maxDepth, LoadRWTex2D(Get(depthInput)[lastMip], (did.xy * 2) + int2(2,0)).x);        
+       //     maxDepth = max(maxDepth, LoadRWTex2D(Get(depthInput)[lastMip], (did.xy * 2) + int2(2,1)).x);
+       // }
+       // // if we are reducing an odd-height texture then fetch the edge texels
+       // if (((screenSize.y & 1) != 0) && (did.y == screenSize.y-3)) {
+       //     maxDepth = max(maxDepth, LoadRWTex2D(Get(depthInput)[lastMip], (did.xy * 2) + int2(0,2)).x);      
+       //     maxDepth = max(maxDepth, LoadRWTex2D(Get(depthInput)[lastMip], (did.xy * 2) + int2(1,2)).x);
+       // }
 
         Write2D(Get(depthInput)[Get(mipLevel)], did.xy, maxDepth);
     }

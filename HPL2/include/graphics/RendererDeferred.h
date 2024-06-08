@@ -647,6 +647,7 @@ namespace hpl {
         SharedBuffer m_hiZOcclusionUniformBuffer;
         SharedBuffer m_hiZBoundBoxBuffer;
         SharedBuffer m_occlusionTestBuffer;
+        SharedBuffer m_occlusionDebugBuffer;
 
         struct OcclusionQueryAlpha {
             iRenderable* m_renderable = nullptr;
@@ -669,9 +670,10 @@ namespace hpl {
         };
 
         struct UniformPropBlock {
-            uint2 depthDim;
+            float2 depthDim;
             uint32_t numObjects;
             uint32_t maxMipLevel;
+            uint32_t objectID;
         };
 
         // light pass
