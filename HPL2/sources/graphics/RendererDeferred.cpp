@@ -2240,7 +2240,7 @@ namespace hpl {
         BindRenderTargetsDesc bindRenderTargets = {};
         bindRenderTargets.mDepthStencil = { .pDepthStencil =depthBuffer, .mLoadAction = LOAD_ACTION_LOAD };
         bindRenderTargets.mRenderTargetCount = 1;
-        bindRenderTargets.mRenderTargets[0] = (BindRenderTargetDesc){outputBuffer, LOAD_ACTION_LOAD };
+        bindRenderTargets.mRenderTargets[0] = BindRenderTargetDesc{outputBuffer, LOAD_ACTION_LOAD };
         cmdBindRenderTargets(cmd, &bindRenderTargets);
 
         cmdSetViewport(cmd, 0.0f, 0.0f, outputBuffer->mWidth, outputBuffer->mHeight, 0.0f, 1.0f);
@@ -2840,7 +2840,7 @@ namespace hpl {
                         BindRenderTargetsDesc bindRenderTargets = {0};
                         bindRenderTargets.mDepthStencil = { .pDepthStencil = depthBuffer, .mLoadAction = LOAD_ACTION_LOAD, .mLoadActionStencil = LOAD_ACTION_CLEAR};
                         bindRenderTargets.mRenderTargetCount = 1;
-                        bindRenderTargets.mRenderTargets[0] = (BindRenderTargetDesc){outputBuffer, LOAD_ACTION_LOAD};
+                        bindRenderTargets.mRenderTargets[0] = BindRenderTargetDesc{outputBuffer, LOAD_ACTION_LOAD};
                         cmdBindRenderTargets(cmd, &bindRenderTargets);
                     }
                 }
@@ -2921,10 +2921,10 @@ namespace hpl {
             BindRenderTargetsDesc bindRenderTargets = {0};
             bindRenderTargets.mDepthStencil = { .pDepthStencil = depthBuffer, .mLoadAction = LOAD_ACTION_LOAD };
             bindRenderTargets.mRenderTargetCount = 4;
-            bindRenderTargets.mRenderTargets[0] = (BindRenderTargetDesc){colorBuffer, LOAD_ACTION_CLEAR};
-            bindRenderTargets.mRenderTargets[1] = (BindRenderTargetDesc){normalBuffer, LOAD_ACTION_CLEAR};
-            bindRenderTargets.mRenderTargets[2] = (BindRenderTargetDesc){positionBuffer, LOAD_ACTION_CLEAR};
-            bindRenderTargets.mRenderTargets[3] = (BindRenderTargetDesc){specularBuffer, LOAD_ACTION_CLEAR};
+            bindRenderTargets.mRenderTargets[0] = BindRenderTargetDesc{colorBuffer, LOAD_ACTION_CLEAR};
+            bindRenderTargets.mRenderTargets[1] = BindRenderTargetDesc{normalBuffer, LOAD_ACTION_CLEAR};
+            bindRenderTargets.mRenderTargets[2] = BindRenderTargetDesc{positionBuffer, LOAD_ACTION_CLEAR};
+            bindRenderTargets.mRenderTargets[3] = BindRenderTargetDesc{specularBuffer, LOAD_ACTION_CLEAR};
             cmdBindRenderTargets(cmd, &bindRenderTargets);
 
             cmdSetViewport(cmd, 0.0f, 0.0f, colorBuffer->mWidth, colorBuffer->mHeight, 0.0f, 1.0f);
@@ -2974,7 +2974,7 @@ namespace hpl {
             BindRenderTargetsDesc bindRenderTargets = {};
             bindRenderTargets.mDepthStencil = { .pDepthStencil = depthBuffer, .mLoadAction = LOAD_ACTION_LOAD };
             bindRenderTargets.mRenderTargetCount = 1;
-            bindRenderTargets.mRenderTargets[0] = (BindRenderTargetDesc){colorBuffer, LOAD_ACTION_LOAD};
+            bindRenderTargets.mRenderTargets[0] = BindRenderTargetDesc{colorBuffer, LOAD_ACTION_LOAD};
             cmdBindRenderTargets(cmd, &bindRenderTargets);
 
             cmdSetViewport(cmd, 0.0f, 0.0f, colorBuffer->mWidth, colorBuffer->mHeight, 0.0f, 1.0f);
@@ -3101,7 +3101,7 @@ namespace hpl {
 
                     DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, targets);
 
-                    QueryCoverageData::CoverageQuery queryCoverage = (QueryCoverageData::CoverageQuery){
+                    QueryCoverageData::CoverageQuery queryCoverage = QueryCoverageData::CoverageQuery{
                         .m_queryIndex = query->m_queryIndex++,
                         .m_maxQueryIndex = query->m_queryIndex++,
                     };
@@ -3946,7 +3946,7 @@ namespace hpl {
             BindRenderTargetsDesc bindRenderTargets = {};
             bindRenderTargets.mDepthStencil = { .pDepthStencil = currentGBuffer.m_depthBuffer.m_handle, .mLoadAction = LOAD_ACTION_LOAD };
             bindRenderTargets.mRenderTargetCount = 1;
-            bindRenderTargets.mRenderTargets[0] = (BindRenderTargetDesc){ currentGBuffer.m_outputBuffer.m_handle, LOAD_ACTION_LOAD };
+            bindRenderTargets.mRenderTargets[0] = BindRenderTargetDesc{ currentGBuffer.m_outputBuffer.m_handle, LOAD_ACTION_LOAD };
             cmdBindRenderTargets(frame.m_cmd, &bindRenderTargets);
 
             cmdSetViewport(frame.m_cmd, 0.0f, 0.0f, static_cast<float>(common->m_size.x), static_cast<float>(common->m_size.y), 0.0f, 1.0f);
