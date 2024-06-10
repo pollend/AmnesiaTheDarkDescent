@@ -64,6 +64,7 @@ AddToolTarget(ParticleViewer
 add_executable(MshConverter
         mshconverter/MshConverter.cpp
         )
+hpl_set_output_dir(MshConverter "") 
 
 # Hack to copy resources for tools
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/resources/"

@@ -197,7 +197,7 @@ namespace hpl {
 
             // Render world and call callbacks
             if (alFlags & tSceneRenderFlag_World) {
-                pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPreWorldDraw);
+                //pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPreWorldDraw);
 
                 if (pPostEffectComposite && (alFlags & tSceneRenderFlag_PostEffects)) {
                     bPostEffects = pPostEffectComposite->HasActiveEffects();
@@ -222,7 +222,7 @@ namespace hpl {
                     //  													pRenderTarget->mvSize);
                     //  umm need to workout how this framebuffer is used ...
                 }
-                pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPostWorldDraw);
+                //pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPostWorldDraw);
 
                 //////////////////////////////////////////////
                 // Render 3D GuiSets
@@ -271,7 +271,7 @@ namespace hpl {
                  }
             }
             //if(outputImage.IsValid()) {
-            //    cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            //    RunViewportCallbackMessagecmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
             //    std::array rtBarriers = {
             //        RenderTargetBarrier{ outputImage.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
             //    };

@@ -36,7 +36,7 @@ jobs:
       - name: Zipping (Windows)
         run: |
           cd ${{ github.workspace }}/build
-          7z a Amnesia_windows_x68_64_${{ github.event.inputs.tag }}.zip amnesia/Release
+          7z a Amnesia_windows_x68_64_${{ github.event.inputs.tag }}.zip *
       - uses: actions/upload-artifact@master
         with:
           name: windows-build-artifacts

@@ -121,22 +121,22 @@ namespace hpl {
         SetSize(window.GetWindowSize());
     }
 
-    void cViewport::AddViewportCallback(iViewportCallback* apCallback) {
-        mlstCallbacks.push_back(apCallback);
-    }
+    //void cViewport::AddViewportCallback(iViewportCallback* apCallback) {
+    //    mlstCallbacks.push_back(apCallback);
+    //}
 
-    void cViewport::RemoveViewportCallback(iViewportCallback* apCallback) {
-        STLFindAndRemove(mlstCallbacks, apCallback);
-    }
+    //void cViewport::RemoveViewportCallback(iViewportCallback* apCallback) {
+    //    STLFindAndRemove(mlstCallbacks, apCallback);
+    //}
 
-    void cViewport::RunViewportCallbackMessage(eViewportMessage aMessage) {
-        tViewportCallbackListIt it = mlstCallbacks.begin();
-        for (; it != mlstCallbacks.begin(); ++it) {
-            iViewportCallback* pCallback = *it;
+    //void cViewport::RunViewportCallbackMessage(eViewportMessage aMessage) {
+    //    tViewportCallbackListIt it = mlstCallbacks.begin();
+    //    for (; it != mlstCallbacks.begin(); ++it) {
+    //        iViewportCallback* pCallback = *it;
 
-            pCallback->RunMessage(aMessage);
-        }
-    }
+    //        pCallback->RunMessage(aMessage);
+    //    }
+    //}
 
     void cViewport::SetTarget(SharedRenderTarget& target) {
         m_target = target;

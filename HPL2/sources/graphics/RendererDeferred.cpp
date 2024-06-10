@@ -661,192 +661,8 @@ namespace hpl {
             });
         }
 
-        // prepass
-        m_prePassPool.Load(forgeRenderer->Rend(), [&](CmdPool** pool) {
-            CmdPoolDesc cmdPoolDesc = {};
-            cmdPoolDesc.pQueue = forgeRenderer->GetGraphicsQueue();
-            cmdPoolDesc.mTransient = true;
-            addCmdPool(forgeRenderer->Rend(), &cmdPoolDesc, pool);
-            return true;
-        });
-        m_prePassCmd.Load(forgeRenderer->Rend(), [&](Cmd** cmd) {
-            CmdDesc cmdDesc = {};
-            cmdDesc.pPool = m_prePassPool.m_handle;
-            addCmd(forgeRenderer->Rend(), &cmdDesc, cmd);
-            return true;
-        });
-        m_prePassFence.Load(forgeRenderer->Rend(), [&](Fence** fence) {
-            addFence(forgeRenderer->Rend(), fence);
-            return true;
-        });
 
-        // hi-z
         {
-            m_ShaderHIZGenerate.Load(forgeRenderer->Rend(), [&](Shader** shader) {
-                ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0].pFileName = "generate_hi_z.comp";
-                addShader(forgeRenderer->Rend(), &loadDesc, shader);
-                return true;
-            });
-
-            m_shaderTestOcclusion.Load(forgeRenderer->Rend(), [&](Shader** shader) {
-                ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0].pFileName = "test_AABB_hi_z.comp";
-                addShader(forgeRenderer->Rend(), &loadDesc, shader);
-                return true;
-            });
-
-            m_copyDepthShader.Load(forgeRenderer->Rend(), [&](Shader** shader) {
-                ShaderLoadDesc loadDesc = {};
-                loadDesc.mStages[0].pFileName = "fullscreen.vert";
-                loadDesc.mStages[1].pFileName = "copy_hi_z.frag";
-                addShader(forgeRenderer->Rend(), &loadDesc, shader);
-                return true;
-            });
-
-            m_hiZOcclusionUniformBuffer.Load([&](Buffer** buf) {
-                BufferLoadDesc desc = {};
-                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-                desc.mDesc.mSize = sizeof(cRendererDeferred::UniformPropBlock);
-                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-                desc.pData = nullptr;
-                desc.ppBuffer = buf;
-                addResource(&desc, nullptr);
-                return true;
-            });
-            m_hiZBoundBoxBuffer.Load([&](Buffer** buf) {
-                BufferLoadDesc desc = {};
-                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_BUFFER;
-                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-                desc.mDesc.mElementCount = cRendererDeferred::MaxObjectTest;
-                desc.mDesc.mStructStride = sizeof(float4);
-                desc.mDesc.mSize = desc.mDesc.mStructStride * desc.mDesc.mElementCount;
-                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-                desc.pData = nullptr;
-                desc.ppBuffer = buf;
-                addResource(&desc, nullptr);
-                return true;
-            });
-            m_occlusionTestBuffer.Load([&](Buffer** buf) {
-                BufferLoadDesc desc = {};
-                desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_RW_BUFFER;
-                desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_TO_CPU;
-                desc.mDesc.mElementCount = cRendererDeferred::MaxObjectTest;
-                desc.mDesc.mStructStride = sizeof(uint32_t);
-                desc.mDesc.mSize = sizeof(uint32_t) * cRendererDeferred::MaxObjectTest;
-                desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-                desc.pData = nullptr;
-                desc.ppBuffer = buf;
-                addResource(&desc, nullptr);
-                return true;
-            });
-            m_rootSignatureHIZOcclusion.Load(forgeRenderer->Rend(), [&](RootSignature** sig) {
-                std::array shaders = { m_ShaderHIZGenerate.m_handle, m_shaderTestOcclusion.m_handle };
-                RootSignatureDesc rootSignatureDesc = {};
-                const char* pStaticSamplers[] = { "depthSampler" };
-                rootSignatureDesc.mStaticSamplerCount = 1;
-                rootSignatureDesc.ppStaticSamplers = &m_bilinearSampler.m_handle;
-                rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
-                rootSignatureDesc.ppShaders = shaders.data();
-                rootSignatureDesc.mShaderCount = shaders.size();
-                addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, sig);
-                return true;
-            });
-            m_descriptorSetHIZGenerate.Load(forgeRenderer->Rend(), [&](DescriptorSet** set) {
-                DescriptorSetDesc setDesc = { m_rootSignatureHIZOcclusion.m_handle,
-                                              DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
-                                              cRendererDeferred::MaxHiZMipLevels };
-                addDescriptorSet(forgeRenderer->Rend(), &setDesc, set);
-                return true;
-            });
-            m_rootSignatureCopyDepth.Load(forgeRenderer->Rend(), [&](RootSignature** signature) {
-                std::array shaders = { m_copyDepthShader.m_handle };
-                RootSignatureDesc rootSignatureDesc = {};
-                const char* pStaticSamplers[] = { "depthSampler" };
-
-                rootSignatureDesc.ppShaders = shaders.data();
-                rootSignatureDesc.mShaderCount = shaders.size();
-                rootSignatureDesc.mStaticSamplerCount = 1;
-                rootSignatureDesc.ppStaticSamplers = &m_samplerPointClampToBorder.m_handle;
-                rootSignatureDesc.ppStaticSamplerNames = pStaticSamplers;
-                addRootSignature(forgeRenderer->Rend(), &rootSignatureDesc, signature);
-                return true;
-            });
-
-            m_descriptorCopyDepth.Load(forgeRenderer->Rend(), [&](DescriptorSet** handle) {
-                DescriptorSetDesc setDesc = { m_rootSignatureCopyDepth.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
-                addDescriptorSet(forgeRenderer->Rend(), &setDesc, handle);
-                return true;
-            });
-            m_pipelineHIZGenerate.Load(forgeRenderer->Rend(), [&](Pipeline** pipeline) {
-                PipelineDesc pipelineDesc = {};
-                pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
-                ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
-                computePipelineDesc.pShaderProgram = m_ShaderHIZGenerate.m_handle;
-                computePipelineDesc.pRootSignature = m_rootSignatureHIZOcclusion.m_handle;
-                addPipeline(forgeRenderer->Rend(), &pipelineDesc, pipeline);
-                return true;
-            });
-
-            m_pipelineAABBOcclusionTest.Load(forgeRenderer->Rend(), [&](Pipeline** handle) {
-                PipelineDesc pipelineDesc = {};
-                pipelineDesc.mType = PIPELINE_TYPE_COMPUTE;
-                ComputePipelineDesc& computePipelineDesc = pipelineDesc.mComputeDesc;
-                computePipelineDesc.pShaderProgram = m_shaderTestOcclusion.m_handle;
-                computePipelineDesc.pRootSignature = m_rootSignatureHIZOcclusion.m_handle;
-                addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
-                return true;
-            });
-
-            m_descriptorAABBOcclusionTest.Load(forgeRenderer->Rend(), [&](DescriptorSet** handle) {
-                DescriptorSetDesc setDesc = { m_rootSignatureHIZOcclusion.m_handle, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, 1 };
-                addDescriptorSet(forgeRenderer->Rend(), &setDesc, handle);
-                return true;
-            });
-
-            m_pipelineCopyDepth.Load(forgeRenderer->Rend(), [&](Pipeline** handle) {
-                RasterizerStateDesc rasterStateNoneDesc = {};
-                rasterStateNoneDesc.mCullMode = CULL_MODE_NONE;
-
-                DepthStateDesc depthStateDisabledDesc = {};
-                depthStateDisabledDesc.mDepthWrite = false;
-                depthStateDisabledDesc.mDepthTest = false;
-
-                std::array imageTargets = { TinyImageFormat_R32_SFLOAT };
-                PipelineDesc pipelineDesc = {};
-                pipelineDesc.mType = PIPELINE_TYPE_GRAPHICS;
-                GraphicsPipelineDesc& graphicsPipelineDesc = pipelineDesc.mGraphicsDesc;
-                graphicsPipelineDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-                graphicsPipelineDesc.mRenderTargetCount = imageTargets.size();
-                graphicsPipelineDesc.pColorFormats = imageTargets.data();
-                graphicsPipelineDesc.pShaderProgram = m_copyDepthShader.m_handle;
-                graphicsPipelineDesc.pRootSignature = m_rootSignatureCopyDepth.m_handle;
-                graphicsPipelineDesc.mRenderTargetCount = 1;
-                graphicsPipelineDesc.mDepthStencilFormat = TinyImageFormat_UNDEFINED;
-                graphicsPipelineDesc.pVertexLayout = NULL;
-                graphicsPipelineDesc.mSampleCount = SAMPLE_COUNT_1;
-                graphicsPipelineDesc.pRasterizerState = &rasterStateNoneDesc;
-                graphicsPipelineDesc.pDepthState = &depthStateDisabledDesc;
-                graphicsPipelineDesc.pBlendState = NULL;
-                addPipeline(forgeRenderer->Rend(), &pipelineDesc, handle);
-                return true;
-            });
-        }
-        {
-            //m_occlusionReadBackBuffer.Load([&](Buffer** buf) {
-            //    BufferLoadDesc desc = {};
-            //    desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_RW_BUFFER;
-            //    desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_TO_CPU;
-            //    desc.mDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-            //    desc.mDesc.mElementCount = cRendererDeferred::MaxObjectTest;
-            //    desc.mDesc.mStructStride = sizeof(uint64_t);
-            //    desc.mDesc.mSize = desc.mDesc.mStructStride * desc.mDesc.mElementCount;
-            //    desc.pData = nullptr;
-            //    desc.ppBuffer = buf;
-            //    addResource(&desc, nullptr);
-            //    return true;
-            //});
 
             m_shaderOcclusionQuery.Load(forgeRenderer->Rend(), [&](Shader** handle) {
                 ShaderLoadDesc loadDesc = {};
@@ -920,13 +736,6 @@ namespace hpl {
                     return true;
                 });
             }
-            m_occlusionQuery.Load(forgeRenderer->Rend(), [&](QueryPool** pool) {
-                QueryPoolDesc queryPoolDesc = {};
-                queryPoolDesc.mType = QUERY_TYPE_OCCLUSION;
-                queryPoolDesc.mQueryCount = MaxQueryPoolSize;
-                addQueryPool(forgeRenderer->Rend(), &queryPoolDesc, pool);
-                return true;
-            });
         }
         // -------------- Fog ----------------------------
         {
@@ -3252,54 +3061,70 @@ namespace hpl {
             cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
         }
 
-        //uint32_t queryIndex = 0;
-        //{
-        //    cmdBeginDebugMarker(m_prePassCmd.m_handle, 1, 1, 0, "Occlusion Query");
-        //    std::array targets = { eVertexBufferElement_Position };
-        //    DrawPacket packet = static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame);
+        {
+            cmdBindRenderTargets(cmd, NULL);
+            std::array rtBarriers = {
+                RenderTargetBarrier{ depthBuffer, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_WRITE },
+            };
+            cmdResourceBarrier(cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            bindRenderTargets.mDepthStencil = { .pDepthStencil = depthBuffer,
+                                                .mLoadAction = LOAD_ACTION_LOAD,
+                                                .mClearValue = { .depth = 1.0f, .stencil = 0 } };
+            cmdBindRenderTargets(cmd, &bindRenderTargets);
+        }
+        if (options.m_query) {
+            auto* query = options.m_query;
+            cmdBeginDebugMarker(cmd, 1, 1, 0, "Occlusion Query");
+            std::array targets = { eVertexBufferElement_Position };
+            DrawPacket packet = static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame);
 
-        //    uint32_t occlusionObjectIndex = getDescriptorIndexFromName(m_rootSignatureOcclusuion.m_handle, "rootConstant");
-        //    uint32_t occlusionIndex = 0;
-        //    cMatrixf viewProj = cMath::MatrixMul(projectionMat, viewMat);
+            uint32_t occlusionObjectIndex = getDescriptorIndexFromName(m_rootSignatureOcclusuion.m_handle, "rootConstant");
+            uint32_t occlusionIndex = 0;
+            cMatrixf viewProj = cMath::MatrixMul(projectionMat, viewMat);
 
-        //    cmdBindDescriptorSet(m_prePassCmd.m_handle, 0, m_descriptorOcclusionConstSet.m_handle);
-        //    for (auto& query : renderList.GetOcclusionQueryItems()) {
-        //        if (TypeInfo<hpl::cBillboard>::IsType(*query)) {
-        //            cBillboard* pBillboard = static_cast<cBillboard*>(query.m_renderable);
+            cmdBindDescriptorSet(cmd, 0, m_descriptorOcclusionConstSet.m_handle);
+            for (auto& renderable : renderList.GetOcclusionQueryItems()) {
+                if(query->m_queryIndex >= MaxOcclusionDescSize - 2) {
+                    break;
+                }
+                if (TypeInfo<hpl::cBillboard>::IsType(*renderable)) {
+                    cBillboard* pBillboard = static_cast<cBillboard*>(renderable);
 
-        //            auto mvp = cMath::ToForgeMatrix4(cMath::MatrixMul(
-        //                viewProj, cMath::MatrixMul(pBillboard->GetWorldMatrix(), cMath::MatrixScale(pBillboard->GetHaloSourceSize()))));
+                    auto mvp = cMath::ToForgeMatrix4(cMath::MatrixMul(
+                        viewProj, cMath::MatrixMul(pBillboard->GetWorldMatrix(), cMath::MatrixScale(pBillboard->GetHaloSourceSize()))));
 
-        //            BufferUpdateDesc updateDesc = { m_occlusionUniformBuffer.m_handle, m_occlusionIndex * sizeof(mat4) };
-        //            beginUpdateResource(&updateDesc);
-        //            (*reinterpret_cast<mat4*>(updateDesc.pMappedData)) = mvp;
-        //            endUpdateResource(&updateDesc);
+                    BufferUpdateDesc updateDesc = { m_occlusionUniformBuffer.m_handle, m_occlusionIndex * sizeof(mat4) };
+                    beginUpdateResource(&updateDesc);
+                    (*reinterpret_cast<mat4*>(updateDesc.pMappedData)) = mvp;
+                    endUpdateResource(&updateDesc);
+                    cmdBindPushConstants(cmd, m_rootSignatureOcclusuion.m_handle, occlusionObjectIndex, &m_occlusionIndex);
 
-        //            cmdBindPushConstants(
-        //                m_prePassCmd.m_handle, m_rootSignatureOcclusuion.m_handle, occlusionObjectIndex, &m_occlusionIndex);
+                    DrawPacket::cmdBindBuffers(cmd, frame.m_resourcePool, &packet, targets);
 
-        //            DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet, targets);
+                    QueryCoverageData::CoverageQuery queryCoverage = (QueryCoverageData::CoverageQuery){
+                        .m_queryIndex = query->m_queryIndex++,
+                        .m_maxQueryIndex = query->m_queryIndex++,
+                    };
+                    query->m_coverageQueries.try_emplace(renderable, queryCoverage);
 
-        //            QueryDesc queryDesc = {};
-        //            queryDesc.mIndex = queryIndex++;
-        //            cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineOcclusionQuery.m_handle);
-        //            cmdBeginQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
-        //            cmdDrawIndexed(m_prePassCmd.m_handle, packet.numberOfIndecies(), 0, 0);
-        //            cmdEndQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
-        //            query.m_queryIndex = queryDesc.mIndex;
+                    QueryDesc queryDesc = {};
+                    queryDesc.mIndex = queryCoverage.m_queryIndex;
+                    cmdBindPipeline(cmd, m_pipelineOcclusionQuery.m_handle);
+                    cmdBeginQuery(cmd, query->m_occlusionQuery.m_handle, &queryDesc);
+                    cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
+                    cmdEndQuery(cmd, query->m_occlusionQuery.m_handle, &queryDesc);
 
-        //            queryDesc.mIndex = queryIndex++;
-        //            cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineMaxOcclusionQuery.m_handle);
-        //            cmdBeginQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
-        //            cmdDrawIndexed(m_prePassCmd.m_handle, packet.numberOfIndecies(), 0, 0);
-        //            cmdEndQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
-        //            query.m_maxQueryIndex = queryDesc.mIndex;
+                    queryDesc.mIndex = queryCoverage.m_maxQueryIndex++;
+                    cmdBindPipeline(cmd, m_pipelineMaxOcclusionQuery.m_handle);
+                    cmdBeginQuery(cmd, query->m_occlusionQuery.m_handle, &queryDesc);
+                    cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
+                    cmdEndQuery(cmd, query->m_occlusionQuery.m_handle, &queryDesc);
 
-        //            m_occlusionIndex = (m_occlusionIndex + 1) % MaxOcclusionDescSize;
-        //        }
-        //    }
-        //    cmdEndDebugMarker(m_prePassCmd.m_handle);
-        //}
+                    m_occlusionIndex = (m_occlusionIndex + 1) % MaxOcclusionDescSize;
+                }
+            }
+            cmdEndDebugMarker(cmd);
+        }
 
         //for (size_t i = 0; i < uniformTest.size(); i++) {
         //    auto& test = uniformTest[i];
@@ -3335,463 +3160,6 @@ namespace hpl {
         //    cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
         //    cmdDrawIndexed(cmd, packet.numberOfIndecies(), 0, 0);
         //}
-        cmdEndDebugMarker(cmd);
-    }
-
-    void cRendererDeferred::cmdPreAndPostZ(
-        Cmd* cmd,
-        cWorld* apWorld,
-        std::set<iRenderable*>& prePassRenderables,
-        const ForgeRenderer::Frame& frame,
-        cRenderList& renderList,
-        float frameTime,
-        RenderTarget* depthBuffer,
-        RenderTarget* hiZBuffer,
-        cFrustum* apFrustum,
-        uint32_t frameDescriptorIndex,
-        cMatrixf viewMat,
-        cMatrixf projectionMat,
-        AdditionalZPassOptions options) {
-        ASSERT(depthBuffer && "Depth buffer not created");
-        ASSERT(hiZBuffer && "Depth buffer not created");
-
-        FenceStatus fenceStatus;
-        getFenceStatus(frame.m_renderer->Rend(), m_prePassFence.m_handle, &fenceStatus);
-        if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
-            waitForFences(frame.m_renderer->Rend(), 1, &m_prePassFence.m_handle);
-        }
-        resetCmdPool(frame.m_renderer->Rend(), m_prePassPool.m_handle);
-
-        uint32_t materialObjectIndex = getDescriptorIndexFromName(m_materialRootSignature.m_handle, "materialRootConstant");
-
-        struct RenderableContainer {
-            iRenderableContainer* m_continer;
-            eWorldContainerType m_type;
-        };
-        std::array worldContainers = {
-            RenderableContainer{ apWorld->GetRenderableContainer(eWorldContainerType_Dynamic), eWorldContainerType_Dynamic },
-            RenderableContainer{ apWorld->GetRenderableContainer(eWorldContainerType_Static), eWorldContainerType_Static }
-        };
-
-        for (auto& container : worldContainers) {
-            container.m_continer->UpdateBeforeRendering();
-        }
-        std::vector<UniformTest> uniformTest;
-        uint32_t queryIndex = 0;
-        std::vector<OcclusionQueryAlpha> occlusionQueryAlpha;
-        // start pre-z pass
-
-
-        beginCmd(m_prePassCmd.m_handle);
-        cmdResetQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, 0, MaxQueryPoolSize);
-        {
-            std::function<void(iRenderableContainerNode * childNode, eWorldContainerType staticGeometry)> walkRenderables;
-            walkRenderables = [&](iRenderableContainerNode* childNode, eWorldContainerType containerType) {
-                childNode->UpdateBeforeUse();
-                for (auto& childNode : childNode->GetChildNodes()) {
-                    childNode->UpdateBeforeUse();
-                    eCollision frustumCollision = apFrustum->CollideNode(childNode);
-                    if (frustumCollision == eCollision_Outside) {
-                        continue;
-                    }
-                    if (apFrustum->CheckAABBNearPlaneIntersection(childNode->GetMin(), childNode->GetMax())) {
-                        cVector3f vViewSpacePos = cMath::MatrixMul(apFrustum->GetViewMatrix(), childNode->GetCenter());
-                        childNode->SetViewDistance(vViewSpacePos.z);
-                        childNode->SetInsideView(true);
-                    } else {
-                        // Frustum origin is outside of node. Do intersection test.
-                        cVector3f vIntersection;
-                        cMath::CheckAABBLineIntersection(
-                            childNode->GetMin(), childNode->GetMax(), apFrustum->GetOrigin(), childNode->GetCenter(), &vIntersection, NULL);
-                        cVector3f vViewSpacePos = cMath::MatrixMul(apFrustum->GetViewMatrix(), vIntersection);
-                        childNode->SetViewDistance(vViewSpacePos.z);
-                        childNode->SetInsideView(false);
-                    }
-                    walkRenderables(childNode, containerType);
-                }
-                for (auto& pObject : childNode->GetObjects()) {
-                    if (!iRenderable::IsObjectIsVisible(*pObject, options.objectVisibilityFlags, options.clipPlanes)) {
-                        continue;
-                    }
-                    const bool visibleLastFrame = (prePassRenderables.empty() || prePassRenderables.contains(pObject));
-
-                    auto& test = uniformTest.emplace_back();
-                    test.m_preZPass = visibleLastFrame;
-                    test.m_renderable = pObject;
-
-                    cMaterial* pMaterial = pObject->GetMaterial();
-
-                    if (pObject && pObject->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
-                        pObject->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
-                        pObject->UpdateGraphicsForFrame(frameTime);
-                    }
-
-                    if (pMaterial && pMaterial->GetRenderFrameCount() != iRenderer::GetRenderFrameCount()) {
-                        pMaterial->SetRenderFrameCount(iRenderer::GetRenderFrameCount());
-                        pMaterial->UpdateBeforeRendering(frameTime);
-                    }
-                    ////////////////////////////////////////
-                    // Update per viewport specific and set amtrix point
-                    // Skip this for non-decal translucent! This is because the water rendering might mess it up otherwise!
-                    if (pMaterial == NULL || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id) == false ||
-                        pMaterial->Descriptor().m_id == MaterialID::Decal) {
-                        // skip rendering if the update return false
-                        if (pObject->UpdateGraphicsForViewport(apFrustum, frameTime) == false) {
-                            continue;
-                        }
-
-                        pObject->SetModelMatrixPtr(pObject->GetModelMatrix(apFrustum));
-                    }
-                    // Only set a matrix used for sorting. Calculate the proper in the trans rendering!
-                    else {
-                        pObject->SetModelMatrixPtr(pObject->GetModelMatrix(NULL));
-                    }
-
-                    if (visibleLastFrame && pObject->UsesOcclusionQuery() && !options.m_disableOcclusionQueries) {
-                        auto& occlusionAlpha = occlusionQueryAlpha.emplace_back();
-                        occlusionAlpha.m_renderable = pObject;
-                    }
-                }
-            };
-            for (auto& it : worldContainers) {
-                iRenderableContainerNode* pNode = it.m_continer->GetRoot();
-                pNode->UpdateBeforeUse(); // Make sure node is updated.
-                pNode->SetInsideView(true); // We never want to check root! Assume player is inside.
-                walkRenderables(pNode, it.m_type);
-            }
-
-            std::sort(uniformTest.begin(), uniformTest.end(), [&](UniformTest& apObjectA, UniformTest& apObjectB) {
-                cMaterial* pMatA = apObjectA.m_renderable->GetMaterial();
-                cMaterial* pMatB = apObjectB.m_renderable->GetMaterial();
-                if (!(pMatA && pMatB)) {
-                    return false;
-                }
-
-                //////////////////////////
-                // Alpha mode
-                if (pMatA->GetAlphaMode() != pMatB->GetAlphaMode()) {
-                    return pMatA->GetAlphaMode() < pMatB->GetAlphaMode();
-                }
-
-                //////////////////////////
-                // If alpha, sort by texture (we know alpha is same for both materials, so can just test one)
-                if (pMatA->GetAlphaMode() == eMaterialAlphaMode_Trans) {
-                    if (pMatA->GetImage(eMaterialTexture_Diffuse) != pMatB->GetImage(eMaterialTexture_Diffuse)) {
-                        return pMatA->GetImage(eMaterialTexture_Diffuse) < pMatB->GetImage(eMaterialTexture_Diffuse);
-                    }
-                }
-
-                // View space depth, no need to test further since Z should almost never be the same for two objects.
-                //  use ">" since we want to render things closest to the screen first.
-                return apObjectA.m_renderable->GetViewSpaceZ() > apObjectB.m_renderable->GetViewSpaceZ();
-                // return apObjectA < apObjectB;
-            });
-
-            cmdBeginDebugMarker(m_prePassCmd.m_handle, 0, 1, 0, "Pre Z");
-
-            BindRenderTargetsDesc bindRenderTargets = {0};
-            bindRenderTargets.mDepthStencil = { .pDepthStencil = depthBuffer, .mLoadAction = LOAD_ACTION_CLEAR, .mClearValue = { .depth = 1.0f, .stencil = 0 } };
-            cmdBindRenderTargets(m_prePassCmd.m_handle, &bindRenderTargets);
-
-            cmdSetViewport(
-                m_prePassCmd.m_handle,
-                0.0f,
-                0.0f,
-                static_cast<float>(depthBuffer->mWidth),
-                static_cast<float>(depthBuffer->mHeight),
-                0.0f,
-                1.0f);
-            cmdSetScissor(m_prePassCmd.m_handle, 0, 0, static_cast<float>(depthBuffer->mWidth), static_cast<float>(depthBuffer->mHeight));
-            cmdBindPipeline(m_prePassCmd.m_handle, options.m_invert ? m_zPassPipelineCW.m_handle : m_zPassPipelineCCW.m_handle);
-
-            cmdBindDescriptorSet(m_prePassCmd.m_handle, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
-
-            UniformPropBlock uniformPropBlock = {};
-            for (size_t i = 0; i < uniformTest.size(); i++) {
-                auto& test = uniformTest[i];
-                cMaterial* pMaterial = test.m_renderable->GetMaterial();
-
-                ASSERT(uniformTest.size() < MaxObjectTest && "Too many renderables");
-                auto* pBoundingVolume = test.m_renderable->GetBoundingVolume();
-
-                BufferUpdateDesc updateDesc = { m_hiZBoundBoxBuffer.m_handle, i * (2 * sizeof(float4)), sizeof(float4) * 2 };
-                auto boundBoxMin = pBoundingVolume->GetMin();
-                auto boundBoxMax = pBoundingVolume->GetMax();
-                beginUpdateResource(&updateDesc);
-                reinterpret_cast<float4*>(updateDesc.pMappedData)[0] = float4(boundBoxMin.x, boundBoxMin.y, boundBoxMin.z, 0.0f);
-                reinterpret_cast<float4*>(updateDesc.pMappedData)[1] = float4(boundBoxMax.x, boundBoxMax.y, boundBoxMax.z, 0.0f);
-                endUpdateResource(&updateDesc);
-
-                if (!test.m_preZPass || !pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
-                    continue;
-                }
-
-                std::array targets = { eVertexBufferElement_Position,
-                                       eVertexBufferElement_Texture0,
-                                       eVertexBufferElement_Normal,
-                                       eVertexBufferElement_Texture1Tangent };
-                DrawPacket packet = test.m_renderable->ResolveDrawPacket(frame);
-                if (packet.m_type == DrawPacket::Unknown) {
-                    continue;
-                }
-                MaterialRootConstant materialConst = {};
-                uint32_t instance = cmdBindMaterialAndObject(m_prePassCmd.m_handle, frame, pMaterial, test.m_renderable, {});
-                materialConst.objectId = instance;
-                DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet, targets);
-                cmdBindPushConstants(m_prePassCmd.m_handle, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                cmdDrawIndexed(m_prePassCmd.m_handle, packet.numberOfIndecies(), 0, 0);
-            }
-
-            uniformPropBlock.maxMipLevel = hiZBuffer->mMipLevels - 1;
-            uniformPropBlock.depthDim = uint2(depthBuffer->mWidth, depthBuffer->mHeight);
-            uniformPropBlock.numObjects = uniformTest.size();
-
-            BufferUpdateDesc updateDesc = { m_hiZOcclusionUniformBuffer.m_handle, 0, sizeof(UniformPropBlock) };
-            beginUpdateResource(&updateDesc);
-            (*reinterpret_cast<UniformPropBlock*>(updateDesc.pMappedData)) = uniformPropBlock;
-            endUpdateResource(&updateDesc);
-            cmdEndDebugMarker(m_prePassCmd.m_handle);
-        }
-        {
-            cmdBeginDebugMarker(m_prePassCmd.m_handle, 1, 1, 0, "Occlusion Query");
-            std::array targets = { eVertexBufferElement_Position };
-            DrawPacket packet = static_cast<LegacyVertexBuffer*>(m_box.get())->resolveGeometryBinding(frame.m_currentFrame);
-
-            uint32_t occlusionObjectIndex = getDescriptorIndexFromName(m_rootSignatureOcclusuion.m_handle, "rootConstant");
-            uint32_t occlusionIndex = 0;
-            cMatrixf viewProj = cMath::MatrixMul(projectionMat, viewMat);
-
-            cmdBindDescriptorSet(m_prePassCmd.m_handle, 0, m_descriptorOcclusionConstSet.m_handle);
-            for (auto& query : occlusionQueryAlpha) {
-                if (TypeInfo<hpl::cBillboard>::IsType(*query.m_renderable)) {
-                    cBillboard* pBillboard = static_cast<cBillboard*>(query.m_renderable);
-
-                    auto mvp = cMath::ToForgeMatrix4(cMath::MatrixMul(
-                        viewProj, cMath::MatrixMul(pBillboard->GetWorldMatrix(), cMath::MatrixScale(pBillboard->GetHaloSourceSize()))));
-
-                    BufferUpdateDesc updateDesc = { m_occlusionUniformBuffer.m_handle, m_occlusionIndex * sizeof(mat4) };
-                    beginUpdateResource(&updateDesc);
-                    (*reinterpret_cast<mat4*>(updateDesc.pMappedData)) = mvp;
-                    endUpdateResource(&updateDesc);
-
-                    cmdBindPushConstants(
-                        m_prePassCmd.m_handle, m_rootSignatureOcclusuion.m_handle, occlusionObjectIndex, &m_occlusionIndex);
-
-                    DrawPacket::cmdBindBuffers(m_prePassCmd.m_handle, frame.m_resourcePool, &packet, targets);
-
-
-                    QueryDesc queryDesc = {};
-                    queryDesc.mIndex = queryIndex++;
-                    cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineOcclusionQuery.m_handle);
-                    cmdBeginQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
-                    cmdDrawIndexed(m_prePassCmd.m_handle, packet.numberOfIndecies(), 0, 0);
-                    cmdEndQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
-                    query.m_queryIndex = queryDesc.mIndex;
-
-                    queryDesc.mIndex = queryIndex++;
-                    cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineMaxOcclusionQuery.m_handle);
-                    cmdBeginQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
-                    cmdDrawIndexed(m_prePassCmd.m_handle, packet.numberOfIndecies(), 0, 0);
-                    cmdEndQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, &queryDesc);
-                    query.m_maxQueryIndex = queryDesc.mIndex;
-
-                    m_occlusionIndex = (m_occlusionIndex + 1) % MaxOcclusionDescSize;
-                }
-            }
-            cmdEndDebugMarker(m_prePassCmd.m_handle);
-        }
-        // hi-z generate pass
-        {
-            cmdBeginDebugMarker(m_prePassCmd.m_handle, 0, 0, 0, "Generate HI-Z");
-            {
-                cmdBindRenderTargets(m_prePassCmd.m_handle, NULL);
-                std::array rtBarriers = {
-                    RenderTargetBarrier{ depthBuffer, RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_SHADER_RESOURCE },
-                    RenderTargetBarrier{ hiZBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_RENDER_TARGET },
-                };
-                cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-            }
-            {
-                // LoadActionsDesc loadActions = {};
-                // loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-                // loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-                // loadActions.mClearColorValues[0] = { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f };
-                // cmdBindRenderTargets(m_prePassCmd.m_handle, 1, &hiZBuffer, NULL, &loadActions, NULL, NULL, -1, -1);
-
-                BindRenderTargetsDesc bindRenderTargets = {0};
-                bindRenderTargets.mRenderTargetCount = 1;
-                bindRenderTargets.mRenderTargets[0] = (BindRenderTargetDesc){.pRenderTarget = hiZBuffer, .mLoadAction = LOAD_ACTION_LOAD, .mClearValue = { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 0.0f }};
-                cmdBindRenderTargets(m_prePassCmd.m_handle, &bindRenderTargets);
-
-                std::array<DescriptorData, 1> params = {};
-                params[0].pName = "sourceInput";
-                params[0].ppTextures = &depthBuffer->pTexture;
-                updateDescriptorSet(frame.m_renderer->Rend(), 0, m_descriptorCopyDepth.m_handle, params.size(), params.data());
-
-                cmdSetViewport(m_prePassCmd.m_handle, 0.0f, 0.0f, depthBuffer->mWidth, depthBuffer->mHeight, 0.0f, 1.0f);
-                cmdSetScissor(m_prePassCmd.m_handle, 0, 0, depthBuffer->mWidth, depthBuffer->mHeight);
-                cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineCopyDepth.m_handle);
-
-                cmdBindDescriptorSet(m_prePassCmd.m_handle, 0, m_descriptorCopyDepth.m_handle);
-                cmdDraw(m_prePassCmd.m_handle, 3, 0);
-            }
-
-            {
-                cmdBindRenderTargets(m_prePassCmd.m_handle, NULL);
-                std::array rtBarriers = {
-                    RenderTargetBarrier{ depthBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_WRITE },
-                    RenderTargetBarrier{ hiZBuffer, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_UNORDERED_ACCESS },
-                };
-                cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-            }
-            uint32_t rootConstantIndex = getDescriptorIndexFromName(m_rootSignatureHIZOcclusion.m_handle, "uRootConstants");
-            uint32_t width = static_cast<float>(depthBuffer->mWidth);
-            uint32_t height = static_cast<float>(depthBuffer->mHeight);
-            for (uint32_t lod = 1; lod < hiZBuffer->mMipLevels; ++lod) {
-                std::array<DescriptorData, 1> params = {};
-                params[0].pName = "depthInput";
-                params[0].mBindMipChain = true;
-                params[0].ppTextures = &hiZBuffer->pTexture;
-                updateDescriptorSet(frame.m_renderer->Rend(), lod, m_descriptorSetHIZGenerate.m_handle, params.size(), params.data());
-
-                width /= 2;
-                height /= 2;
-                struct {
-                    uint2 screenDim;
-                    uint32_t mipLevel;
-                } pushConstants = {};
-
-                pushConstants.mipLevel = lod;
-                pushConstants.screenDim = uint2(depthBuffer->mWidth, depthBuffer->mHeight);
-
-                // bind lod to push constant
-                cmdBindPushConstants(m_prePassCmd.m_handle, m_rootSignatureHIZOcclusion.m_handle, rootConstantIndex, &pushConstants);
-                cmdBindDescriptorSet(m_prePassCmd.m_handle, lod, m_descriptorSetHIZGenerate.m_handle);
-                cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineHIZGenerate.m_handle);
-                cmdDispatch(m_prePassCmd.m_handle, static_cast<uint32_t>(width / 16) + 1, static_cast<uint32_t>(height / 16) + 1, 1);
-
-                std::array rtBarriers = {
-                    RenderTargetBarrier{ hiZBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_UNORDERED_ACCESS },
-                };
-                cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-            }
-            {
-                std::array rtBarriers = { RenderTargetBarrier{
-                    hiZBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE } };
-                cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-            }
-            cmdEndDebugMarker(m_prePassCmd.m_handle);
-
-            cmdBeginDebugMarker(m_prePassCmd.m_handle, 0, 1, 0, "AABB Hi-Z");
-            {
-                std::array<DescriptorData, 5> params = {};
-                params[0].pName = "perFrameConstants";
-                params[0].ppBuffers = &m_perFrameBuffer[frameDescriptorIndex].m_handle;
-                params[1].pName = "objectUniformBlock";
-                params[1].ppBuffers = &m_hiZOcclusionUniformBuffer.m_handle;
-                params[2].pName = "occlusionTest";
-                params[2].ppBuffers = &m_occlusionTestBuffer.m_handle;
-                params[3].pName = "occlusionBoxBuffer";
-                params[3].ppBuffers = &m_hiZBoundBoxBuffer.m_handle;
-                params[4].pName = "depthTest";
-                params[4].ppTextures = &hiZBuffer->pTexture;
-                updateDescriptorSet(frame.m_renderer->Rend(), 0, m_descriptorAABBOcclusionTest.m_handle, params.size(), params.data());
-
-                cmdBindDescriptorSet(m_prePassCmd.m_handle, 0, m_descriptorAABBOcclusionTest.m_handle);
-                cmdBindPipeline(m_prePassCmd.m_handle, m_pipelineAABBOcclusionTest.m_handle);
-                cmdDispatch(m_prePassCmd.m_handle, static_cast<uint32_t>(uniformTest.size() / 128) + 1, 1, 1);
-                {
-                    std::array rtBarriers = { RenderTargetBarrier{
-                        hiZBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS } };
-                    cmdResourceBarrier(m_prePassCmd.m_handle, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-                }
-            }
-            cmdEndDebugMarker(m_prePassCmd.m_handle);
-            //cmdResolveQuery(m_prePassCmd.m_handle, m_occlusionQuery.m_handle, m_occlusionReadBackBuffer.m_handle, 0, queryIndex);
-
-            endCmd(m_prePassCmd.m_handle);
-            // Submit the gpu work.
-            QueueSubmitDesc submitDesc = {};
-            submitDesc.mCmdCount = 1;
-            submitDesc.ppCmds = &m_prePassCmd.m_handle;
-            submitDesc.pSignalFence = m_prePassFence.m_handle;
-            submitDesc.mSubmitDone = true;
-            queueSubmit(frame.m_renderer->GetGraphicsQueue(), &submitDesc);
-
-            FenceStatus fenceStatus;
-            getFenceStatus(frame.m_renderer->Rend(), m_prePassFence.m_handle, &fenceStatus);
-            if (fenceStatus == FENCE_STATUS_INCOMPLETE) {
-                waitForFences(frame.m_renderer->Rend(), 1, &m_prePassFence.m_handle);
-            }
-
-            //uint64_t* occlusionCount = reinterpret_cast<uint64_t*>(m_occlusionReadBackBuffer.m_handle->pCpuMappedAddress);
-            for (auto& query : occlusionQueryAlpha) {
-                if (TypeInfo<hpl::cBillboard>::IsType(*query.m_renderable)) {
-                    cBillboard* pBillboard = static_cast<cBillboard*>(query.m_renderable);
-                    QueryData maxSamplesQuery = {0};
-                    QueryData samplesQuery = {0};
-                    getQueryData(frame.m_renderer->Rend(), m_occlusionQuery.m_handle, query.m_queryIndex, &maxSamplesQuery );
-                    getQueryData(frame.m_renderer->Rend(), m_occlusionQuery.m_handle, query.m_maxQueryIndex, &samplesQuery);
-                    //float maxSamples = static_cast<float>(occlusionCount[query.m_maxQueryIndex]);
-                    //float samples = static_cast<float>(occlusionCount[query.m_queryIndex]);
-                    float billboardCoverage = pBillboard->getAreaOfScreenSpace(apFrustum);
-                    if (maxSamplesQuery.mOcclusionCounts > 0) {
-                        pBillboard->SetHaloAlpha(billboardCoverage * ((double)samplesQuery.mOcclusionCounts / (double)maxSamplesQuery.mOcclusionCounts));
-                    } else {
-                        pBillboard->SetHaloAlpha(0.0f);
-                    }
-                }
-            }
-        }
-
-        prePassRenderables.clear();
-
-
-        cmdBeginDebugMarker(cmd, 0, 1, 0, "Post Z");
-        BindRenderTargetsDesc bindRenderTargets = {0};
-        bindRenderTargets.mDepthStencil = { .pDepthStencil = depthBuffer, .mLoadAction = LOAD_ACTION_LOAD, .mClearValue = { .depth = 1.0f, .stencil = 0 }};
-        cmdBindRenderTargets(cmd, &bindRenderTargets);
-
-
-        cmdSetViewport(cmd, 0.0f, 0.0f, depthBuffer->mWidth, depthBuffer->mHeight, 0.0f, 1.0f);
-        cmdSetScissor(cmd, 0, 0, depthBuffer->mWidth, depthBuffer->mHeight);
-
-        cmdBindPipeline(cmd, options.m_invert ? m_zPassPipelineCW.m_handle : m_zPassPipelineCCW.m_handle);
-        cmdBindDescriptorSet(cmd, frameDescriptorIndex, m_materialSet.m_frameSet[frame.m_frameIndex].m_handle);
-
-        auto* testResult = reinterpret_cast<uint32_t*>(m_occlusionTestBuffer.m_handle->pCpuMappedAddress);
-        for (size_t i = 0; i < uniformTest.size(); ++i) {
-            if (testResult[i] == 1) {
-                renderList.AddObject(uniformTest[i].m_renderable);
-                prePassRenderables.insert(uniformTest[i].m_renderable);
-                if (!uniformTest[i].m_preZPass) {
-                    auto* renderable = uniformTest[i].m_renderable;
-                    eMaterialRenderMode renderMode =
-                        renderable->GetCoverageAmount() >= 1 ? eMaterialRenderMode_Z : eMaterialRenderMode_Z_Dissolve;
-
-                    cMaterial* pMaterial = renderable->GetMaterial();
-                    if (!pMaterial || cMaterial::IsTranslucent(pMaterial->Descriptor().m_id)) {
-                        continue;
-                    }
-                    DrawPacket drawPacket = renderable->ResolveDrawPacket(frame);
-                    if (drawPacket.m_type == DrawPacket::Unknown) {
-                        continue;
-                    }
-
-                    MaterialRootConstant materialConst = {};
-                    uint32_t instance = cmdBindMaterialAndObject(cmd, frame, pMaterial, renderable);
-                    materialConst.objectId = instance;
-                    std::array targets = { eVertexBufferElement_Position,
-                                           eVertexBufferElement_Texture0,
-                                           eVertexBufferElement_Normal,
-                                           eVertexBufferElement_Texture1Tangent };
-                    DrawPacket::cmdBindBuffers(frame.m_cmd, frame.m_resourcePool, &drawPacket, targets);
-                    cmdBindPushConstants(cmd, m_materialRootSignature.m_handle, materialObjectIndex, &materialConst);
-                    cmdDrawIndexed(cmd, drawPacket.numberOfIndecies(), 0, 0);
-                }
-            }
-        }
-
         cmdEndDebugMarker(cmd);
     }
 
@@ -4040,7 +3408,6 @@ namespace hpl {
         const Matrix4 mainFrustumViewMat = apFrustum->GetViewMat();
         const Matrix4 mainFrustumProjMat = apFrustum->GetProjectionMat();
 
-        // auto& swapChainImage = frame.m_swapChain->ppRenderTargets[frame.m_swapChainIndex];
         auto common = m_boundViewportData.resolve(viewport);
         if (!common || common->m_size != viewport.GetSize()) {
             auto* forgeRenderer = Interface<ForgeRenderer>::Get();
@@ -4051,6 +3418,15 @@ namespace hpl {
             }
             if (common) { // reusing state from gbuffer
                 viewportData->m_reflectionBuffer = std::move(common->m_reflectionBuffer);
+                viewportData->m_query = std::move(viewportData->m_query);
+            } else {
+                viewportData->m_query.m_occlusionQuery.Load(forgeRenderer->Rend(), [&](QueryPool** pool) {
+                    QueryPoolDesc queryPoolDesc = {};
+                    queryPoolDesc.mType = QUERY_TYPE_OCCLUSION;
+                    queryPoolDesc.mQueryCount = MaxOcclusionDescSize;
+                    addQueryPool(forgeRenderer->Rend(), &queryPoolDesc, pool);
+                    return true;
+                });
             }
             for (auto& reflection : viewportData->m_reflectionBuffer) {
                 RebuildGBuffer(*forgeRenderer, reflection.m_buffer, viewportData->m_size.x / 2, viewportData->m_size.y / 2);
@@ -4155,7 +3531,30 @@ namespace hpl {
                 else {
                     pObject->SetModelMatrixPtr(pObject->GetModelMatrix(NULL));
                 }
-
+                auto queryIt = common->m_query.m_coverageQueries.find(pObject);
+                if(queryIt != common->m_query.m_coverageQueries.end()) {
+                    if (TypeInfo<hpl::cBillboard>::IsType(*pObject)) {
+                        cBillboard* pBillboard = static_cast<cBillboard*>(pObject);
+                        QueryData maxSamplesQuery = {0};
+                        QueryData samplesQuery = {0};
+                        getQueryData(
+                            frame.m_renderer->Rend(),
+                            common->m_query.m_occlusionQuery.m_handle,
+                            queryIt->second.m_maxQueryIndex,
+                            &maxSamplesQuery);
+                        getQueryData(
+                            frame.m_renderer->Rend(),
+                            common->m_query.m_occlusionQuery.m_handle,
+                            queryIt->second.m_queryIndex,
+                            &samplesQuery);
+                        float billboardCoverage = pBillboard->getAreaOfScreenSpace(apFrustum);
+                        if (maxSamplesQuery.mOcclusionCounts > 0) {
+                            pBillboard->SetHaloAlpha(billboardCoverage * ((double)samplesQuery.mOcclusionCounts / (double)maxSamplesQuery.mOcclusionCounts));
+                        } else {
+                            pBillboard->SetHaloAlpha(0.0f);
+                        }
+                    }
+                }
                 m_rendererList.AddObject(pObject);
             };
             iRenderableContainer::WalkRenderableContainer(
@@ -4167,37 +3566,24 @@ namespace hpl {
                 eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea | eRenderListCompileFlag_Z);
         }
 
-        cmdPreZ(frame.m_cmd,
-                apWorld,
-                frame,
-                m_rendererList,
-                afFrameTime,
-                currentGBuffer.m_depthBuffer.m_handle,
-                apFrustum,
-                mainFrameIndex,
-                mainFrustumView,
-                mainFrustumProj,
-                {});
-
-        // Occlusion testing
-        //m_rendererList.BeginAndReset(afFrameTime, apFrustum);
-        //cmdPreAndPostZ(
-        //    frame.m_cmd,
-        //    apWorld,
-        //    currentGBuffer.m_preZPassRenderables,
-        //    frame,
-        //    m_rendererList,
-        //    afFrameTime,
-        //    currentGBuffer.m_depthBuffer.m_handle,
-        //    currentGBuffer.m_hizDepthBuffer.m_handle,
-        //    apFrustum,
-        //    mainFrameIndex,
-        //    mainFrustumView,
-        //    mainFrustumProj,
-        //    {});
-        //m_rendererList.End(
-        //    eRenderListCompileFlag_Diffuse | eRenderListCompileFlag_Translucent | eRenderListCompileFlag_Decal |
-        //    eRenderListCompileFlag_Illumination | eRenderListCompileFlag_FogArea);
+        cmdBindRenderTargets(cmd, NULL);
+        common->m_query.m_coverageQueries.clear();
+        if (common->m_query.m_queryIndex > 0) {
+            cmdResetQuery(cmd, common->m_query.m_occlusionQuery.m_handle, 0, common->m_query.m_queryIndex);
+        }
+        common->m_query.m_queryIndex = 0;
+        cmdPreZ(
+            cmd,
+            apWorld,
+            frame,
+            m_rendererList,
+            afFrameTime,
+            currentGBuffer.m_depthBuffer.m_handle,
+            apFrustum,
+            mainFrameIndex,
+            mainFrustumView,
+            mainFrustumProj,
+            { .m_query = &common->m_query });
 
         {
             cmdBindRenderTargets(frame.m_cmd, NULL);
@@ -4743,7 +4129,6 @@ namespace hpl {
                                 .objectVisibilityFlags = eRenderableFlag_VisibleInReflection,
                                 .clipPlanes = {},
                                 .m_invert = true,
-                                .m_disableOcclusionQueries = true,
                             });
 
                         {
@@ -4858,9 +4243,8 @@ namespace hpl {
                 switch (pMaterial->Descriptor().m_id) {
                 case MaterialID::Translucent:
                     {
-                        DrawPacket  drawPacket = translucencyItem->ResolveDrawPacket(frame);
-                        if (drawPacket.m_type == DrawPacket::Unknown ||
-                            drawPacket.numberOfIndecies() == 0) {
+                        DrawPacket drawPacket = translucencyItem->ResolveDrawPacket(frame);
+                        if (drawPacket.m_type == DrawPacket::Unknown || drawPacket.numberOfIndecies() == 0) {
                             break;
                         }
 

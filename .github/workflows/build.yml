@@ -27,6 +27,14 @@ jobs:
         run: |
           cd ${{ github.workspace }}/build
           ninja
+      - name: Package Amnesia
+        working-directory: ./build
+        run: tar -czvf ../amnesia-linux-x86-64-release.tar.gz * 
+      - name: Upload Amnesia artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: amnesia-linux-x86-64-release
+          path: amnesia-linux-x86-64-release.tar.gz
   windows:
     runs-on: windows-latest
     steps:
@@ -51,3 +59,11 @@ jobs:
         run: |
           cd ${{ github.workspace }}\build
           msbuild ALL_BUILD.vcxproj /property:Configuration=Release
+      - name: Package Amnesia
+        working-directory: .\build
+        run: 7z a ..\amnesia-win-x86-64-release.zip *
+      - name: Upload Amnesia artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: amnesia-win-x86-64-release
+          path: amnesia-win-x86-64-release.zip

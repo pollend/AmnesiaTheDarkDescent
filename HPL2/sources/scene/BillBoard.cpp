@@ -230,7 +230,7 @@ namespace hpl {
         binding.m_subAllocation = m_geometry.get();
         binding.m_indexOffset = 0;
         binding.m_set = GraphicsAllocator::AllocationSet::OpaqueSet;
-        binding.m_numIndices = 6 * (mType == eBillboardType_FixedAxis ? 2 : 0);
+        binding.m_numIndices = 6 * (mType == eBillboardType_FixedAxis ? 2 : 1);
         binding.m_vertexOffset = (m_activeCopy * cBillboard::NumberVerts);
         packet.m_unified = binding;
         return packet;

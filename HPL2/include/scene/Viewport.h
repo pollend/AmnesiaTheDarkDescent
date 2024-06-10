@@ -60,7 +60,7 @@ namespace hpl {
         HPL_RTTI_CLASS(cViewport, "{f5d42b52-6e84-4486-afa0-a5888f3513a0}")
     public:
         static constexpr Uuid PrimaryViewportTag = hpl::detail::From("{f5d42b52-6e84-4486-afa0-a5888f3513a0}");
-        static constexpr size_t MaxViewportHandles = 9;
+        static constexpr size_t MaxViewportHandles = 12;
 
         using ResizeEvent = hpl::Event<hpl::cVector2l&>;
         using ViewportDispose = hpl::Event<>;
@@ -151,15 +151,10 @@ namespace hpl {
         }
 
         void bindToWindow(window::NativeWindowWrapper& window);
-        void AddViewportCallback(iViewportCallback* apCallback);
-        void RemoveViewportCallback(iViewportCallback* apCallback);
-        void RunViewportCallbackMessage(eViewportMessage aMessage);
 
         inline void ConnectViewportChanged(ViewportChange::Handler& handler) { handler.Connect(m_viewportChanged);}
-
         inline void ConnectDraw(PostSolidDraw::Handler& handler) { handler.Connect(m_postSolidDraw); }
         inline void ConnectDraw(PostTranslucenceDraw::Handler& handler) { handler.Connect(m_postTranslucenceDraw); }
-
         inline void SignalDraw(PostSolidDrawPacket& payload) { m_postSolidDraw.Signal(payload);}
         inline void SignalDraw(PostTranslucenceDrawPacket& payload) { m_postTranslucenceDraw.Signal(payload);}
 
@@ -194,7 +189,7 @@ namespace hpl {
         PostSolidDraw m_postSolidDraw;
         PostTranslucenceDraw m_postTranslucenceDraw;
 
-        tViewportCallbackList mlstCallbacks;
+        //tViewportCallbackList mlstCallbacks;
         tGuiSetList m_guiSets;
 
         std::unique_ptr<cRenderSettings> mpRenderSettings;
