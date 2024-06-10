@@ -25,9 +25,11 @@ namespace hpl {
         }
         m_frame.m_isFinished = false;
 
+
         // Stall if CPU is running "Swap Chain Buffer Count" frames ahead of GPU
         // m_resourcePoolIndex = (m_resourcePoolIndex + 1) % ResourcePoolSize;
         //m_currentFrameCount++;
+        acquireNextImage(m_renderer, m_swapChain.m_handle, m_imageAcquiredSemaphore, NULL, &m_frame.m_swapChainIndex);
         m_frame.m_cmdRingElement = getNextGpuCmdRingElement(&m_graphicsCmdRing, true, 1);
         FenceStatus fenceStatus;
         getFenceStatus(m_renderer, m_frame.m_cmdRingElement.pFence, &fenceStatus);
@@ -56,10 +58,7 @@ namespace hpl {
     }
 
     void ForgeRenderer::SubmitFrame() {
-        uint32_t swapChainIndex = 0;
-        acquireNextImage(m_renderer, m_swapChain.m_handle, m_imageAcquiredSemaphore, NULL, &swapChainIndex);
-        RenderTarget* swapChainTarget = m_swapChain.m_handle->ppRenderTargets[swapChainIndex];
-
+        RenderTarget* swapChainTarget = m_swapChain.m_handle->ppRenderTargets[m_frame.m_swapChainIndex];
         {
             cmdBindRenderTargets(m_frame.cmd(), NULL);
             std::array rtBarriers = {
@@ -103,7 +102,6 @@ namespace hpl {
         m_frame.m_waitSemaphores.push_back(flushUpdateDesc.pOutSubmittedSemaphore);
         m_frame.m_waitSemaphores.push_back(m_imageAcquiredSemaphore);
 
-
         QueueSubmitDesc submitDesc = {};
         submitDesc.mWaitSemaphoreCount = m_frame.m_waitSemaphores.size();
         submitDesc.ppWaitSemaphores = m_frame.m_waitSemaphores.data();
@@ -115,7 +113,7 @@ namespace hpl {
         queueSubmit(m_graphicsQueue, &submitDesc);
 
         QueuePresentDesc presentDesc = {};
-        presentDesc.mIndex = swapChainIndex;
+        presentDesc.mIndex = m_frame.m_swapChainIndex;
         presentDesc.mWaitSemaphoreCount = 1;
         presentDesc.pSwapChain = m_swapChain.m_handle;
         presentDesc.ppWaitSemaphores = &m_frame.RingElement().pSemaphore;
@@ -349,8 +347,8 @@ namespace hpl {
                         addSwapChain(m_renderer, &swapChainDesc, handle);
                         return true;
                     });
-                    removeSemaphore(m_renderer, m_imageAcquiredSemaphore);
-                    addSemaphore(m_renderer, &m_imageAcquiredSemaphore);
+                    //removeSemaphore(m_renderer, m_imageAcquiredSemaphore);
+                    //addSemaphore(m_renderer, &m_imageAcquiredSemaphore);
                     for(auto& rt: m_finalRenderTarget) {
                         rt.Load(m_renderer,[&](RenderTarget** target) {
                             RenderTargetDesc renderTarget = {};

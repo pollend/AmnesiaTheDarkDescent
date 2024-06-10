@@ -108,6 +108,7 @@ namespace hpl {
         public:
             uint32_t m_currentFrame = 0;
             uint32_t m_frameIndex = 0;
+            uint32_t m_swapChainIndex = 0;
             GpuCmdRingElement m_cmdRingElement;
             bool m_isFinished = true;
 
@@ -116,7 +117,6 @@ namespace hpl {
             void operator=(Frame&) = delete;
 
             ForgeRenderer* m_renderer = nullptr;
-            SwapChain* m_swapChain = nullptr;
             Cmd* m_cmd = nullptr;
             CmdPool* m_cmdPool = nullptr;
             Fence* m_renderCompleteFence = nullptr;

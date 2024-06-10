@@ -31,6 +31,10 @@
 #include <FixPreprocessor.h>
 namespace hpl {
 
+    namespace Math {
+        static constexpr size_t BYTE_MB = 1000000;
+    }
+
 	//---------------------------------------------
 
 	class cFrustum;

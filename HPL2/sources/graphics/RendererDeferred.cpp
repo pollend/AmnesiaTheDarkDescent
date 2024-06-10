@@ -2725,7 +2725,7 @@ namespace hpl {
                     BindRenderTargetsDesc bindRenderTargets = {};
                     bindRenderTargets.mDepthStencil = { .pDepthStencil = depthBuffer, .mLoadAction = LOAD_ACTION_LOAD, .mLoadActionStencil = LOAD_ACTION_CLEAR};
                     bindRenderTargets.mRenderTargetCount = 1;
-                    bindRenderTargets.mRenderTargets[0] = (BindRenderTargetDesc){.pRenderTarget = outputBuffer, .mLoadAction = LOAD_ACTION_CLEAR, .mClearValue = { .r = options.m_clearColor.getX(),
+                    bindRenderTargets.mRenderTargets[0] = BindRenderTargetDesc{.pRenderTarget = outputBuffer, .mLoadAction = LOAD_ACTION_CLEAR, .mClearValue = { .r = options.m_clearColor.getX(),
                                                                    .g = options.m_clearColor.getY(),
                                                                    .b = options.m_clearColor.getZ(),
                                                                    .a = options.m_clearColor.getW() }, .mOverrideClearValue = true, };
@@ -3419,7 +3419,8 @@ namespace hpl {
             if (common) { // reusing state from gbuffer
                 viewportData->m_reflectionBuffer = std::move(common->m_reflectionBuffer);
                 viewportData->m_query = std::move(viewportData->m_query);
-            } else {
+            }
+            if(!viewportData->m_query.m_occlusionQuery.IsValid()){
                 viewportData->m_query.m_occlusionQuery.Load(forgeRenderer->Rend(), [&](QueryPool** pool) {
                     QueryPoolDesc queryPoolDesc = {};
                     queryPoolDesc.mType = QUERY_TYPE_OCCLUSION;

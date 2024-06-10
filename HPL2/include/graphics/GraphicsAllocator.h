@@ -8,6 +8,7 @@
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Utilities/RingBuffer.h"
 #include <folly/small_vector.h>
+#include "math/Math.h"
 
 namespace hpl {
 
@@ -23,14 +24,14 @@ namespace hpl {
 
         GraphicsAllocator(ForgeRenderer* renderer);
 
-        static constexpr uint32_t OpaqueVertexBufferSize = 0xf << 18;
-        static constexpr uint32_t OpaqueIndexBufferSize = 0xf << 18;
+        static constexpr uint32_t OpaqueVertexBufferSize = 6000000;
+        static constexpr uint32_t OpaqueIndexBufferSize =  3000000;
 
-        static constexpr uint32_t ParticleVertexBufferSize = 0xf << 12;
-        static constexpr uint32_t ParticleIndexBufferSize = 0xf << 12;
+        static constexpr uint32_t ParticleVertexBufferSize = 61440;
+        static constexpr uint32_t ParticleIndexBufferSize = 61440;
 
-        static constexpr uint32_t ImmediateVertexBufferSize = 0xf << 14;
-        static constexpr uint32_t ImmediateIndexBufferSize = 0xf << 14;
+        static constexpr uint32_t ImmediateVertexBufferSize = hpl::Math::BYTE_MB * 5;
+        static constexpr uint32_t ImmediateIndexBufferSize =  hpl::Math::BYTE_MB * 3;
 
         GPURingBufferOffset allocTransientVertexBuffer(uint32_t size);
         GPURingBufferOffset allocTransientIndexBuffer(uint32_t size);

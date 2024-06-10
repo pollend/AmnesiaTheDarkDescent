@@ -695,10 +695,6 @@ namespace hpl {
 		cVector2l vSize = pLowLevelGraphics->GetScreenSizeInt();
         RenderTarget* target = frame.m_finalRenderTarget;
 
-		//LoadActionsDesc loadActions = {};
-		//loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-		//loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-	    //cmdBindRenderTargets(frame.m_cmd, 1, &target, NULL, &loadActions, NULL, NULL, -1, -1);
         BindRenderTargetsDesc bindRenderTargets = {};
         bindRenderTargets.mRenderTargetCount = 1;
         bindRenderTargets.mRenderTargets[0] = { target, LOAD_ACTION_LOAD };
