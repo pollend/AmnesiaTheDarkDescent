@@ -2,6 +2,7 @@
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Utilities/Math/MathTypes.h"
 #include "Common_3/Resources/ResourceLoader/Interfaces/IResourceLoader.h"
+#include "graphics/GraphicsAllocator.h"
 #include "graphics/VertexBuffer.h"
 
 #include "scene/Camera.h"
@@ -39,22 +40,6 @@ namespace hpl {
     }
 
     DebugDraw::DebugDraw(ForgeRenderer* renderer) {
-        {
-            BufferDesc desc = {};
-			desc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
-            desc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-            desc.mSize = ImmediateVertexBufferSize;
-            desc.pName = "Immediate Vertex Buffer";
-			addGPURingBuffer(renderer->Rend(), &desc, &m_vertexBuffer);
-	    }
-        {
-            BufferDesc desc = {};
-		    desc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
-            desc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-            desc.mSize = ImmediateIndexBufferSize;
-            desc.pName = "Immediate Index Buffer";
-			addGPURingBuffer(renderer->Rend(), &desc, &m_indexBuffer);
-	    }
         m_bilinearSampler.Load(renderer->Rend(), [&](Sampler** sampler) {
             SamplerDesc bilinearClampDesc = { FILTER_NEAREST,
                                               FILTER_NEAREST,
@@ -152,10 +137,8 @@ namespace hpl {
             updateDescriptorSet(renderer->Rend(), i, m_perTextureViewDescriptorSet.m_handle, params.size(), params.data());
         }
         VertexLayout uvVertexLayout = {};
-        uvVertexLayout.mBindingCount = 3;
-        uvVertexLayout.mBindings[0].mStride = sizeof(float3);
-        uvVertexLayout.mBindings[1].mStride = sizeof(float2);
-        uvVertexLayout.mBindings[2].mStride = sizeof(float3);
+        uvVertexLayout.mBindingCount = 1;
+        uvVertexLayout.mBindings[0].mStride = sizeof(float3) + sizeof(float2) + sizeof(float4);
 
         uvVertexLayout.mAttribCount = 3;
         uvVertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
@@ -168,18 +151,17 @@ namespace hpl {
         uvVertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
         uvVertexLayout.mAttribs[1].mBinding = 0;
         uvVertexLayout.mAttribs[1].mLocation = 1;
-        uvVertexLayout.mAttribs[1].mOffset = sizeof(float) * 3;
+        uvVertexLayout.mAttribs[1].mOffset = sizeof(float3);
 
         uvVertexLayout.mAttribs[2].mSemantic = SEMANTIC_COLOR;
         uvVertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
         uvVertexLayout.mAttribs[2].mBinding = 0;
         uvVertexLayout.mAttribs[2].mLocation = 2;
-        uvVertexLayout.mAttribs[2].mOffset = (sizeof(float) * 3) + (sizeof(float) * 2);
+        uvVertexLayout.mAttribs[2].mOffset = sizeof(float3) + sizeof(float2);
 
         VertexLayout colorVertexLayout = {};
-        colorVertexLayout.mBindingCount = 2;
-        colorVertexLayout.mBindings[0].mStride = sizeof(float2);
-        colorVertexLayout.mBindings[1].mStride = sizeof(float3);
+        colorVertexLayout.mBindingCount = 1;
+        colorVertexLayout.mBindings[0].mStride = sizeof(float3) + sizeof(float4);
         colorVertexLayout.mAttribCount = 2;
         colorVertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
         colorVertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32_SFLOAT;
@@ -191,7 +173,7 @@ namespace hpl {
         colorVertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
         colorVertexLayout.mAttribs[1].mBinding = 0;
         colorVertexLayout.mAttribs[1].mLocation = 1;
-        colorVertexLayout.mAttribs[1].mOffset = sizeof(float) * 3;
+        colorVertexLayout.mAttribs[1].mOffset = sizeof(float3);
 
         BlendStateDesc blendStateDesc{};
         blendStateDesc.mSrcFactors[0] = BC_ONE;
@@ -632,11 +614,17 @@ namespace hpl {
     }
 
     void DebugDraw::flush(const ForgeRenderer::Frame& frame, Cmd* cmd, const cViewport& viewport, const cFrustum& frustum, SharedRenderTarget& targetBuffer, SharedRenderTarget& depthBuffer) {
+
+        auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
         if (frame.m_currentFrame != m_activeFrame) {
             m_textureLookup.clear();
             m_textureId = 0;
             m_activeFrame = frame.m_currentFrame;
         }
+
+
+        cmdBeginDebugMarker(cmd, 0, 1, 0, "Debug Flush");
+
         m_frameIndex = (m_frameIndex + 1) % NumberOfPerFrameUniforms;
         const Matrix4 matMainFrustumView = cMath::ToForgeMatrix4(frustum.GetViewMatrix());
         const Matrix4 matMainFrustumProj = cMath::ToForgeMatrix4(frustum.GetProjectionMatrix());
@@ -664,15 +652,6 @@ namespace hpl {
 
         const bool hasDepthBuffer = depthBuffer.IsValid();
 
-        //std::array targets = {
-        //    targetBuffer.m_handle,
-        //};
-        //LoadActionsDesc loadActions = {};
-        //loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-        //loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-        //BindRenderTargetDesc bindTargetDesc = {0};
-        //bindTargetDesc.mLoadAction = LOAD_ACTION_LOAD;
-        //bindTargetDesc.pRenderTarget = depthBuffer.m_handle;
         BindRenderTargetsDesc bindTargetDescs = {0};
         bindTargetDescs.mDepthStencil = { depthBuffer.m_handle, LOAD_ACTION_LOAD };
         bindTargetDescs.mRenderTargets[0] = { targetBuffer.m_handle, LOAD_ACTION_LOAD };
@@ -699,8 +678,8 @@ namespace hpl {
             const size_t indexBufferSize = sizeof(uint16_t) * numIndices;
 			const uint32_t vertexBufferStride = sizeof(PositionColorVertex);
 
-		    GPURingBufferOffset vb = getGPURingBufferOffset(&m_vertexBuffer, vertexBufferSize);
-		    GPURingBufferOffset ib = getGPURingBufferOffset(&m_indexBuffer, indexBufferSize);
+		    GPURingBufferOffset vb = graphicsAllocator->allocTransientVertexBuffer(vertexBufferSize);
+		    GPURingBufferOffset ib = graphicsAllocator->allocTransientIndexBuffer(indexBufferSize);
 
             auto it = m_colorTriangles.begin();
             auto lastIt = m_colorTriangles.begin();
@@ -767,8 +746,8 @@ namespace hpl {
             const size_t indexBufferSize = sizeof(uint32_t) * numIndices;
 			const uint32_t vertexBufferStride = sizeof(PositionColorVertex);
 
-		    GPURingBufferOffset vb = getGPURingBufferOffset(&m_vertexBuffer, vertexBufferSize);
-		    GPURingBufferOffset ib = getGPURingBufferOffset(&m_indexBuffer, indexBufferSize);
+		    GPURingBufferOffset vb = graphicsAllocator->allocTransientVertexBuffer(vertexBufferSize);
+		    GPURingBufferOffset ib = graphicsAllocator->allocTransientIndexBuffer(indexBufferSize);
 
             auto it = m_colorQuads.begin();
             auto lastIt = m_colorQuads.begin();
@@ -838,8 +817,8 @@ namespace hpl {
             const size_t vbSize = sizeof(PositionColorVertex) * numVertices;
             const size_t ibSize = sizeof(uint16_t) * numVertices;
 			const uint32_t stride = sizeof(PositionColorVertex);
-		    GPURingBufferOffset vb = getGPURingBufferOffset(&m_vertexBuffer, vbSize);
-		    GPURingBufferOffset ib = getGPURingBufferOffset(&m_indexBuffer, ibSize);
+		    GPURingBufferOffset vb = graphicsAllocator->allocTransientVertexBuffer(vbSize);
+		    GPURingBufferOffset ib = graphicsAllocator->allocTransientIndexBuffer(ibSize);
             uint32_t indexBufferOffset = 0;
             uint32_t vertexBufferOffset = 0;
 
@@ -866,7 +845,7 @@ namespace hpl {
             cmdBindDescriptorSet(cmd, m_frameIndex, m_perColorViewDescriptorSet.m_handle);
 			cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &stride, &vb.mOffset);
 			cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT16, ib.mOffset);
-            cmdDrawIndexed(cmd, numVertices, 0, 0);
+            cmdDrawIndexed(cmd, indexBufferOffset, 0, 0);
         }
 
         if(!m_uvQuads.empty()) {
@@ -885,8 +864,8 @@ namespace hpl {
             const size_t vertexBufferSize = sizeof(UVVertex) * (m_uvQuads.size() * 4);
             const size_t indexBufferSize = sizeof(uint16_t) * (m_uvQuads.size() * 6);
 			const uint32_t vertexBufferStride = sizeof(UVVertex);
-		    GPURingBufferOffset vb = getGPURingBufferOffset(&m_vertexBuffer, vertexBufferSize);
-		    GPURingBufferOffset ib = getGPURingBufferOffset(&m_indexBuffer, indexBufferSize);
+		    GPURingBufferOffset vb = graphicsAllocator->allocTransientVertexBuffer(vertexBufferSize);
+		    GPURingBufferOffset ib = graphicsAllocator->allocTransientIndexBuffer(indexBufferSize);
             uint32_t indexBufferOffset = 0;
             uint32_t vertexBufferOffset = 0;
 
@@ -1021,8 +1000,9 @@ namespace hpl {
             const size_t vertexBufferSize = sizeof(PositionColorVertex) * numMaxVertices;
             const size_t indexBufferSize = sizeof(uint32_t) * numMaxVertices;
 			const uint32_t vertexBufferStride = sizeof(PositionColorVertex);
-		    GPURingBufferOffset vb = getGPURingBufferOffset(&m_vertexBuffer, vertexBufferSize);
-		    GPURingBufferOffset ib = getGPURingBufferOffset(&m_indexBuffer, indexBufferSize);
+
+		    GPURingBufferOffset vb = graphicsAllocator->allocTransientVertexBuffer(vertexBufferSize);
+		    GPURingBufferOffset ib = graphicsAllocator->allocTransientIndexBuffer(indexBufferSize);
             uint32_t indexBufferOffset = 0;
             uint32_t vertexBufferOffset = 0;
 
@@ -1067,12 +1047,11 @@ namespace hpl {
             endUpdateResource(&indexUpdateDesc);
         }
 
-
-
         m_line2DSegments.clear();
         m_uvQuads.clear();
         m_colorQuads.clear();
         m_lineSegments.clear();
         m_colorTriangles.clear();
+        cmdEndDebugMarker(cmd);
     }
 } // namespace hpl

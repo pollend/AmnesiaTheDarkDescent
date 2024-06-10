@@ -3688,14 +3688,6 @@ namespace hpl {
         // Render Illumination Pass --> renders to output target
         // ------------------------------------------------------------------------
         {
-            // LoadActionsDesc loadActions = {};
-            // loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-            // loadActions.mLoadActionDepth = LOAD_ACTION_LOAD;
-            // std::array targets = {
-            //     currentGBuffer.m_outputBuffer.m_handle,
-            // };
-            // cmdBindRenderTargets(
-            //     frame.m_cmd, targets.size(), targets.data(), currentGBuffer.m_depthBuffer.m_handle, &loadActions, nullptr, nullptr, -1, -1);
             BindRenderTargetsDesc bindRenderTargets = {0};
             bindRenderTargets.mDepthStencil = { .pDepthStencil = currentGBuffer.m_depthBuffer.m_handle, .mLoadAction = LOAD_ACTION_LOAD };
             bindRenderTargets.mRenderTargetCount = 1;
@@ -3928,7 +3920,7 @@ namespace hpl {
         postSolidEvent.m_debug = m_debug.get();
         postSolidEvent.m_renderList = &m_rendererList;
         viewport.SignalDraw(postSolidEvent);
-        m_debug->flush(frame, frame.m_cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
+        m_debug->flush(frame, cmd, viewport, *apFrustum, currentGBuffer.m_outputBuffer, currentGBuffer.m_depthBuffer);
 
         // ------------------------------------------------------------------------
         // Translucency Pass --> output target
