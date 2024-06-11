@@ -19,6 +19,7 @@
 #pragma once
 
 #include "gui/GuiTypes.h"
+#include "scene/Viewport.h"
 #include <memory>
 
 namespace hpl {
@@ -68,13 +69,14 @@ namespace hpl {
 		friend class cGuiRenderObjectCompare;
 	public:
 
-		cGuiGfxElement(cGui* apGui);
+	    cGuiGfxElement(cGui* apGui);
 		~cGuiGfxElement();
 
 		void Update(float afTimeStep);
 
 		void AddImage(cFrameSubImage* apImage);
 		void AddTexture(Image* apTexture, const cVector2f& avStartUV=0, const cVector2f& avEndUV=1);
+        void BindViewport(cViewport* viewport, const cVector2f& avStartUV=0, const cVector2f& avEndUV=1);
 
 		void AddImageToBuffer(cFrameSubImage* apImage);
 
@@ -107,6 +109,7 @@ namespace hpl {
 		void SetFlipUvYAxis(bool abX);
 		bool GetFlipUvYAxis() { return mbFlipUvYAxis;}
 
+
 		cVector2f GetImageSize();
 
 		void Flush();
@@ -123,6 +126,7 @@ namespace hpl {
 		eGuiMaterial m_materialType = eGuiMaterial::eGuiMaterial_LastEnum;
 		Image* mvTextures[kMaxGuiTextures];
 		cFrameSubImage* mvImages[kMaxGuiTextures];
+        cViewport::ViewportBeforeDraw::Handler m_viewportHandler;
 
 		bool mbDestroyTexture;
 

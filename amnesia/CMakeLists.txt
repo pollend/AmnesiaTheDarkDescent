@@ -109,7 +109,7 @@ endif()
 copy_shader_to_target_dir(Amnesia)
 add_custom_command ( TARGET Amnesia POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${CMAKE_CURRENT_BINARY_DIR}/gpu.data $<TARGET_FILE_DIR:Amnesia>
+    ${CMAKE_CURRENT_SOURCE_DIR}/gpu.data $<TARGET_FILE_DIR:Amnesia>
 )
 
 target_compile_definitions(Amnesia PUBLIC AMNESIA_TDD_VERSION="${AMNESIA_TDD_VERSION}")

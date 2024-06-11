@@ -174,13 +174,13 @@ namespace hpl {
                 vertexLayout.mAttribs[1].mFormat = TinyImageFormat_R32G32_SFLOAT;
                 vertexLayout.mAttribs[1].mBinding = 0;
                 vertexLayout.mAttribs[1].mLocation = 1;
-                vertexLayout.mAttribs[1].mOffset = sizeof(float) * 3;
+                vertexLayout.mAttribs[1].mOffset = sizeof(float3);
 
                 vertexLayout.mAttribs[2].mSemantic = SEMANTIC_COLOR;
                 vertexLayout.mAttribs[2].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
                 vertexLayout.mAttribs[2].mBinding = 0;
                 vertexLayout.mAttribs[2].mLocation = 2;
-                vertexLayout.mAttribs[2].mOffset = sizeof(float) * 3 + sizeof(float) * 2;
+                vertexLayout.mAttribs[2].mOffset = sizeof(float3) + sizeof(float2);
 
                 RasterizerStateDesc rasterizerStateDesc = {};
                 rasterizerStateDesc.mCullMode = CULL_MODE_NONE;
@@ -216,7 +216,6 @@ namespace hpl {
                         blendStateAddDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
                         blendStateAddDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
                         blendStateAddDesc.mIndependentBlend = false;
-
                         return blendStateAddDesc;
                     };
 

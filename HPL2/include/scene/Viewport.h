@@ -65,6 +65,7 @@ namespace hpl {
         using ResizeEvent = hpl::Event<hpl::cVector2l&>;
         using ViewportDispose = hpl::Event<>;
         using ViewportChange = hpl::Event<>;
+        using ViewportBeforeDraw = hpl::Event<ForgeRenderer::Frame*>;
 
         struct DrawPayloadCommon {
             cFrustum* m_frustum;
@@ -91,6 +92,7 @@ namespace hpl {
 
         ~cViewport();
 
+
         inline void SetActive(bool abX) { mbActive = abX;}
         inline void SetVisible(bool abX) { mbVisible = abX;}
 
@@ -113,13 +115,12 @@ namespace hpl {
         inline void SetRenderer(iRenderer* apRenderer) { mpRenderer = apRenderer; }
         inline iRenderer* GetRenderer() { return mpRenderer; }
 
-        cRenderSettings* GetRenderSettings() {
-            return mpRenderSettings.get();
-        }
+        cRenderSettings* GetRenderSettings() { return mpRenderSettings.get(); }
 
         inline void SetPostEffectComposite(cPostEffectComposite* apPostEffectComposite) {
             mpPostEffectComposite = apPostEffectComposite;
         }
+
         inline cPostEffectComposite* GetPostEffectComposite() {
             return mpPostEffectComposite;
         }
@@ -135,28 +136,28 @@ namespace hpl {
         const cVector2l GetSize() {
             return m_size;
         }
-        const uint2 GetSizeU2() {
-            return uint2(m_size.x, m_size.y);
+        const uint2 GetSizeU2() { return uint2(m_size.x, m_size.y); }
+        uint2 GetSizeU() const { return uint2(m_size.x, m_size.y); }
+
+        inline SharedRenderTarget& Target(ForgeRenderer::Frame& frame) { return m_targets[frame.m_frameIndex]; }
+        void SetTarget(std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength>&& target);
+        inline std::shared_ptr<Image>& GetImage(ForgeRenderer::Frame& frame) {
+            return m_images[frame.m_frameIndex];
         }
 
-        uint2 GetSizeU() const {
-            return uint2(m_size.x, m_size.y);
-        }
-
-        inline SharedRenderTarget& Target() { return m_target; }
-        void SetTarget(SharedRenderTarget& target);
-        void SetTarget(SharedRenderTarget&& target);
-        inline std::shared_ptr<Image>& GetImage() {
-            return m_image;
-        }
+        // if a target is not initialized then its assumed to go to the swapchain
+        void InitializeTarget(Renderer* renderer, RenderTargetDesc desc);
+        void InvalidateTarget();
 
         void bindToWindow(window::NativeWindowWrapper& window);
 
         inline void ConnectViewportChanged(ViewportChange::Handler& handler) { handler.Connect(m_viewportChanged);}
         inline void ConnectDraw(PostSolidDraw::Handler& handler) { handler.Connect(m_postSolidDraw); }
         inline void ConnectDraw(PostTranslucenceDraw::Handler& handler) { handler.Connect(m_postTranslucenceDraw); }
+        inline void ConnectBeforeDraw(ViewportBeforeDraw::Handler& handler) { handler.Connect(m_viewportBeforeDraw); }
         inline void SignalDraw(PostSolidDrawPacket& payload) { m_postSolidDraw.Signal(payload);}
         inline void SignalDraw(PostTranslucenceDrawPacket& payload) { m_postTranslucenceDraw.Signal(payload);}
+        inline void SignalBeforeDraw(ForgeRenderer::Frame* frame) { m_viewportBeforeDraw.Signal(frame);}
 
         inline void SetTag(const Uuid& tag) { m_tag = tag; }
         inline Uuid Tag() { return m_tag; }
@@ -174,8 +175,8 @@ namespace hpl {
         iRenderer* mpRenderer = nullptr;
         cPostEffectComposite* mpPostEffectComposite = nullptr;
 
-        SharedRenderTarget m_target;
-        std::shared_ptr<hpl::Image> m_image;
+        std::array<SharedRenderTarget, ForgeRenderer::SwapChainLength> m_targets;
+        std::array<std::shared_ptr<hpl::Image>, ForgeRenderer::SwapChainLength> m_images;
 
         cVector2l m_size = { 0, 0 };
         Uuid m_tag;
@@ -184,17 +185,15 @@ namespace hpl {
 
         ViewportDispose m_disposeEvent;
         ViewportChange m_viewportChanged;
+        ViewportBeforeDraw m_viewportBeforeDraw;
         window::WindowEvent::Handler m_windowEventHandler;
 
         PostSolidDraw m_postSolidDraw;
         PostTranslucenceDraw m_postTranslucenceDraw;
 
-        //tViewportCallbackList mlstCallbacks;
         tGuiSetList m_guiSets;
 
         std::unique_ptr<cRenderSettings> mpRenderSettings;
-
-
         template<typename TData>
         friend class UniqueViewportData;
     };

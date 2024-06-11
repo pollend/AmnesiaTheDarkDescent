@@ -377,7 +377,25 @@ namespace hpl {
 		return pGfxElem;
 	}
 
-	//-----------------------------------------------------------------------
+	cGuiGfxElement* cGui::CreateGfxTexture(	cViewport* viewport, bool abAutoDestroyTexture,
+											eGuiMaterial aMaterial,
+											const cColor& aColor,bool abAddToList,
+											const cVector2f& avStartUV, const cVector2f& avEndUV, bool flipUVY) {
+		cGuiGfxElement *pGfxElem = hplNew( cGuiGfxElement, (this) );
+
+		if(flipUVY) {
+			pGfxElem->SetFlipUvYAxis(true);
+		}
+	    pGfxElem->BindViewport(viewport);
+		pGfxElem->SetColor(aColor);
+		pGfxElem->SetMaterial(aMaterial);
+		pGfxElem->SetDestroyTexture(abAutoDestroyTexture);
+
+		if(abAddToList) mlstGfxElements.push_back(pGfxElem);
+
+		return pGfxElem;
+
+    }
 
 	cGuiGfxElement* cGui::CreateGfxTexture(Image* apTexture, bool abAutoDestroyTexture,
 											eGuiMaterial aMaterial,

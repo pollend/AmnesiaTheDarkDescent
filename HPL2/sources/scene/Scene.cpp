@@ -101,7 +101,6 @@ namespace hpl {
 
         pViewport->SetCamera(apCamera);
         pViewport->SetWorld(apWorld);
-        // pViewport->SetSize(-1);
         pViewport->SetRenderer(mpGraphics->GetRenderer(eRenderer_Main));
 
         if (abPushFront) {
@@ -194,6 +193,9 @@ namespace hpl {
             iRenderer* pRenderer = pViewPort->GetRenderer();
             cCamera* pCamera = pViewPort->GetCamera();
             cFrustum* pFrustum = pCamera ? pCamera->GetFrustum() : NULL;
+            if(pViewPort) {
+                pViewPort->SignalBeforeDraw(&frame);
+            }
 
             // Render world and call callbacks
             if (alFlags & tSceneRenderFlag_World) {
@@ -237,38 +239,38 @@ namespace hpl {
             // Render Post effects
             auto outputImage = pRenderer->GetOutputImage(frame.m_frameIndex, *pViewPort);
             if(outputImage.IsValid()) {
-
-                const bool isViewportTarget = pViewPort->Target().IsValid();
-                auto target = isViewportTarget ? pViewPort->Target().m_handle : frame.finalTarget();
+                SharedRenderTarget& viewportTarget = pViewPort->Target(frame);
+                const bool isViewportTarget = viewportTarget.IsValid();
+                auto target = isViewportTarget ? viewportTarget.m_handle : frame.finalTarget();
+                if (isViewportTarget) {
+                    cmdBindRenderTargets(frame.m_cmd, NULL);
+                    std::array rtBarriers = {
+                        RenderTargetBarrier{ target, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                    };
+                    cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                }
                 if (bPostEffects) {
                     START_TIMING(RenderPostEffects)
 
-                    if (isViewportTarget) {
-                        cmdBindRenderTargets(frame.m_cmd, NULL);
-                        std::array rtBarriers = {
-                            RenderTargetBarrier{ target, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                        };
-                        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-                    }
                     pPostEffectComposite->Draw(
                         frame,
                         *pViewPort,
                          afFrameTime,
                          outputImage.m_handle->pTexture,
                         target);
-                    if (isViewportTarget) {
-                        cmdBindRenderTargets(frame.m_cmd, NULL);
-                        std::array rtBarriers = {
-                            RenderTargetBarrier{ target, RESOURCE_STATE_RENDER_TARGET ,RESOURCE_STATE_SHADER_RESOURCE},
-                        };
-                        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-                    }
-                     STOP_TIMING(RenderPostEffects)
-                 } else {
+                    STOP_TIMING(RenderPostEffects)
+                } else {
                     auto size = pViewPort->GetSize();
                     cRect2l rect = cRect2l(0, 0, size.x, size.y);
                     forgeRenderer->cmdCopyTexture(frame.m_cmd, outputImage.m_handle->pTexture, target);
-                 }
+                }
+                if (isViewportTarget) {
+                    cmdBindRenderTargets(frame.m_cmd, NULL);
+                    std::array rtBarriers = {
+                        RenderTargetBarrier{ target, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                    };
+                    cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                }
             }
             //if(outputImage.IsValid()) {
             //    RunViewportCallbackMessagecmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);

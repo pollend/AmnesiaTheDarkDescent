@@ -120,40 +120,42 @@ namespace hpl {
         window.ConnectWindowEventHandler(m_windowEventHandler);
         SetSize(window.GetWindowSize());
     }
+    void cViewport::InitializeTarget(Renderer* renderer, RenderTargetDesc renderTargetDesc) {
+        for(size_t i = 0; i < m_targets.size(); i++) {
+            m_targets[i].Load(renderer, [&](RenderTarget** target) {
+                addRenderTarget(renderer, &renderTargetDesc, target);
+                return true;
+            });
+            auto texture = SharedTexture();
+            texture.SetRenderTarget(m_targets[i]);
+            m_images[i] = std::make_shared<Image>();
+            m_images[i]->SetForgeTexture(std::move(texture));
+        }
 
-    //void cViewport::AddViewportCallback(iViewportCallback* apCallback) {
-    //    mlstCallbacks.push_back(apCallback);
-    //}
+    }
+    void cViewport::InvalidateTarget() {
+        for(auto& target: m_targets) {
+            target.TryFree();
+        }
+        for(auto& image: m_images) {
+            image = nullptr;
+        }
 
-    //void cViewport::RemoveViewportCallback(iViewportCallback* apCallback) {
-    //    STLFindAndRemove(mlstCallbacks, apCallback);
-    //}
-
-    //void cViewport::RunViewportCallbackMessage(eViewportMessage aMessage) {
-    //    tViewportCallbackListIt it = mlstCallbacks.begin();
-    //    for (; it != mlstCallbacks.begin(); ++it) {
-    //        iViewportCallback* pCallback = *it;
-
-    //        pCallback->RunMessage(aMessage);
-    //    }
-    //}
-
-    void cViewport::SetTarget(SharedRenderTarget& target) {
-        m_target = target;
-        auto texture = SharedTexture();
-        texture.SetRenderTarget(m_target);
-        m_image = std::make_shared<Image>();
-        m_image->SetForgeTexture(std::move(texture));
-        //m_dirtyViewport = true;
     }
 
-    void cViewport::SetTarget(SharedRenderTarget&& target) {
-        m_target = std::move(target);
-        auto texture = SharedTexture();
-        texture.SetRenderTarget(m_target);
-        m_image = std::make_shared<Image>();
-        m_image->SetForgeTexture(std::move(texture));
-        //m_dirtyViewport = true;
-    }
+   // void cViewport::SetTarget(SharedRenderTarget& target) {
+   //     m_targets = target;
+   //     auto texture = SharedTexture();
+   //     texture.SetRenderTarget(m_target);
+   //     m_images = std::make_shared<Image>();
+   //     m_images->SetForgeTexture(std::move(texture));
+   // }
+
+   // void cViewport::SetTarget(SharedRenderTarget&& target) {
+   //     m_targets = std::move(target);
+   //     auto texture = SharedTexture();
+   //     texture.SetRenderTarget(m_target);
+   //     m_images = std::make_shared<Image>();
+   // }
 
 } // namespace hpl

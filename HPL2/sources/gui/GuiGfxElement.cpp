@@ -248,8 +248,18 @@ namespace hpl {
 
 		++mlTextureNum;
 	}
+    void cGuiGfxElement::BindViewport(cViewport* viewport, const cVector2f& avStartUV, const cVector2f& avEndUV) {
+        if(viewport) {
+            m_viewportHandler = cViewport::ViewportBeforeDraw::Handler([&, viewport, avStartUV, avEndUV](ForgeRenderer::Frame* frame) {
+	            mlTextureNum = 0;
+	            AddTexture(viewport->GetImage(*frame).get(), avStartUV, avEndUV);
+            });
+            viewport->ConnectBeforeDraw(m_viewportHandler);
+        } else {
+            m_viewportHandler.Disconnect();
+        }
 
-	//---------------------------------------------------
+    }
 
 	void cGuiGfxElement::AddTexture(Image* apTexture, const cVector2f& avStartUV, const cVector2f& avEndUV)
 	{
@@ -342,7 +352,6 @@ namespace hpl {
 		for(int i=0; i<4; ++i)	mvVtx[i].col = aColor;
 	}
 
-	//-----------------------------------------------------------------------
 
 	void cGuiGfxElement::SetFlipUvYAxis(bool abX)
 	{
