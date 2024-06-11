@@ -250,7 +250,9 @@ set_property(TARGET Nvapi PROPERTY IMPORTED_LOCATION
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     file(GLOB GRAPHICS_D3D12_SOURCE
-        "${THE_FORGE_DIR}/Common_3/Graphics/Direct3D12/*.cpp")
+        "${THE_FORGE_DIR}/Common_3/Graphics/Direct3D12/*.cpp"
+        "${THE_FORGE_DIR}/Common_3/Graphics/Direct3D11/*.cpp"
+    )
     target_sources(TheForge PRIVATE ${GRAPHICS_D3D12_SOURCE})
 
     target_include_directories(TheForge PRIVATE ${THE_FORGE_DIR}/Common_3/Graphics/ThirdParty/OpenSource/D3D12MemoryAllocator)
