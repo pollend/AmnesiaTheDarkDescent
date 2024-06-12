@@ -31,6 +31,10 @@
 #include <FixPreprocessor.h>
 namespace hpl {
 
+    namespace Math {
+        static constexpr size_t BYTE_MB = 1000000;
+    }
+
 	//---------------------------------------------
 
 	class cFrustum;
@@ -57,6 +61,10 @@ namespace hpl {
 
         static Vector3 ToForgeVec3(const cVector3f& vec) {
             return Vector3(vec.x, vec.y, vec.z);
+        }
+
+        static Point3 ToForgePoint3(const cVector3f& vec) {
+            return Point3 (vec.x, vec.y, vec.z);
         }
 
         static Vector2 ToForgeVec2(const cVector2f& vec) {

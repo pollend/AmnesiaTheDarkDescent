@@ -87,7 +87,6 @@ namespace hpl {
         static constexpr uint32_t MaxMaterialSamplers = static_cast<uint32_t>(eTextureWrap_LastEnum) * static_cast<uint32_t>(eTextureFilter_LastEnum) * static_cast<uint32_t>(cMaterial::TextureAntistropy::Antistropy_Count);
         static constexpr uint32_t MaxObjectTest = 32768;
         static constexpr uint32_t MaxOcclusionDescSize = 4096;
-        static constexpr uint32_t MaxQueryPoolSize = MaxOcclusionDescSize * 2;
 
         static constexpr uint32_t TranslucencyBlendModeMask = 0xf;
 
@@ -310,30 +309,45 @@ namespace hpl {
             }
         };
 
+
+        struct QueryCoverageData {
+            struct CoverageQuery {
+                uint32_t m_queryIndex;
+                uint32_t m_maxQueryIndex;
+            };
+            uint32_t m_queryIndex;
+            SharedQueryPool m_occlusionQuery;
+            folly::F14FastMap<iRenderable*, CoverageQuery> m_coverageQueries;
+        };
+
         struct ViewportData {
         public:
             ViewportData() = default;
             ViewportData(const ViewportData&) = delete;
-            ViewportData(ViewportData&& buffer)
-                : m_size(buffer.m_size)
-                , m_refractionImage(std::move(buffer.m_refractionImage))
-                , m_gBuffer(std::move(buffer.m_gBuffer))
-                , m_reflectionBuffer(std::move(buffer.m_reflectionBuffer)) {
+            ViewportData(ViewportData&& viewportData)
+                : m_size(viewportData.m_size)
+                , m_refractionImage(std::move(viewportData.m_refractionImage))
+                , m_gBuffer(std::move(viewportData.m_gBuffer))
+                , m_reflectionBuffer(std::move(viewportData.m_reflectionBuffer))
+                , m_query(std::move(viewportData.m_query)) {
             }
 
             ViewportData& operator=(const ViewportData&) = delete;
 
-            void operator=(ViewportData&& buffer) {
-                m_size = buffer.m_size;
-                m_refractionImage = std::move(buffer.m_refractionImage);
-                m_gBuffer = std::move(buffer.m_gBuffer);
-                m_reflectionBuffer = std::move(buffer.m_reflectionBuffer);
+            void operator=(ViewportData&& viewportData) {
+                m_size = viewportData.m_size;
+                m_refractionImage = std::move(viewportData.m_refractionImage);
+                m_gBuffer = std::move(viewportData.m_gBuffer);
+                m_reflectionBuffer = std::move(viewportData.m_reflectionBuffer);
+                m_query = std::move(viewportData.m_query);
             }
 
             cVector2l m_size = cVector2l(0, 0);
             std::array<GBuffer, ForgeRenderer::SwapChainLength> m_gBuffer;
             std::array<ReflectionGBuffer, MaxReflectionBuffers> m_reflectionBuffer;
             std::shared_ptr<Image> m_refractionImage;
+
+            QueryCoverageData m_query;
         };
 
         cRendererDeferred(
@@ -353,16 +367,14 @@ namespace hpl {
             return sharedData->m_gBuffer[frameIndex].m_outputBuffer;
         }
 
-
         virtual void Draw(
             Cmd* cmd,
-            const ForgeRenderer::Frame& frame,
+            ForgeRenderer::Frame& context,
             cViewport& viewport,
             float afFrameTime,
             cFrustum* apFrustum,
             cWorld* apWorld,
-            cRenderSettings* apSettings,
-            bool abSendFrameBufferToPostEffects) override;
+            cRenderSettings* apSettings) override;
 
     private:
         iVertexBuffer* GetLightShape(iLight* apLight, eDeferredShapeQuality aQuality) const;
@@ -428,17 +440,16 @@ namespace hpl {
             tRenderableFlag objectVisibilityFlags = eRenderableFlag_VisibleInNonReflection;
             std::span<cPlanef> clipPlanes = {};
             bool m_invert = false;
-            bool m_disableOcclusionQueries = false;
+            QueryCoverageData* m_query;
         };
-        void cmdPreAndPostZ(
+
+        void cmdPreZ(
             Cmd* cmd,
             cWorld* apWorld,
-            std::set<iRenderable*>& prePassRenderables,
             const ForgeRenderer::Frame& frame,
             cRenderList& renderList,
             float frameTime,
             RenderTarget* depthBuffer,
-            RenderTarget* hiZBuffer,
             cFrustum* apFrustum,
             uint32_t frameDescriptorIndex,
             cMatrixf viewMat,
@@ -628,52 +639,13 @@ namespace hpl {
         } m_materialSet;
 
         uint32_t m_activeFrame = 0; // tracks the active frame if differnt then we need to reset some state
-        SharedCmdPool m_prePassPool;
-        SharedCmd m_prePassCmd;
-        SharedFence m_prePassFence;
-
-        SharedRootSignature m_rootSignatureHIZOcclusion;
-        SharedShader m_ShaderHIZGenerate;
-        SharedShader m_shaderTestOcclusion;
-        SharedDescriptorSet m_descriptorSetHIZGenerate;
-        SharedPipeline m_pipelineHIZGenerate;
-
-        SharedRootSignature m_rootSignatureCopyDepth;
-        SharedDescriptorSet m_descriptorCopyDepth;
-        SharedDescriptorSet m_descriptorAABBOcclusionTest;
-        SharedPipeline m_pipelineCopyDepth;
-        SharedPipeline m_pipelineAABBOcclusionTest;
-        SharedShader m_copyDepthShader;
-        SharedBuffer m_hiZOcclusionUniformBuffer;
-        SharedBuffer m_hiZBoundBoxBuffer;
-        SharedBuffer m_occlusionTestBuffer;
-
-        struct OcclusionQueryAlpha {
-            iRenderable* m_renderable = nullptr;
-            uint32_t m_maxQueryIndex = 0;
-            uint32_t m_queryIndex = 0;
-        };
-
-        SharedQueryPool m_occlusionQuery;
         uint32_t m_occlusionIndex = 0;
         SharedBuffer m_occlusionUniformBuffer;
         SharedRootSignature m_rootSignatureOcclusuion;
         SharedDescriptorSet m_descriptorOcclusionConstSet;
-        SharedBuffer m_occlusionReadBackBuffer;
         SharedShader m_shaderOcclusionQuery;
         SharedPipeline m_pipelineMaxOcclusionQuery;
         SharedPipeline m_pipelineOcclusionQuery;
-
-        struct UniformTest {
-            bool m_preZPass = false;
-            iRenderable* m_renderable = nullptr;
-        };
-
-        struct UniformPropBlock {
-            uint2 depthDim;
-            uint32_t numObjects;
-            uint32_t maxMipLevel;
-        };
 
         // light pass
         struct UniformLightPerFrameSet {

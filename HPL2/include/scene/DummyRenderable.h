@@ -53,7 +53,7 @@ namespace hpl {
 		virtual cMaterial *GetMaterial() override { return NULL;}
 		virtual iVertexBuffer* GetVertexBuffer() override{ return NULL;}
 
-        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override {
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame) override {
             DrawPacket packet;
             packet.m_type = DrawPacket::Unknown;
             return packet;

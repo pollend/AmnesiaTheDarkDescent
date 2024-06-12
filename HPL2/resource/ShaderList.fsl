@@ -40,7 +40,6 @@
 
 #frag solid_diffuse_parallax.frag
     // toned down the parallax effect a bit
-
     #define PARALLAX_ENABLED 1
     #define SEARCH_SAMPLE_COUNT 4
     #define ALPHA_REJECT 0.5
@@ -277,15 +276,15 @@
   #include "forward_diffuse.vert.fsl"
 #end
 
-#frag forward_diffuse.frag
-  #define ALPHA_REJECT 0.5
-  #include "forward_diffuse.frag.fsl"
-#end
-
-#comp point_light_clusters.comp
-  #include "point_light_clusters.comp.fsl"
-#end
-
-#comp light_clusters_clear.comp
-  #include "light_clusters_clear.comp.fsl"
-#end
+//#frag forward_diffuse.frag
+//  #define ALPHA_REJECT 0.5
+//  #include "forward_diffuse.frag.fsl"
+//#end
+//
+//#comp point_light_clusters.comp
+//  #include "point_light_clusters.comp.fsl"
+//#end
+//
+//#comp light_clusters_clear.comp
+//  #include "light_clusters_clear.comp.fsl"
+//#end

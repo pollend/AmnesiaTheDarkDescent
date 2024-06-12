@@ -225,7 +225,8 @@ namespace hpl {
 
 		////////////////////////////////////
 		// Try loading cache
-		LoadCacheFile(asFile);
+		// TODO: profile and work out if the cache is necessary
+	    //LoadCacheFile(asFile);
 
 
 		////////////////////////////////////
@@ -297,7 +298,8 @@ namespace hpl {
 
 		//////////////////////////////
 		// Save cache
-		SaveCacheFile(asFile);
+		// TODO: profile and work out if the cache is necessary this is current broken ...
+		//SaveCacheFile(asFile);
 
 		//////////////////////////////
 		// Final clean up

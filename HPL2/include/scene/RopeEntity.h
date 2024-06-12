@@ -34,13 +34,13 @@ namespace hpl {
 	class iVertexBuffer;
 	class iPhysicsRope;
 
-	//------------------------------------------
-
 	class cRopeEntity : public iRenderable
 	{
 	public:
 		cRopeEntity(const tString& asName, cResources *apResources,cGraphics *apGraphics, iPhysicsRope *apRope, int alMaxSegments);
 		~cRopeEntity();
+
+        static constexpr uint32_t NumberOfCopies = 2;
 
 		const tString& GetName(){return msName;}
 
@@ -71,18 +71,15 @@ namespace hpl {
 		void SetLengthTileSize(float afX){ mfLengthTileSize = afX;}
 		float GetLengthTileSize(){ return mfLengthTileSize;}
 
-
-		/////////////////////////////////
 		//Entity implementation
 		tString GetEntityType(){ return "RopeEntity";}
 
 		bool IsVisible();
 
-		/////////////////////////////////
 		//Renderable implementations
 		virtual cMaterial *GetMaterial() override{ return mpMaterial;}
-		virtual iVertexBuffer* GetVertexBuffer() override{return mpVtxBuffer;}
-        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override;
+		virtual iVertexBuffer* GetVertexBuffer() override{return nullptr;}
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame) override;
 
         virtual void UpdateGraphicsForFrame(float afFrameTime) override;
 		virtual bool UpdateGraphicsForViewport(cFrustum *apFrustum,float afFrameTime) override;
@@ -101,7 +98,7 @@ namespace hpl {
 		iPhysicsRope *mpRope;
 
 		cMaterial *mpMaterial;
-		iVertexBuffer* mpVtxBuffer;
+        std::shared_ptr<GeometrySet::GeometrySetSubAllocation> m_geometry;
 
 		int mlMaxSegments;
 
@@ -113,6 +110,8 @@ namespace hpl {
 		bool mbMultiplyAlphaWithColor;
 
 		int mlLastUpdateCount;
-	};
+	    uint8_t m_activeCopy = 0;
+        int m_numberSegments = 0;
+    };
 
 };

@@ -99,17 +99,20 @@ namespace hpl::window::internal {
         }
 
         #if defined(VK_USE_PLATFORM_XLIB_KHR)
+            handle.type = WINDOW_HANDLE_TYPE_XLIB;
             handle.display = wmi.info.x11.display;
             handle.window = wmi.info.x11.window;
             // handle.colormap = wmi.info.x11.colormap;
             //handle.xlib_wm_delete_window = XInternAtom(wmi.info.x11.display, "WM_DELETE_WINDOW", False);
         #elif defined(VK_USE_PLATFORM_XCB_KHR)
+            handle.type = WINDOW_HANDLE_TYPE_XCB;
             handle.connection = wmi.info.x11.display;
             handle.screen = wmi.info.x11.screen;
             handle.window = wmi.info.x11.window;
             handle.atom_wm_delete_window = xcb_intern_atom_reply(handle.connection, xcb_intern_atom(
                     handle.connection, 0, strlen("WM_DELETE_WINDOW"), "WM_DELETE_WINDOW"), 0);
         #elif defined(__ANDROID__)
+            handle.type = WINDOW_HANDLE_TYPE_ANDROID;
             handle.window = wmi.info.android.window;
             handle.activity = wmi.info.android.activity;
             handle.configuration = wmi.info.android.config;

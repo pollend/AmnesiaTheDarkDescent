@@ -58,19 +58,17 @@ namespace hpl {
 		bool GetShowBacksideWhenOutside(){ return mbShowBacksideWhenOutside; }
 		bool GetShowBacksideWhenInside(){ return mbShowBacksideWhenInside; }
 
-		//////////////////////////////
 		//iEntity implementation
 		tString GetEntityType(){ return "cFogArea";}
 
-		///////////////////////////////
 		//Renderable implementation:
-		cMaterial *GetMaterial(){ return NULL;}
-		iVertexBuffer* GetVertexBuffer(){ return NULL;}
-        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame,std::span<eVertexBufferElement> elements) override;
-		eRenderableType GetRenderType(){ return eRenderableType_FogArea;}
+		virtual cMaterial *GetMaterial() override{ return NULL;}
+		virtual iVertexBuffer* GetVertexBuffer() override{ return NULL;}
+        virtual DrawPacket ResolveDrawPacket(const ForgeRenderer::Frame& frame) override;
+		virtual eRenderableType GetRenderType() override { return eRenderableType_FogArea;}
 
-		int GetMatrixUpdateCount(){ return GetTransformUpdateCount();}
-		cMatrixf* GetModelMatrix(cFrustum* apFrustum);
+		virtual int GetMatrixUpdateCount() override{ return GetTransformUpdateCount();}
+		virtual cMatrixf* GetModelMatrix(cFrustum* apFrustum) override;
 
 	private:
 		cColor mColor;

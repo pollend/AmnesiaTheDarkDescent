@@ -834,25 +834,21 @@ void iEditorViewport::UpdateViewport()
 		return;
 
     auto forgeRenderer = Interface<ForgeRenderer>::Get();
-    SharedRenderTarget target;
-    target.Load(forgeRenderer->Rend(), [&](RenderTarget** target) {
-        ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-        RenderTargetDesc renderTargetDesc = {};
-        renderTargetDesc.mArraySize = 1;
-        renderTargetDesc.mClearValue = optimizedColorClearBlack;
-        renderTargetDesc.mDepth = 1;
-        renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-        renderTargetDesc.mWidth = mpEngineViewport->GetSize().x;
-        renderTargetDesc.mHeight = mpEngineViewport->GetSize().y;
-        renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
-        renderTargetDesc.mSampleQuality = 0;
-        renderTargetDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-        renderTargetDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
-        renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_RW_TEXTURE | DESCRIPTOR_TYPE_TEXTURE;
-        addRenderTarget(forgeRenderer->Rend(), &renderTargetDesc, target);
-        return true;
-    });
-    mpEngineViewport->SetTarget(std::move(target));
+    ClearValue optimizedColorClearBlack = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+    RenderTargetDesc renderTargetDesc = {};
+    renderTargetDesc.mArraySize = 1;
+    renderTargetDesc.mClearValue = optimizedColorClearBlack;
+    renderTargetDesc.mDepth = 1;
+    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+    renderTargetDesc.mWidth = mpEngineViewport->GetSize().x;
+    renderTargetDesc.mHeight = mpEngineViewport->GetSize().y;
+    renderTargetDesc.mSampleCount = SAMPLE_COUNT_1;
+    renderTargetDesc.mSampleQuality = 0;
+    renderTargetDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+    renderTargetDesc.mFormat = TinyImageFormat_R8G8B8A8_UNORM;
+    renderTargetDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+
+    mpEngineViewport->InitializeTarget(forgeRenderer->Rend(), renderTargetDesc);
 	cGui* pGui = mpGuiSet->GetGui();
 
 	////////////////////////////////////////////
@@ -860,7 +856,7 @@ void iEditorViewport::UpdateViewport()
 	cGuiGfxElement* pImg = mpImgViewport->GetImage();
 	if(pImg) pGui->DestroyGfx(pImg);
 
-	pImg = pGui->CreateGfxTexture(mpEngineViewport->GetImage().get(), false, eGuiMaterial_Diffuse, cColor(1,1), true, cVector2f(0,0), cVector2f(1,1), false);
+	pImg = pGui->CreateGfxTexture(mpEngineViewport, false, eGuiMaterial_Diffuse, cColor(1,1), true, cVector2f(0,0), cVector2f(1,1), false);
 
 	mpImgViewport->SetImage(pImg);
 	mbViewportNeedsUpdate = false;
@@ -931,8 +927,8 @@ void iEditorViewport::SetEngineViewportSize(const cVector2l& avSize)
 	mvEngineViewportSize = avSize;
 
 	mpEngineViewport->SetSize(mvEngineViewportSize);
-    auto& image = mpEngineViewport->GetImage();
-	const cVector2l vFBSize = cVector2l(image->GetWidth(), image->GetHeight());
+    auto size = mpEngineViewport->GetSizeU2();
+	const cVector2l vFBSize = cVector2l(size.x, size.y);
 
 	mvUVSize = cVector2f((float)mvEngineViewportSize.x, (float)mvEngineViewportSize.y) /
 			   cVector2f((float)vFBSize.x, (float)vFBSize.y);

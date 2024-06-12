@@ -154,11 +154,10 @@ namespace hpl
         uint32_t rootConstantIndex = getDescriptorIndexFromName(mpSpecificType->m_rootSignature.m_handle, "rootConstant");
         cmdBindPushConstants(frame.m_cmd, mpSpecificType->m_rootSignature.m_handle, rootConstantIndex, &alphaFade);
 
-        LoadActionsDesc loadActions = {};
-        loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-        loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
-
-        cmdBindRenderTargets(frame.m_cmd, 1, &renderTarget, NULL, &loadActions, NULL, NULL, -1, -1);
+        BindRenderTargetsDesc bindRenderTargets = {};
+        bindRenderTargets.mRenderTargetCount = 1;
+        bindRenderTargets.mRenderTargets[0] = { renderTarget, LOAD_ACTION_LOAD };
+        cmdBindRenderTargets(frame.m_cmd, &bindRenderTargets);
 
         std::array<DescriptorData, 2> params = {};
         params[0].pName = "sourceInput";

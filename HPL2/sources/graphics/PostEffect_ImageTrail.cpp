@@ -82,11 +82,7 @@ namespace hpl {
             blendStateDesc.mSrcAlphaFactors[0] = BC_SRC_ALPHA;
             blendStateDesc.mDstAlphaFactors[0] = BC_ONE_MINUS_SRC_ALPHA;
             blendStateDesc.mBlendAlphaModes[0] = BM_ADD;
-            #ifdef USE_THE_FORGE_LEGACY
-                blendStateDesc.mMasks[0] = ALL;
-            #else
-                blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
-            #endif
+            blendStateDesc.mColorWriteMasks[0] = ColorMask::COLOR_MASK_ALL;
 
             blendStateDesc.mRenderTargetMask = BLEND_STATE_TARGET_0;
             blendStateDesc.mIndependentBlend = false;
@@ -180,7 +176,7 @@ namespace hpl {
         }
 
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(frame.m_cmd, NULL);
             std::array rtBarriers = {
                 RenderTargetBarrier{
                     imageTrailData->m_accumulationTarget.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
@@ -207,12 +203,16 @@ namespace hpl {
 
             updateDescriptorSet(renderer->Rend(), mpImageTrailType->m_descIndex, mpImageTrailType->m_perFrameDescriptorSet[frame.m_frameIndex].m_handle, params.size(), params.data());
         }
-        LoadActionsDesc loadActions = {};
-        loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
-        loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+        //LoadActionsDesc loadActions = {};
+        //loadActions.mLoadActionsColor[0] = LOAD_ACTION_LOAD;
+        //loadActions.mLoadActionDepth = LOAD_ACTION_DONTCARE;
+        //std::array inputTargets = { imageTrailData->m_accumulationTarget.m_handle };
+        //cmdBindRenderTargets(frame.m_cmd, inputTargets.size(), inputTargets.data(), NULL, &loadActions, NULL, NULL, -1, -1);
 
-        std::array inputTargets = { imageTrailData->m_accumulationTarget.m_handle };
-        cmdBindRenderTargets(frame.m_cmd, inputTargets.size(), inputTargets.data(), NULL, &loadActions, NULL, NULL, -1, -1);
+        BindRenderTargetsDesc bindRenderTargets = {};
+        bindRenderTargets.mRenderTargetCount = 1;
+        bindRenderTargets.mRenderTargets[0] = { imageTrailData->m_accumulationTarget.m_handle , LOAD_ACTION_LOAD };
+        cmdBindRenderTargets(frame.m_cmd, &bindRenderTargets);
 
         uint32_t rootConstantIndex = getDescriptorIndexFromName(mpImageTrailType->m_rootSignature.m_handle, "rootConstant");
         cmdBindPushConstants(frame.m_cmd, mpImageTrailType->m_rootSignature.m_handle, rootConstantIndex, &alpha);
@@ -223,7 +223,7 @@ namespace hpl {
         cmdDraw(frame.m_cmd, 3, 0);
         mpImageTrailType->m_descIndex = (mpImageTrailType->m_descIndex + 1) % cPostEffectType_ImageTrail::DescSetSize;
         {
-            cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            cmdBindRenderTargets(frame.m_cmd, NULL);
             std::array rtBarriers = {
                 RenderTargetBarrier{
                     imageTrailData->m_accumulationTarget.m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },

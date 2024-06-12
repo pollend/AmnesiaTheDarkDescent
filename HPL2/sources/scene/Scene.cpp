@@ -19,6 +19,7 @@
 
 #include "scene/Scene.h"
 
+#include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "engine/IUpdateEventLoop.h"
 #include "engine/Interface.h"
 #include "graphics/RenderTarget.h"
@@ -100,7 +101,6 @@ namespace hpl {
 
         pViewport->SetCamera(apCamera);
         pViewport->SetWorld(apWorld);
-        // pViewport->SetSize(-1);
         pViewport->SetRenderer(mpGraphics->GetRenderer(eRenderer_Main));
 
         if (abPushFront) {
@@ -172,7 +172,7 @@ namespace hpl {
         }
     }
 
-    void cScene::Render(const ForgeRenderer::Frame& frame, float afFrameTime, tFlag alFlags) {
+    void cScene::Render(ForgeRenderer::Frame& frame, float afFrameTime, tFlag alFlags) {
         // Increase the frame count (do this at top, so render count is valid until this Render is called again!)
         iRenderer::IncRenderFrameCount();
 
@@ -193,10 +193,13 @@ namespace hpl {
             iRenderer* pRenderer = pViewPort->GetRenderer();
             cCamera* pCamera = pViewPort->GetCamera();
             cFrustum* pFrustum = pCamera ? pCamera->GetFrustum() : NULL;
-            //////////////////////////////////////////////
+            if(pViewPort) {
+                pViewPort->SignalBeforeDraw(&frame);
+            }
+
             // Render world and call callbacks
             if (alFlags & tSceneRenderFlag_World) {
-                pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPreWorldDraw);
+                //pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPreWorldDraw);
 
                 if (pPostEffectComposite && (alFlags & tSceneRenderFlag_PostEffects)) {
                     bPostEffects = pPostEffectComposite->HasActiveEffects();
@@ -211,8 +214,7 @@ namespace hpl {
                         afFrameTime,
                         pFrustum,
                         pViewPort->GetWorld(),
-                        pViewPort->GetRenderSettings(),
-                        bPostEffects);
+                        pViewPort->GetRenderSettings());
                     STOP_TIMING(RenderWorld)
                 } else {
                     // If no renderer sets up viewport do that by our selves.
@@ -222,7 +224,7 @@ namespace hpl {
                     //  													pRenderTarget->mvSize);
                     //  umm need to workout how this framebuffer is used ...
                 }
-                pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPostWorldDraw);
+                //pViewPort->RunViewportCallbackMessage(eViewportMessage_OnPostWorldDraw);
 
                 //////////////////////////////////////////////
                 // Render 3D GuiSets
@@ -234,45 +236,49 @@ namespace hpl {
 
             auto forgeRenderer = Interface<ForgeRenderer>::Get();
 
-            //////////////////////////////////////////////
             // Render Post effects
             auto outputImage = pRenderer->GetOutputImage(frame.m_frameIndex, *pViewPort);
-
             if(outputImage.IsValid()) {
-                const bool isViewportTarget = pViewPort->Target().IsValid();
-                auto& target = isViewportTarget ? pViewPort->Target().m_handle : frame.m_finalRenderTarget;
+                SharedRenderTarget& viewportTarget = pViewPort->Target(frame);
+                const bool isViewportTarget = viewportTarget.IsValid();
+                auto target = isViewportTarget ? viewportTarget.m_handle : frame.finalTarget();
+                if (isViewportTarget) {
+                    cmdBindRenderTargets(frame.m_cmd, NULL);
+                    std::array rtBarriers = {
+                        RenderTargetBarrier{ target, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+                    };
+                    cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                }
                 if (bPostEffects) {
                     START_TIMING(RenderPostEffects)
 
-                    if (isViewportTarget) {
-                        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                        std::array rtBarriers = {
-                            RenderTargetBarrier{ target, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
-                        };
-                        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-                    }
                     pPostEffectComposite->Draw(
                         frame,
                         *pViewPort,
                          afFrameTime,
                          outputImage.m_handle->pTexture,
                         target);
-                    if (isViewportTarget) {
-                        cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
-                        std::array rtBarriers = {
-                            RenderTargetBarrier{ target, RESOURCE_STATE_RENDER_TARGET ,RESOURCE_STATE_SHADER_RESOURCE},
-                        };
-                        cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
-                    }
-                     STOP_TIMING(RenderPostEffects)
-                 } else {
+                    STOP_TIMING(RenderPostEffects)
+                } else {
                     auto size = pViewPort->GetSize();
                     cRect2l rect = cRect2l(0, 0, size.x, size.y);
-                    forgeRenderer->cmdCopyTexture(frame.m_cmd, outputImage.m_handle->pTexture,
-                        target);
-                 }
+                    forgeRenderer->cmdCopyTexture(frame.m_cmd, outputImage.m_handle->pTexture, target);
+                }
+                if (isViewportTarget) {
+                    cmdBindRenderTargets(frame.m_cmd, NULL);
+                    std::array rtBarriers = {
+                        RenderTargetBarrier{ target, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE },
+                    };
+                    cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+                }
             }
-
+            //if(outputImage.IsValid()) {
+            //    RunViewportCallbackMessagecmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+            //    std::array rtBarriers = {
+            //        RenderTargetBarrier{ outputImage.m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
+            //    };
+            //    cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
+            //}
             //////////////////////////////////////////////
             // Render Screen GUI
             if (alFlags & tSceneRenderFlag_Gui) {

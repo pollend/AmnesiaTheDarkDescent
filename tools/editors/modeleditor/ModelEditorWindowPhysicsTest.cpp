@@ -474,12 +474,9 @@ void cModelEditorWindowPhysicsTest::OnInitLayout()
 	mpInpBuoyancyAngularViscosity->SetValue(mfBuoyancyAngularViscosity, false);
 	mpInpBuoyancyLinearViscosity->SetValue(mfBuoyancyLinearViscosity, false);
 
-	auto& target = mpEngineViewport->Target();
-    if(target.IsValid()) {
-	    SetEngineViewportPositionAndSize(0,cVector2l(
-	        target.m_handle->mWidth, target.m_handle->mHeight));
-	}
-	CreateGuiViewport(mpBGFrame);
+	auto size= mpEngineViewport->GetSizeU2();
+    SetEngineViewportPositionAndSize(0, cVector2l(size.x, size.y));
+    CreateGuiViewport(mpBGFrame);
 	SetGuiViewportPos(cVector3f(2,55,0.1f));
 	SetGuiViewportSize(cVector2f(mpBGFrame->GetSize() - cVector2f(4,58)));
 	UpdateViewport();

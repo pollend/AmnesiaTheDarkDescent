@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 set(CMAKE_CXX_STANDARD 20)
 set(INSTALL_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 set(CMAKE_INSTALL_PREFIX ${INSTALL_OUTPUT_PATH} CACHE PATH "Install path prefix, prepended onto install directories." FORCE)
+set(CMAKE_MODULE_PATH ${CMAKE_HOME_DIRECTORY}/cmake)
+include(HPLUtils)
 
 enable_language(ASM)
 
@@ -13,12 +15,6 @@ if(UNIX)
     set(VCPKG_CMAKE_SYSTEM_NAME Linux)
 endif()
 include("${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
-
-add_definitions(
-    -DUSE_THE_FORGE_LEGACY
-    # -DUSE_FORWARD_PLUS_BACKEND # prototype forward renderer
-)
-
 
 # hack to get to build on windwos
 # HACK to correctly set Linux property for newer cmake

@@ -96,14 +96,14 @@ namespace hpl {
                 return;
             }
             if(pogoTargetIndex == 0) {
-                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                cmdBindRenderTargets(frame.m_cmd, NULL);
                 std::array rtBarriers = {
                     RenderTargetBarrier{ boundData->m_renderTarget[0].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },
                     RenderTargetBarrier{ boundData->m_renderTarget[1].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
                 };
                 cmdResourceBarrier(frame.m_cmd, 0, NULL, 0, NULL, rtBarriers.size(), rtBarriers.data());
             } else {
-                cmdBindRenderTargets(frame.m_cmd, 0, NULL, NULL, NULL, NULL, NULL, -1, -1);
+                cmdBindRenderTargets(frame.m_cmd, NULL);
                 std::array rtBarriers = {
                     RenderTargetBarrier{ boundData->m_renderTarget[0].m_handle, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_SHADER_RESOURCE},
                     RenderTargetBarrier{ boundData->m_renderTarget[1].m_handle, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_RENDER_TARGET },

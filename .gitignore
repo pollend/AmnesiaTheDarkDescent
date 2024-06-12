@@ -17,6 +17,7 @@
 mono_crash.*
 
 # Build results
+build/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
@@ -30,10 +31,6 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
-.[Bb]uild/
-[Bb]uild/
-vcpkg_installed/
-/out/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -353,8 +350,16 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 
-lib/
-
+# HPL2 Specific
 BuildID_*.cpp
 BuildID_*.h
-cmake-build-debug/
+CMakeCache.txt
+vcpkg_installed/
+CMakeFiles/
+
+Makefile
+cmake_install.cmake
+*.a
+
+/HPL2/Shaders
+/HPL2/CompiledShaders
