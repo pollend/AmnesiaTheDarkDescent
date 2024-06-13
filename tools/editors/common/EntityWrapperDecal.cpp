@@ -163,7 +163,7 @@ bool cEntityWrapperDataDecal::SaveSpecific(cXmlElement* apElement)
 
 	if(pDecalMesh)
 	{
-        pVB = pDecalMesh->GetVertexBuffer();
+        pVB = pDecalMesh->GetSubMesh()->GetVertexBuffer();
 		lVertexNum = pVB->GetVertexNum();
 		lIndexNum = pVB->GetIndexNum();
 	}

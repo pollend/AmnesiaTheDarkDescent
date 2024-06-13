@@ -268,24 +268,6 @@ namespace hpl {
         return NULL;
     }
 
-    // not an ideal solution
-    SharedBuffer cSubMesh::StreamBufferInfo::CommitSharedBuffer() {
-        if(!m_gpuBuffer.IsValid()) {
-            auto rawView = m_buffer.CreateViewRaw();
-            m_gpuBuffer.Load([&](Buffer** buffer) {
-                BufferLoadDesc loadDesc = {};
-                loadDesc.ppBuffer = buffer;
-                loadDesc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
-                loadDesc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
-                loadDesc.mDesc.mSize = rawView.NumBytes();
-                loadDesc.pData = rawView.rawByteSpan().data();
-                addResource(&loadDesc, nullptr);
-                return true;
-            });
-        }
-        return m_gpuBuffer;
-    }
-
     iCollideShape* cSubMesh::CreateCollideShape(iPhysicsWorld* apWorld, std::span<MeshCollisionResource> colliders) {
         if (colliders.empty()) {
             return nullptr;

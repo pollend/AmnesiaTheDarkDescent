@@ -403,16 +403,6 @@ void cEntityWrapperPrimitivePlane::SetEndCorner(const cVector3f& avX)
 	mlNormalAxisIndex = ComputeNormalAxisIndex();
 }
 
-//------------------------------------------------------------------------
-
-//------------------------------------------------------------------------
-
-////////////////////////////////////////////////////////////////////
-// PROTECTED METHODS
-////////////////////////////////////////////////////////////////////
-
-//------------------------------------------------------------------------
-
 int cEntityWrapperPrimitivePlane::ComputeNormalAxisIndex()
 {
 	//Log("\tComputing plane normal axis index...\n");
@@ -426,45 +416,45 @@ int cEntityWrapperPrimitivePlane::ComputeNormalAxisIndex()
 
 //------------------------------------------------------------------------
 
-void cEntityWrapperPrimitivePlane::UpdateUVMapping()
-{
-	//////////////////////////////////////////////////////////////
-	// VERY IMPORTANT TO CLEAR THE CURRENT UVS (for god's sake)
-	mvUVCorners.clear();
+void cEntityWrapperPrimitivePlane::UpdateUVMapping() {
+    // VERY IMPORTANT TO CLEAR THE CURRENT UVS (for god's sake)
+    mvUVCorners.clear();
 
-	iVertexBuffer* pVB = ((cEngineEntityGeneratedMesh*)mpEngineEntity)->GetVertexBuffer();
+    cSubMesh* pVB = ((cEngineEntityGeneratedMesh*)mpEngineEntity)->GetSubMesh();
 
-	int lNumVertices = pVB->GetVertexNum();
-	float* pVertexCoords = pVB->GetFloatArray(eVertexBufferElement_Position);
-	float* pTexCoords = pVB->GetFloatArray(eVertexBufferElement_Texture0);
+    auto posStream = pVB->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+    auto texStream = pVB->getStreamBySemantic(ShaderSemantic::SEMANTIC_TEXCOORD0);
+    auto posView = posStream->GetStructuredView<float3>();
+    auto texView = texStream->GetStructuredView<float2>();
 
-	for(int i=0;i<lNumVertices;++i)
-	{
-		cVector3f vCoords = cVector3f(pVertexCoords[0],pVertexCoords[1], pVertexCoords[2]);
-		if(mbAlignToWorldCoords)
-			vCoords = cMath::MatrixMul(mmtxTransform, vCoords);
-		else
-			vCoords = cMath::MatrixMul(mmtxScale, vCoords);
+    for (int i = 0; i < posStream->m_numberElements; ++i) {
+        cVector3 vCoords = cMath::FromForgeVector3(f3Tov3(posView.Get(i)));
+        if (mbAlignToWorldCoords) {
+            vCoords = cMath::MatrixMul(mmtxTransform, vCoords);
+        } else {
+            vCoords = cMath::MatrixMul(mmtxScale, vCoords);
+        }
+        vCoords = cMath::MatrixMul(cMath::MatrixRotateY(mfTextureAngle), vCoords);
 
-		vCoords = cMath::MatrixMul(cMath::MatrixRotateY(mfTextureAngle), vCoords);
+        cVector2f res = cVector2f(0, 0);
+        if (mlNormalAxisIndex == 0) {
+            res.x = vCoords.v[1] * mvTileAmount.v[1] + mvTileOffset.v[1];
+        } else {
+            res.x = vCoords.v[0] * mvTileAmount.v[0] + mvTileOffset.v[0];
+        }
+        if (mlNormalAxisIndex == 2) {
+            res.y = vCoords.v[1] * mvTileAmount.v[1] + mvTileOffset.v[1];
+        } else {
+            res.y = vCoords.v[2] * mvTileAmount.v[2] + mvTileOffset.v[2];
+        }
 
-		if(mlNormalAxisIndex==0)
-			pTexCoords[0] = vCoords.v[1]*mvTileAmount.v[1] + mvTileOffset.v[1];
-		else
-			pTexCoords[0] = vCoords.v[0]*mvTileAmount.v[0] + mvTileOffset.v[0];
-
-		if(mlNormalAxisIndex==2)
-			pTexCoords[1] = vCoords.v[1]*mvTileAmount.v[1] + mvTileOffset.v[1];
-		else
-			pTexCoords[1] = vCoords.v[2]*mvTileAmount.v[2] + mvTileOffset.v[2];
-
-		mvUVCorners.push_back(cVector2f(pTexCoords[0],pTexCoords[1]));
-
-		pVertexCoords+=4;
-		pTexCoords+=3;
-	}
-
-	pVB->UpdateData(eVertexElementFlag_Texture0, false);
+        mvUVCorners.push_back(res);
+        texView.Write(i, float2(res.x, res.y));
+    }
+    pVB->m_notify.Signal((cSubMesh::NotifyMesh){
+        .m_semanticSize = 1,
+        .m_semantic = { ShaderSemantic::SEMANTIC_TEXCOORD0 },
+    });
 }
 
 //------------------------------------------------------------------------
@@ -496,9 +486,8 @@ cMesh* cEntityWrapperPrimitivePlane::CreatePrimitiveMesh()
     cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TextureTrait>(&textureInfo, &uv);
     cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TangentTrait>(&tangentInfo, &tangent);
 
-    MeshUtility::MeshCreateResult result;
-    MeshUtility::CreatePlane(
-        Vector3(0,0,0), cMath::ToForgeVec3(vEndCorner),
+    MeshUtility::MeshCreateResult result = MeshUtility::CreatePlane(
+         cMath::ToForgeVec3(vEndCorner),Vector3(0,0,0),
         Vector2(1,0), Vector2(0,0), Vector2(0,1), Vector2(1,1),
         &index,
         &position,
@@ -527,10 +516,6 @@ cMesh* cEntityWrapperPrimitivePlane::CreatePrimitiveMesh()
 	pSubMesh->SetMaterial(pMat);
 	iVertexBuffer* pVtxBuffer = new LegacyVertexBuffer(eVertexBufferDrawType_Tri, eVertexBufferUsageType_Static, 0, 0);
 	pSubMesh->SetStreamBuffers(pVtxBuffer, std::move(vertexStreams), std::move(indexInfo));
-	//cMesh* pMesh = GetEditorWorld()->GetEditor()->GetEngine()->GetGraphics()->GetMeshCreator()->CreatePlane("", 0, vEndCorner,
-   // 																										cVector2f(1,0), 0,
-   // 																										cVector2f(0,1), 1,
-   // 																										msMaterial);
 
 	return pMesh;
 }

@@ -25,8 +25,8 @@ namespace hpl {
 
         auto vertexStorageReport = m_vertexStreamAllocator.storageReport();
         auto indexStorageReport = m_indexStreamAllocator.storageReport();
-        LOGF(LogLevel::eINFO, "vertex storage total free space: %d largest region: %d", vertexStorageReport.totalFreeSpace, vertexStorageReport.largestFreeRegion);
-        LOGF(LogLevel::eINFO, "index storage total free space: %d largest region: %d", indexStorageReport.totalFreeSpace, indexStorageReport.largestFreeRegion);
+        //LOGF(LogLevel::eDEBUG, "vertex storage total free space: %d largest region: %d", vertexStorageReport.totalFreeSpace, vertexStorageReport.largestFreeRegion);
+        //LOGF(LogLevel::eDEBUG, "index storage total free space: %d largest region: %d", indexStorageReport.totalFreeSpace, indexStorageReport.largestFreeRegion);
 
         ASSERT(subAllocation->m_indexAllocation.offset != OffsetAllocator::Allocation::NO_SPACE);
         ASSERT(subAllocation->m_indexAllocation.metadata != OffsetAllocator::Allocation::NO_SPACE);

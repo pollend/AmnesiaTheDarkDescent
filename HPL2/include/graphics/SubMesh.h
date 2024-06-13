@@ -48,6 +48,15 @@ namespace hpl {
         friend class cSubMeshEntity;
 
     public:
+        struct NotifyMesh {
+            uint32_t m_semanticSize;
+            ShaderSemantic m_semantic[12];
+            uint32_t changeIndexData: 1;
+        };
+        using NotifySubMeshChanged = hpl::Event<NotifyMesh>;
+        NotifySubMeshChanged m_notify;
+
+
         // preset traits that are expected throughout the engine
         struct PostionTrait {
             using Type = float3;
@@ -81,14 +90,12 @@ namespace hpl {
             }
 
             StreamBufferInfo(const StreamBufferInfo& other):
-                m_gpuBuffer(other.m_gpuBuffer),
                 m_buffer(other.m_buffer),
                 m_semantic(other.m_semantic),
                 m_stride(other.m_stride),
                 m_numberElements(other.m_numberElements){
             }
             StreamBufferInfo(StreamBufferInfo&& other):
-                m_gpuBuffer(std::move(other.m_gpuBuffer)),
                 m_buffer(std::move(other.m_buffer)),
                 m_semantic(other.m_semantic),
                 m_stride(other.m_stride),
@@ -96,14 +103,12 @@ namespace hpl {
             }
 
             void operator=(const StreamBufferInfo& other) {
-                m_gpuBuffer = other.m_gpuBuffer;
                 m_buffer = other.m_buffer;
                 m_semantic = other.m_semantic;
                 m_stride = other.m_stride;
                 m_numberElements = other.m_numberElements;
             }
             void operator=(StreamBufferInfo&& other) {
-                m_gpuBuffer = std::move(other.m_gpuBuffer);
                 m_buffer = std::move(other.m_buffer);
                 m_semantic = other.m_semantic;
                 m_stride = other.m_stride;
@@ -124,9 +129,7 @@ namespace hpl {
             constexpr GraphicsBuffer::BufferStructuredView<T> GetStructuredView(uint32_t byteOffset = 0) {
                 return m_buffer.CreateStructuredView<T>(byteOffset, m_stride);
             }
-            SharedBuffer CommitSharedBuffer();
 
-            SharedBuffer m_gpuBuffer;
             GraphicsBuffer m_buffer;
             uint32_t m_stride = 0;
             uint32_t m_numberElements = 0;
@@ -203,12 +206,14 @@ namespace hpl {
 
         void AddCollider(const MeshCollisionResource& def);
         std::span<MeshCollisionResource> GetColliders();
-        inline std::span<StreamBufferInfo> streamBuffers() {return m_vertexStreams; }
+        inline std::span<StreamBufferInfo> streamBuffers() { return m_vertexStreams; }
         inline std::span<StreamBufferInfo>::iterator getStreamBySemantic(ShaderSemantic semantic) {
             return std::find_if(streamBuffers().begin(), streamBuffers().end(), [&](auto& stream) {
                 return stream.m_semantic == semantic;
             });
         }
+
+
         inline IndexBufferInfo& IndexStream() {return m_indexStream; }
         void SetIsCollideShape(bool abX) {
             m_collideShape = abX;
@@ -257,9 +262,8 @@ namespace hpl {
         bool hasMesh();
         void SetStreamBuffers(iVertexBuffer* buffer, std::vector<StreamBufferInfo>&& vertexStreams, IndexBufferInfo&& indexStream);
         void Compile();
-
-        void CommitBuffer(ShaderSemantic semantic);
     private:
+
         cMaterialManager* m_materialManager = nullptr;
         tString m_name;
 

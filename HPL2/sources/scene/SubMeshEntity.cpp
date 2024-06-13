@@ -53,61 +53,103 @@
 #include <cstdint>
 
 namespace hpl {
-    cSubMeshEntity::cSubMeshEntity(
-        const tString& asName, cMeshEntity* apMeshEntity, cSubMesh* apSubMesh, cMaterialManager* apMaterialManager)
-        : iRenderable(asName)
-        , mpMeshEntity(apMeshEntity)
-        , mpSubMesh(apSubMesh)
-        , mpMaterialManager(apMaterialManager) {
-        mbIsOneSided = mpSubMesh->GetIsOneSided();
-        mvOneSidedNormal = mpSubMesh->GetOneSidedNormal();
-        m_isSkinnedMesh  = (mpMeshEntity->GetMesh()->GetSkeleton() != nullptr);
+
+    void cSubMeshEntity::updateVertexStream(cSubMesh::StreamBufferInfo& localStream) {
+        auto gpuStream = m_geometry->getStreamBySemantic(localStream.m_semantic);
+        ASSERT(gpuStream != m_geometry->vertexStreams().end());
+        const uint32_t reservedVerticies = m_numberVertices * (m_isSkinnedMesh ? 2 : 1);
+
+        BufferUpdateDesc updateDesc = { gpuStream->buffer().m_handle,
+                                        gpuStream->stride() * m_geometry->vertexOffset(),
+                                        gpuStream->stride() * reservedVerticies };
+        beginUpdateResource(&updateDesc);
+
+        GraphicsBuffer gpuBuffer(updateDesc);
+        auto dest = gpuBuffer.CreateViewRaw();
+        auto src = localStream.m_buffer.CreateViewRaw();
+        for (size_t i = 0; i < m_numberVertices; i++) {
+            auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
+            dest.WriteRaw(i * gpuStream->stride(), sp);
+        }
+        if (m_isSkinnedMesh) {
+            for (size_t i = 0; i < m_numberVertices; i++) {
+                auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
+                dest.WriteRaw(((i + m_numberVertices) * gpuStream->stride()), sp);
+            }
+        }
+        endUpdateResource(&updateDesc);
+    }
+
+    void cSubMeshEntity::updateIndexStream(cSubMesh::IndexBufferInfo& stream) {
+        BufferUpdateDesc updateDesc = { m_geometry->indexBuffer().m_handle,
+                                        m_geometry->indexOffset() * GeometrySet::IndexBufferStride,
+                                        GeometrySet::IndexBufferStride * m_numberIndecies };
+        beginUpdateResource(&updateDesc);
+        GraphicsBuffer gpuBuffer(updateDesc);
+        auto dest = gpuBuffer.CreateIndexView();
+        auto src = stream.m_buffer.CreateIndexView();
+        for (size_t i = 0; i < m_numberIndecies; i++) {
+            dest.Write(i, src.Get(i));
+        }
+        endUpdateResource(&updateDesc);
+    }
+    void cSubMeshEntity::rebuildGpuVertexStreams() {
         auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
         ASSERT(graphicsAllocator);
-
-        auto vertexStreams = mpSubMesh->streamBuffers();
-        auto& indexStream = mpSubMesh->IndexStream();
         auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
 
+        auto vertexStreams = m_subMesh->streamBuffers();
+        auto& indexStream = m_subMesh->IndexStream();
         m_numberVertices = vertexStreams.begin()->m_numberElements;
         m_numberIndecies = indexStream.m_numberElements;
 
         const uint32_t reservedVerticies = m_numberVertices * (m_isSkinnedMesh ? 2 : 1);
         m_geometry = opaqueSet.allocate(reservedVerticies, m_numberIndecies);
         for(auto& localStream: vertexStreams) {
-            auto gpuStream = m_geometry->getStreamBySemantic(localStream.m_semantic);
-            ASSERT(gpuStream != m_geometry->vertexStreams().end());
-
-            BufferUpdateDesc updateDesc = { gpuStream->buffer().m_handle, gpuStream->stride() *  m_geometry->vertexOffset(),  gpuStream->stride() * reservedVerticies};
-            beginUpdateResource(&updateDesc);
-
-            GraphicsBuffer gpuBuffer(updateDesc);
-            auto dest = gpuBuffer.CreateViewRaw();
-            auto src = localStream.m_buffer.CreateViewRaw();
-            for(size_t i = 0; i < m_numberVertices; i++) {
-                auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
-                dest.WriteRaw(i * gpuStream->stride(), sp);
-            }
-            if(m_isSkinnedMesh) {
-                for(size_t i = 0; i < m_numberVertices; i++) {
-                    auto sp = src.rawByteSpan().subspan(i * localStream.m_stride, std::min(gpuStream->stride(), localStream.m_stride));
-                    dest.WriteRaw(((i + m_numberVertices) * gpuStream->stride()), sp);
-                }
-            }
-            endUpdateResource(&updateDesc);
+            updateVertexStream(localStream);
         }
-        {
-            BufferUpdateDesc updateDesc = { m_geometry->indexBuffer().m_handle, m_geometry->indexOffset() * GeometrySet::IndexBufferStride,  GeometrySet::IndexBufferStride * m_numberIndecies};
-            beginUpdateResource(&updateDesc);
-            GraphicsBuffer gpuBuffer(updateDesc);
-            auto dest = gpuBuffer.CreateIndexView();
-            auto src = indexStream.m_buffer.CreateIndexView();
-            for(size_t i = 0; i < m_numberIndecies; i++) {
-                dest.Write(i, src.Get(i));
-            }
-            endUpdateResource(&updateDesc);
-        }
+        updateIndexStream(indexStream);
+    }
 
+    bool cSubMeshEntity::isGeometryMismatch(cSubMesh* submesh) {
+        if (submesh->IndexStream().m_numberElements != m_numberIndecies) {
+            return true;
+        }
+        auto vertexStreams = m_subMesh->streamBuffers();
+        for(auto& localStream: vertexStreams) {
+            if(localStream.m_numberElements != m_numberVertices) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    cSubMeshEntity::cSubMeshEntity(
+        const tString& asName, cMeshEntity* apMeshEntity, cSubMesh* apSubMesh, cMaterialManager* apMaterialManager)
+        : iRenderable(asName)
+        , mpMeshEntity(apMeshEntity)
+        , m_subMesh(apSubMesh)
+        , mpMaterialManager(apMaterialManager) {
+        mbIsOneSided = m_subMesh->GetIsOneSided();
+        mvOneSidedNormal = m_subMesh->GetOneSidedNormal();
+        m_isSkinnedMesh  = (mpMeshEntity->GetMesh()->GetSkeleton() != nullptr);
+        auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
+        ASSERT(graphicsAllocator);
+        auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
+        m_subMeshChangeHandler = cSubMesh::NotifySubMeshChanged::Handler([&](cSubMesh::NotifyMesh notify) {
+            if (isGeometryMismatch(m_subMesh)) {
+                rebuildGpuVertexStreams();
+                return;
+            }
+            if (notify.changeIndexData) {
+                updateIndexStream(m_subMesh->IndexStream());
+            }
+            for (size_t i = 0; i < notify.m_semanticSize; i++) {
+                updateVertexStream(*m_subMesh->getStreamBySemantic(notify.m_semantic[i]));
+            }
+        });
+        m_subMeshChangeHandler.Connect(m_subMesh->m_notify);
+        rebuildGpuVertexStreams();
     }
 
     cSubMeshEntity::~cSubMeshEntity() {
@@ -120,14 +162,14 @@ namespace hpl {
     }
 
     cMaterial* cSubMeshEntity::GetMaterial() {
-        if (mpMaterial == NULL && mpSubMesh->GetMaterial() == NULL) {
+        if (mpMaterial == NULL && m_subMesh->GetMaterial() == NULL) {
             // Error("Materials for sub entity %s are NULL!\n",GetName().c_str());
         }
 
         if (mpMaterial)
             return mpMaterial;
         else
-            return mpSubMesh->GetMaterial();
+            return m_subMesh->GetMaterial();
     }
 
     static inline float3 WeightTransform(const cMatrixf& a_mtxA, float3 src, float weight) {
@@ -147,7 +189,6 @@ namespace hpl {
 
 
     void cSubMeshEntity::UpdateGraphicsForFrame(float afFrameTime) {
-        ////////////////////////////////////
         // Update things in parent first.
         mpMeshEntity->UpdateGraphicsForFrame(afFrameTime);
 
@@ -161,13 +202,13 @@ namespace hpl {
             m_activeCopy = (m_activeCopy + 1) % ForgeRenderer::SwapChainLength;
             mbGraphicsUpdated = true;
 
-            auto staticBindBuffers = mpSubMesh->streamBuffers();
-            auto bindPositionIt = mpSubMesh->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
-            auto bindNormalIt = mpSubMesh->getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL);
-            auto bindTangentIt = mpSubMesh->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
-            ASSERT(bindPositionIt != mpSubMesh->streamBuffers().end() &&
-                bindNormalIt != mpSubMesh->streamBuffers().end()  &&
-                bindTangentIt != mpSubMesh->streamBuffers().end()
+            auto staticBindBuffers = m_subMesh->streamBuffers();
+            auto bindPositionIt = m_subMesh->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
+            auto bindNormalIt = m_subMesh->getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL);
+            auto bindTangentIt = m_subMesh->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
+            ASSERT(bindPositionIt != m_subMesh->streamBuffers().end() &&
+                bindNormalIt != m_subMesh->streamBuffers().end()  &&
+                bindTangentIt != m_subMesh->streamBuffers().end()
             );
             auto bindPositonView = bindPositionIt->GetStructuredView<float3>(); // the static buffer data is the fixed pose
             auto bindNormalView = bindNormalIt->GetStructuredView<float3>();
@@ -198,8 +239,8 @@ namespace hpl {
 
             ASSERT(bindPositionIt->m_numberElements == m_numberVertices);
             for(size_t i = 0; i < m_numberVertices; i++) {
-                const std::span<float> weights = std::span<float>(&mpSubMesh->m_vertexWeights[(i * 4)], 4);
-                const std::span<uint8_t> boneIdxs = std::span<uint8_t>(&mpSubMesh->m_vertexBones[(i * 4)], 4);
+                const std::span<float> weights = std::span<float>(&m_subMesh->m_vertexWeights[(i * 4)], 4);
+                const std::span<uint8_t> boneIdxs = std::span<uint8_t>(&m_subMesh->m_vertexBones[(i * 4)], 4);
 
                 float3 bindPos = bindPositonView.Get(i);
                 float3 bindNormal = bindNormalView.Get(i);
@@ -247,7 +288,7 @@ namespace hpl {
     }
 	iVertexBuffer* cSubMeshEntity::GetVertexBuffer()
 	{
-		return mpSubMesh->GetVertexBuffer();
+		return m_subMesh->GetVertexBuffer();
 	}
 
 	cBoundingVolume* cSubMeshEntity::GetBoundingVolume()

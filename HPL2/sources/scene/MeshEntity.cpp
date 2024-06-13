@@ -52,11 +52,6 @@
 
 namespace hpl {
 
-	//////////////////////////////////////////////////////////////////////////
-	// CONSTRUCTORS
-	//////////////////////////////////////////////////////////////////////////
-
-	//-----------------------------------------------------------------------
 
 	cMeshEntity::cMeshEntity(const tString asName,cMesh* apMesh, cMaterialManager* apMaterialManager,
 							cMeshManager* apMeshManager, cAnimationManager *apAnimationManager) :
@@ -456,7 +451,7 @@ namespace hpl {
 					while(BoneIt.HasNext())
 					{
 						cBoneState *pBoneState = static_cast<cBoneState*>(BoneIt.Next());
-	
+
 						SetBoneMatrixFromBodyRec(mpBoneStateRoot->GetWorldMatrix(),pBoneState);
 					}
 
