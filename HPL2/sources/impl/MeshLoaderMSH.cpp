@@ -46,7 +46,7 @@
 
 namespace hpl {
 
-    bool gbLogMSHLoad = false;
+    static constexpr bool gbLogMSHLoad = false;
 
 	cMeshLoaderMSH::cMeshLoaderMSH(iLowLevelGraphics *apLowLevelGraphics) : iMeshLoader(apLowLevelGraphics)
 	{

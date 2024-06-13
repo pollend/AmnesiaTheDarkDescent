@@ -89,48 +89,56 @@ protected:
 
 //-----------------------------------------------------------------------
 
-class iEngineEntityMesh : public iEngineEntity
-{
+class iEngineEntityMesh : public iEngineEntity {
 public:
-	iEngineEntityMesh(iEntityWrapper* apParent);
-	~iEngineEntityMesh();
+    iEngineEntityMesh(iEntityWrapper* apParent);
+    ~iEngineEntityMesh();
 
-	void SetUpMesh();
-	cMeshEntity* GetMeshEntity() { return (cMeshEntity*)mpEntity; }
+    void SetUpMesh();
+    cMeshEntity* GetMeshEntity() override {
+        return (cMeshEntity*)mpEntity;
+    }
 
-	virtual bool Create(const tString& asName);
+    virtual bool Create(const tString& asName) override;
 
-	bool CheckRayIntersect(cEditorWindowViewport* apViewport, cVector3f* apPos, tVector3fVec* apTriangle, float* apT=NULL);
+    bool CheckRayIntersect(cEditorWindowViewport* apViewport, cVector3f* apPos, tVector3fVec* apTriangle, float* apT = NULL) override;
 
-	cBoundingVolume* GetPickBV(cEditorWindowViewport* apViewport) { return mpEntity->GetBoundingVolume(); }
+    cBoundingVolume* GetPickBV(cEditorWindowViewport* apViewport) override {
+        return mpEntity->GetBoundingVolume();
+    }
 
-	void Update();
-	void UpdateVisibility();
+    void Update() override;
+    void UpdateVisibility() override;
 
-	virtual void Draw(cEditorWindowViewport* apViewport,
-				DebugDraw* apFunctions,
-				bool abIsSelected,
-				bool abIsActive, const cColor& aHighlightCol) override;
-	virtual void DrawSolid(cEditorWindowViewport* apViewport,
-					 DebugDraw* apFunctions,
-					 const cColor& aCol) override;
+    virtual void Draw(
+        cEditorWindowViewport* apViewport,
+        DebugDraw* apFunctions,
+        bool abIsSelected,
+        bool abIsActive,
+        const cColor& aHighlightCol) override;
+    virtual void DrawSolid(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, const cColor& aCol) override;
 
-	// Own funcs
-	void SetCastShadows(bool abX);
-	void SetCoverage(float afX);
-	bool SetMaterial(const tString&);
-	bool SetCustomMaterial(const tString&, bool abDelete=true);
-	bool SetCustomMaterial(cMaterial*, bool abDelete=true);
+    // Own funcs
+    void SetCastShadows(bool abX);
+    void SetCoverage(float afX);
+    bool SetMaterial(const tString&);
+    bool SetCustomMaterial(const tString&, bool abDelete = true);
+    bool SetCustomMaterial(cMaterial*, bool abDelete = true);
 
-	static void SetDisabledCoverage(float afX) { mfDisabledCoverage = afX; }
-	static float GetDisabledCoverage() { return mfDisabledCoverage; }
+    static void SetDisabledCoverage(float afX) {
+        mfDisabledCoverage = afX;
+    }
+    static float GetDisabledCoverage() {
+        return mfDisabledCoverage;
+    }
 
 protected:
-	void SetMesh(cMesh* apMesh) { mpMesh = apMesh; }
+    void SetMesh(cMesh* apMesh) {
+        mpMesh = apMesh;
+    }
 
-	cMesh* mpMesh;
-
-	static float mfDisabledCoverage;
+    cMesh* mpMesh;
+    static float mfDisabledCoverage;
 };
 
 //-----------------------------------------------------------------------
@@ -179,7 +187,7 @@ public:
 
 	bool ReCreate(cMesh* apMesh);
 
-	iVertexBuffer* GetVertexBuffer();
+	cSubMesh* GetSubMesh();
 };
 
 //-----------------------------------------------------------------------

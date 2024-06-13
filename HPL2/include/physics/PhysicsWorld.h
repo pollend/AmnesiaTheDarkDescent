@@ -22,6 +22,7 @@
 
 #include <map>
 #include "graphics/DebugDraw.h"
+#include "graphics/GraphicsBuffer.h"
 #include "system/SystemTypes.h"
 #include "math/MathTypes.h"
 #include "graphics/GraphicsTypes.h"
@@ -127,8 +128,10 @@ namespace hpl {
 		virtual iCollideShape* CreateSphereShape(const cVector3f &avRadii, cMatrixf* apOffsetMtx)=0;
 		virtual iCollideShape* CreateCylinderShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx)=0;
 		virtual iCollideShape* CreateCapsuleShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx)=0;
-
 		virtual iCollideShape* CreateMeshShape(iVertexBuffer *apVtxBuffer)=0;
+		//virtual iCollideShape* CreateMeshShape(size_t numberVerticies,
+		//                GraphicsBuffer::BufferIndexView indexView,
+		//                GraphicsBuffer::BufferStructuredView<float3> position)=0;
 		/**
 		 * The buffer position must be pointing to where the data is saved!
 		 */

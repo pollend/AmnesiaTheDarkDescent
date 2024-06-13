@@ -72,9 +72,6 @@ namespace hpl {
 
 	class cMeshEntity : public iEntity3D
 	{
-	#ifdef __GNUC__
-		typedef iRenderable __super;
-	#endif
 	friend class cSubMeshEntity;
 	friend class cMeshEntityRootNodeUpdate;
 	friend class cMesh;

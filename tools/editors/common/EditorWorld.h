@@ -263,7 +263,7 @@ protected:
 	std::vector<tString> mvEntityCategories;
 	std::vector<tIntList> mvEntityCategoryTypes;
 
-	tEntityTypeList mlstEntityTypes;
+	std::vector<iEntityWrapperType*> mlstEntityTypes;
 
 	std::map<int, int> mmapIDRedirectors;
 

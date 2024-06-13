@@ -214,7 +214,7 @@ void cEntityWrapperBodyShape::Draw(	cEditorWindowViewport* apViewport, DebugDraw
 	options.m_transform = cMath::ToForgeMatrix4(*pMesh->GetMeshEntity()->GetSubMeshEntity(0)->GetModelMatrix(NULL));
 
 	cColor col = abIsSelected?cColor(1) : cColor(1,1,1,0.1f);
-	apFunctions->DebugWireFrameFromVertexBuffer(pMesh->GetVertexBuffer(), cMath::ToForgeVec4(col));
+	apFunctions->DebugWireFrameFromVertexBuffer(pMesh->GetSubMesh()->GetVertexBuffer(), cMath::ToForgeVec4(col));
 
 
 	// apFunctions->SetMatrix(pMesh->GetMeshEntity()->GetSubMeshEntity(0)->GetModelMatrix(NULL));

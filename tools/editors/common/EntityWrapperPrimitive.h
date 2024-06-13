@@ -86,7 +86,6 @@ public:
 protected:
 	iEngineEntity* CreateSpecificEngineEntity();
 	virtual cMesh* CreatePrimitiveMesh()=0;
-	//eEditorPrimitiveType mPType;
 
 	tString msMaterial;
 	bool mbCastShadows;

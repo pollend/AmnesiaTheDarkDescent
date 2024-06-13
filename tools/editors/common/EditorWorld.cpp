@@ -641,70 +641,58 @@ void iEditorWorld::AddEntityType(iEntityWrapperType* apType)
 
 //----------------------------------------------------------------------------
 
-iEntityWrapperType* iEditorWorld::GetEntityTypeByName(const tString& asX)
-{
-	tWString sName = cString::To16Char(asX);
-	iEntityWrapperType* pType = NULL;
-	tEntityTypeListIt it = mlstEntityTypes.begin();
-	for(;it!=mlstEntityTypes.end();++it)
-	{
-		iEntityWrapperType* pType = *it;
-		if(pType->GetName()==sName)
-			return pType;
-	}
+iEntityWrapperType* iEditorWorld::GetEntityTypeByName(const tString& asX) {
+    tWString sName = cString::To16Char(asX);
+    for (auto& pType : mlstEntityTypes) {
+        if (pType->GetName() == sName)
+            return pType;
+    }
 
-	Log("Type %s not created.\n", asX.c_str());
+    Log("Type %s not created.\n", asX.c_str());
 
-	return NULL;
+    return NULL;
 }
 
 //----------------------------------------------------------------------------
 
-iEntityWrapperType* iEditorWorld::GetEntityTypeByID(int alID)
-{
-	tEntityTypeListIt it = mlstEntityTypes.begin();
-	for(;it!=mlstEntityTypes.end();++it)
-	{
-		iEntityWrapperType* pType = *it;
-		if(pType->GetID()==alID)
-			return pType;
-	}
+iEntityWrapperType* iEditorWorld::GetEntityTypeByID(int alID) {
+    for (auto& pType : mlstEntityTypes) {
+        if (pType->GetID() == alID)
+            return pType;
+    }
 
-	Error("Type with ID %d not created.\n", alID);
+    Error("Type with ID %d not created.\n", alID);
 
-	return NULL;
-
+    return NULL;
 }
 
 //----------------------------------------------------------------------------
 
-iEntityWrapperType* iEditorWorld::GetEntityTypeByElement(cXmlElement* apElement)
-{
-	iEntityWrapperType* pDefaultType = NULL;
-	tEntityTypeListIt it = mlstEntityTypes.begin();
-	for(;it!=mlstEntityTypes.end();++it)
-	{
-		iEntityWrapperType* pType = *it;
-		if(pType->IsAppropriateType(apElement))
-			return pType;
+iEntityWrapperType* iEditorWorld::GetEntityTypeByElement(cXmlElement* apElement) {
+    iEntityWrapperType* pDefaultType = NULL;
+    for (auto& pType : mlstEntityTypes) {
+        if (pType->IsAppropriateType(apElement))
+            return pType;
 
-		if(pDefaultType==NULL && pType->IsAppropriateDefaultType(apElement))
-			pDefaultType = pType;
-	}
+        if (pDefaultType == NULL && pType->IsAppropriateDefaultType(apElement))
+            pDefaultType = pType;
+    }
 
-	SetShowLoadErrorPopUp();
-	Error("No appropriate type found for %s \"%s\" with ID %d\n", apElement->GetValue().c_str(), apElement->GetAttributeString("Name").c_str(),
-																apElement->GetAttributeInt("ID"));
-	if(pDefaultType)
-	{
-		Log("Trying default...%s\n", pDefaultType->ToString().c_str());
-		return pDefaultType;
-	}
-	else
-		Log("No default type found\n");
+    SetShowLoadErrorPopUp();
+    LOGF(
+        LogLevel::eERROR,
+        "No appropriate type found for %s \"%s\" with ID %d\n",
+        apElement->GetValue().c_str(),
+        apElement->GetAttributeString("Name").c_str(),
+        apElement->GetAttributeInt("ID"));
+    if (pDefaultType) {
+        LOGF(LogLevel::eINFO, "Trying default...%s\n", pDefaultType->ToString().c_str());
+        return pDefaultType;
+    } else {
+        LOGF(LogLevel::eINFO, "No default type found\n");
+    }
 
-
-	return NULL;
+    return NULL;
 }
 
 //----------------------------------------------------------------------------
@@ -716,20 +704,10 @@ int iEditorWorld::GetEntityTypeNum()
 
 //----------------------------------------------------------------------------
 
-iEntityWrapperType* iEditorWorld::GetEntityType(int alX)
-{
-	int i=0;
-	tEntityTypeListIt it = mlstEntityTypes.begin();
-	for(;it!=mlstEntityTypes.end();++it, ++i)
-	{
-		if(i==alX)
-			return *it;
-	}
-
-	return NULL;
+iEntityWrapperType* iEditorWorld::GetEntityType(int alX) {
+    return mlstEntityTypes[alX];
 }
 
-//----------------------------------------------------------------------------
 
 void iEditorWorld::SetTypeVisibility(int alTypeID, bool abX)
 {
@@ -1353,11 +1331,11 @@ iEntityWrapper* iEditorWorld::CreateEntityWrapperFromXMLElement(cXmlElement* apE
 			pEnt = CreateEntityWrapperFromData(pData);
 	}
 
-	if(pEnt==NULL)
-		Log("Failed loading entity of type %s named %s with ID %d\n", apElement->GetValue().c_str(),
+	if(pEnt==NULL) {
+		LOGF(LogLevel::eDEBUG, "Failed loading entity of type %s named %s with ID %d\n", apElement->GetValue().c_str(),
 																	  apElement->GetAttributeString("Name").c_str(),
 																	  apElement->GetAttributeInt("ID"));
-
+    }
 	return pEnt;
 }
 
