@@ -50,17 +50,14 @@ jobs:
         uses: microsoft/setup-msbuild@v1.1
       - name: Configure
         run: |
-          mkdir ${{ github.workspace }}\build && cd ${{ github.workspace }}\build
+          mkdir ${{ github.workspace }}
           cmake ${{ github.workspace }} -DVCPKG_INSTALL_OPTIONS="--binarysource=clear\;x-gha,readwrite" -DCMAKE_BUILD_TYPE:STRING=Release -DAMNESIA_GAME_DIRECTORY:STRING='' -G "Visual Studio 17 2022" -A x64
       - name: Build
         run: |
-          cd ${{ github.workspace }}\build
+          cd ${{ github.workspace }}
           msbuild ALL_BUILD.vcxproj /property:Configuration=Release
-      - name: Package Amnesia
-        working-directory: .\build
-        run: 7z a ..\amnesia-win-x86-64-release.zip *
       - name: Upload Amnesia artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: amnesia-win-x86-64-release
-          path: amnesia-win-x86-64-release.zip
+          name: amnesia-linux-x86-64-release
+          path: build

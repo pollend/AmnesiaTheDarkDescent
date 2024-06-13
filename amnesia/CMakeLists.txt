@@ -76,9 +76,7 @@ ELSEIF(LINUX)
 ENDIF()
 hpl_set_output_dir(Amnesia "") 
 
-add_custom_target(GameRelease DEPENDS Amnesia)
-set(AMNESIA_EXECUTABLE_OUTPUT_PATH  ${INSTALL_OUTPUT_PATH}/Amnesia)
-install(DIRECTORY DESTINATION ${AMNESIA_EXECUTABLE_OUTPUT_PATH})
+
 
 if(WIN32)
     add_custom_command ( TARGET Amnesia POST_BUILD
@@ -93,6 +91,11 @@ if(WIN32)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:DirectXShaderCompiler> $<TARGET_FILE_DIR:Amnesia>
     )
+ELSEIF(LINUX)
+    add_custom_command(TARGET Amnesia POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${IL_LIBRARIES}
+            $<TARGET_FILE_DIR:Amnesia>)
 endif()
 
 ##add_custom_command(

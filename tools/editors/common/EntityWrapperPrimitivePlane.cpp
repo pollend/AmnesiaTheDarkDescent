@@ -451,7 +451,7 @@ void cEntityWrapperPrimitivePlane::UpdateUVMapping() {
         mvUVCorners.push_back(res);
         texView.Write(i, float2(res.x, res.y));
     }
-    pVB->m_notify.Signal((cSubMesh::NotifyMesh){
+    pVB->m_notify.Signal(cSubMesh::NotifyMesh{
         .m_semanticSize = 1,
         .m_semantic = { ShaderSemantic::SEMANTIC_TEXCOORD0 },
     });
@@ -487,7 +487,7 @@ cMesh* cEntityWrapperPrimitivePlane::CreatePrimitiveMesh()
     cSubMesh::StreamBufferInfo::InitializeBuffer<cSubMesh::TangentTrait>(&tangentInfo, &tangent);
 
     MeshUtility::MeshCreateResult result = MeshUtility::CreatePlane(
-         cMath::ToForgeVec3(vEndCorner),Vector3(0,0,0),
+        Vector3(0,0,0), cMath::ToForgeVec3(vEndCorner),
         Vector2(1,0), Vector2(0,0), Vector2(0,1), Vector2(1,1),
         &index,
         &position,
