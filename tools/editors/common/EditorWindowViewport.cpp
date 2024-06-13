@@ -282,7 +282,7 @@ void cEditorWindowViewport::SetEnlarged(bool abX)
 		vPos = mvEnlargedPosition;
 		vSize = mvEnlargedSize;
 		vFBPos = cVector2l(0);
-	    vFBSize = cVector2l(mpEngineViewport->GetSize().x, mpEngineViewport->GetSize().y);
+	    vFBSize = cVector2l(mvEnlargedSize.x, mvEnlargedSize.y);
 	}
 	else
 	{

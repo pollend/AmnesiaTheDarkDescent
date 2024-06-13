@@ -808,7 +808,7 @@ namespace hpl {
             endUpdateResource(&indexUpdateDesc);
         }
 
-        if(!m_line2DSegments.empty()) {
+        if (!m_line2DSegments.empty()) {
             struct PositionColorVertex {
                 float3 position;
                 float4 color;
@@ -816,25 +816,25 @@ namespace hpl {
             const size_t numVertices = m_line2DSegments.size() * 2;
             const size_t vbSize = sizeof(PositionColorVertex) * numVertices;
             const size_t ibSize = sizeof(uint16_t) * numVertices;
-			const uint32_t stride = sizeof(PositionColorVertex);
-		    GPURingBufferOffset vb = graphicsAllocator->allocTransientVertexBuffer(vbSize);
-		    GPURingBufferOffset ib = graphicsAllocator->allocTransientIndexBuffer(ibSize);
+            const uint32_t stride = sizeof(PositionColorVertex);
+            GPURingBufferOffset vb = graphicsAllocator->allocTransientVertexBuffer(vbSize);
+            GPURingBufferOffset ib = graphicsAllocator->allocTransientIndexBuffer(ibSize);
             uint32_t indexBufferOffset = 0;
             uint32_t vertexBufferOffset = 0;
 
-		    BufferUpdateDesc vertexUpdateDesc = { vb.pBuffer, vb.mOffset, vbSize};
-		    BufferUpdateDesc indexUpdateDesc = { ib.pBuffer, ib.mOffset, ibSize};
+            BufferUpdateDesc vertexUpdateDesc = { vb.pBuffer, vb.mOffset, vbSize };
+            BufferUpdateDesc indexUpdateDesc = { ib.pBuffer, ib.mOffset, ibSize };
 
-		    beginUpdateResource(&vertexUpdateDesc);
-		    beginUpdateResource(&indexUpdateDesc);
-            for(auto& segment: m_line2DSegments) {
+            beginUpdateResource(&vertexUpdateDesc);
+            beginUpdateResource(&indexUpdateDesc);
+            for (auto& segment : m_line2DSegments) {
                 reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset++] = vertexBufferOffset;
-                reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset++] = PositionColorVertex {
+                reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset++] = PositionColorVertex{
                     float3(segment.m_start.getX(), segment.m_start.getY(), 0.0f),
                     float4(segment.m_color.getX(), segment.m_color.getY(), segment.m_color.getZ(), segment.m_color.getW())
                 };
                 reinterpret_cast<uint16_t*>(indexUpdateDesc.pMappedData)[indexBufferOffset++] = vertexBufferOffset;
-                reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset++] = PositionColorVertex {
+                reinterpret_cast<PositionColorVertex*>(vertexUpdateDesc.pMappedData)[vertexBufferOffset++] = PositionColorVertex{
                     float3(segment.m_end.getX(), segment.m_end.getY(), 0.0f),
                     float4(segment.m_color.getX(), segment.m_color.getY(), segment.m_color.getZ(), segment.m_color.getW())
                 };
@@ -843,19 +843,19 @@ namespace hpl {
             endUpdateResource(&indexUpdateDesc);
             cmdBindPipeline(cmd, m_lineSegmentPipeline2D.m_handle);
             cmdBindDescriptorSet(cmd, m_frameIndex, m_perColorViewDescriptorSet.m_handle);
-			cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &stride, &vb.mOffset);
-			cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT16, ib.mOffset);
+            cmdBindVertexBuffer(cmd, 1, &vb.pBuffer, &stride, &vb.mOffset);
+            cmdBindIndexBuffer(cmd, ib.pBuffer, INDEX_TYPE_UINT16, ib.mOffset);
             cmdDrawIndexed(cmd, indexBufferOffset, 0, 0);
         }
 
-        if(!m_uvQuads.empty()) {
+        if (!m_uvQuads.empty()) {
             struct UVVertex {
                 float3 position;
                 float2 uv;
                 float4 color;
             };
             std::sort(m_uvQuads.begin(), m_uvQuads.end(), [](const UVQuadRequest& a, const UVQuadRequest& b) {
-                if(a.m_uvImage.m_handle != b.m_uvImage.m_handle) {
+                if (a.m_uvImage.m_handle != b.m_uvImage.m_handle) {
                     return a.m_uvImage.m_handle < b.m_uvImage.m_handle;
                 }
                 return a.m_depthTest < b.m_depthTest;
