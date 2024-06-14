@@ -60,7 +60,7 @@ namespace hpl {
         {
             auto* graphicsAllocator = Interface<GraphicsAllocator>::Get();
             auto& opaqueSet = graphicsAllocator->resolveSet(GraphicsAllocator::AllocationSet::OpaqueSet);
-            m_geometry = opaqueSet.allocate(4 * mlMaxSegments, 6 * mlMaxSegments);
+            m_geometry = opaqueSet.allocate(4 * mlMaxSegments * NumberOfCopies, 6 * mlMaxSegments);
 
             auto& indexStream = m_geometry->indexBuffer();
             auto positionStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_POSITION);
@@ -72,72 +72,22 @@ namespace hpl {
             BufferUpdateDesc indexUpdateDesc = { indexStream.m_handle,
                                                  m_geometry->indexOffset() * GeometrySet::IndexBufferStride,
                                                  GeometrySet::IndexBufferStride * 6 * mlMaxSegments * NumberOfCopies };
-            BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle,
-                                                    m_geometry->vertexOffset() * positionStream->stride(),
-                                                    positionStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
-            BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle,
-                                                  m_geometry->vertexOffset() * normalStream->stride(),
-                                                  normalStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
-            BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle,
-                                                 m_geometry->vertexOffset() * colorStream->stride(),
-                                                 colorStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
-            BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle,
-                                                   m_geometry->vertexOffset() * textureStream->stride(),
-                                                   textureStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
-            BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle,
-                                                   m_geometry->vertexOffset() * tangentStream->stride(),
-                                                   tangentStream->stride() * 4 * mlMaxSegments * NumberOfCopies };
 
             beginUpdateResource(&indexUpdateDesc);
-            beginUpdateResource(&positionUpdateDesc);
-            beginUpdateResource(&normalUpdateDesc);
-            beginUpdateResource(&colorUpdateDesc);
-            beginUpdateResource(&textureUpdateDesc);
-            beginUpdateResource(&tangentUpdateDesc);
 
             GraphicsBuffer gpuIndexBuffer(indexUpdateDesc);
-            GraphicsBuffer gpuPositionBuffer(positionUpdateDesc);
-            GraphicsBuffer gpuNormalBuffer(normalUpdateDesc);
-            GraphicsBuffer gpuColorBuffer(colorUpdateDesc);
-            GraphicsBuffer gpuTextureBuffer(textureUpdateDesc);
-            GraphicsBuffer gpuTangentBuffer(tangentUpdateDesc);
-            auto indexView = gpuPositionBuffer.CreateIndexView();
+            auto indexView = gpuIndexBuffer.CreateIndexView();
 		    uint32_t index = 0;
             for (int i = 0; i < mlMaxSegments; ++i) {
                 for (int j = 0; j < 3; j++) {
-                    indexView.Write(index, j + i * 4);
+                    indexView.Write(index++, j + i * 4);
                 }
                 for (int j = 2; j < 5; j++) {
-                    indexView.Write(index, (j == 4 ? 0 : j) + i * 4);
+                    indexView.Write(index++, (j == 4 ? 0 : j) + i * 4);
                 }
             }
 
-            for(size_t copyIdx = 0; copyIdx < 2; copyIdx++) {
-                auto positionView = gpuPositionBuffer.CreateStructuredView<float3>(positionStream->stride() * copyIdx * mlMaxSegments * 4);
-                auto normalView = gpuNormalBuffer.CreateStructuredView<float3>(normalStream->stride() * copyIdx * mlMaxSegments * 4);
-                auto colorView = gpuColorBuffer.CreateStructuredView<float4>(colorStream->stride() * copyIdx * mlMaxSegments * 4);
-                auto textureView = gpuTextureBuffer.CreateStructuredView<float2>(textureStream->stride() * copyIdx * mlMaxSegments * 4);
-                auto tangentView = gpuTangentBuffer.CreateStructuredView<float3>(tangentStream->stride() * copyIdx * mlMaxSegments * 4);
-		        for(int i=0; i < mlMaxSegments; ++i)
-		        {
-		            for(size_t j = 0; j < 4; j++) {
-                        tangentView.Write((i *  4) + j, float3(0, 0, 1));
-                        positionView.Write((i *  4) + j, float3(0,0,0));
-                        normalView.Write((i *  4) + j, float3(0.0f, 0.0f, 1.0f));
-                        colorView.Write((i *  4) + j, float4(mColor.r, mColor.g, mColor.g, mColor.a));
-                        textureView.Write((i *  4) + j, float2(0,0));
-                    }
-		        }
-                Matrix4 trans = Matrix4::identity();
-                hpl::MeshUtility::MikkTSpaceGenerate(4 * mlMaxSegments, 6 * mlMaxSegments, &indexView, &positionView, &textureView, &normalView, &tangentView);
-		    }
-
             endUpdateResource(&indexUpdateDesc);
-            endUpdateResource(&positionUpdateDesc);
-            endUpdateResource(&normalUpdateDesc);
-            endUpdateResource(&colorUpdateDesc);
-            endUpdateResource(&textureUpdateDesc);
-            endUpdateResource(&tangentUpdateDesc);
         }
 
 		mbApplyTransformToBV = false;
@@ -223,7 +173,6 @@ namespace hpl {
 	}
 
 	static cVector2f gvPosAdd[4] = {
-		//cVector2f (1,1), cVector2f (1,0), cVector2f (-1,0), cVector2f (-1,1)
 		cVector2f (1,0), cVector2f (-1,0), cVector2f (-1,1), cVector2f (1,1)
 	};
 
@@ -245,11 +194,21 @@ namespace hpl {
         auto normalStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_NORMAL);
         auto tangentStream = m_geometry->getStreamBySemantic(ShaderSemantic::SEMANTIC_TANGENT);
 
-        BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle, positionStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy) + m_geometry->vertexOffset()), positionStream->stride() * mlMaxSegments * 4 };
-        BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle, textureStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy)+ m_geometry->vertexOffset()), textureStream->stride() * mlMaxSegments * 4 };
-        BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle, colorStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy)+ m_geometry->vertexOffset()), colorStream->stride() * mlMaxSegments * 4 };
-        BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle, normalStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy)+ m_geometry->vertexOffset()), normalStream->stride() * mlMaxSegments * 4 };
-        BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle, tangentStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy)+ m_geometry->vertexOffset()), tangentStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc positionUpdateDesc = { positionStream->buffer().m_handle,
+            positionStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy) + m_geometry->vertexOffset()),
+            positionStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc textureUpdateDesc = { textureStream->buffer().m_handle,
+            textureStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy) + m_geometry->vertexOffset()),
+            textureStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc colorUpdateDesc = { colorStream->buffer().m_handle,
+            colorStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy) + m_geometry->vertexOffset()),
+            colorStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc normalUpdateDesc = { normalStream->buffer().m_handle,
+            normalStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy) + m_geometry->vertexOffset()),
+            normalStream->stride() * mlMaxSegments * 4 };
+        BufferUpdateDesc tangentUpdateDesc = { tangentStream->buffer().m_handle,
+            tangentStream->stride()  * ((mlMaxSegments * 4 * m_activeCopy) + m_geometry->vertexOffset()),
+            tangentStream->stride() * mlMaxSegments * 4 };
 
         beginUpdateResource(&positionUpdateDesc);
         beginUpdateResource(&textureUpdateDesc);
@@ -298,7 +257,7 @@ namespace hpl {
 			}
 
 			//Calculate properties
-			cVector3f vPos = pPart->GetSmoothPosition();
+            cVector3f vPos = pPart->GetSmoothPosition();
 			cVector3f vDelta = vPos - vPrevPos;
 			float fLength = vDelta.Length();
 			cVector3f vUp = vDelta / fLength;
@@ -307,51 +266,50 @@ namespace hpl {
 
 			//Update position
 			for(int i=0; i<4; ++i) {
-				positionView.Write(segmentIndex + i, v3ToF3(cMath::ToForgeVec3(vPrevPos + vRight * gvPosAdd[i].x*mfRadius + vUp * gvPosAdd[i].y*fLength)));
-			    //SetVec4(&pPosArray[i*4], vPrevPos + vRight * gvPosAdd[i].x*mfRadius + vUp * gvPosAdd[i].y*fLength);
+				positionView.Write((segmentIndex * 4) + i, v3ToF3(cMath::ToForgeVec3(vPrevPos + vRight * gvPosAdd[i].x * mfRadius + vUp * gvPosAdd[i].y*fLength)));
 		    }
 
 			//Update uv
 			if(lCount==2 && (fLength < fSegmentLength || fSegmentLength==0))
 			{
+
 				//No segments
 				if(fSegmentLength==0)
 				{
 					float fYAdd = 1 - fLength/ mfLengthTileSize;
-                    textureView.Write(segmentIndex + 0, v2ToF2(cMath::ToForgeVec2(vTexCoords[0] - cVector2f(0,fYAdd))));
-                    textureView.Write(segmentIndex + 1, v2ToF2(cMath::ToForgeVec2(vTexCoords[1] - cVector2f(0,fYAdd))));
-                    textureView.Write(segmentIndex + 2, v2ToF2(cMath::ToForgeVec2(vTexCoords[2])));
-                    textureView.Write(segmentIndex + 3, v2ToF2(cMath::ToForgeVec2(vTexCoords[3])));
+                    textureView.Write((segmentIndex * 4) + 0, v2ToF2(cMath::ToForgeVec2(vTexCoords[0] - cVector2f(0,fYAdd))));
+                    textureView.Write((segmentIndex * 4) + 1, v2ToF2(cMath::ToForgeVec2(vTexCoords[1] - cVector2f(0,fYAdd))));
+                    textureView.Write((segmentIndex * 4) + 2, v2ToF2(cMath::ToForgeVec2(vTexCoords[2])));
+                    textureView.Write((segmentIndex * 4) + 3, v2ToF2(cMath::ToForgeVec2(vTexCoords[3])));
 				}
 				//First segment of many
 				else
 				{
 					float fYAdd = (1 - (fLength / fSegmentLength))*mfLengthTileAmount;
 
-                    textureView.Write(segmentIndex + 0, v2ToF2(cMath::ToForgeVec2(vTexCoords[0] - cVector2f(0,fYAdd))));
-                    textureView.Write(segmentIndex + 1, v2ToF2(cMath::ToForgeVec2(vTexCoords[1] - cVector2f(0,fYAdd))));
-                    textureView.Write(segmentIndex + 2, v2ToF2(cMath::ToForgeVec2(vTexCoords[2])));
-                    textureView.Write(segmentIndex + 3, v2ToF2(cMath::ToForgeVec2(vTexCoords[3])));
+                    textureView.Write((segmentIndex * 4) + 0, v2ToF2(cMath::ToForgeVec2(vTexCoords[0] - cVector2f(0,fYAdd))));
+                    textureView.Write((segmentIndex * 4) + 1, v2ToF2(cMath::ToForgeVec2(vTexCoords[1] - cVector2f(0,fYAdd))));
+                    textureView.Write((segmentIndex * 4) + 2, v2ToF2(cMath::ToForgeVec2(vTexCoords[2])));
+                    textureView.Write((segmentIndex * 4) + 3, v2ToF2(cMath::ToForgeVec2(vTexCoords[3])));
 				}
 			}
 			else
 			{
 				for(int i=0; i<4; ++i) {
-                    textureView.Write(segmentIndex + i, v2ToF2(cMath::ToForgeVec2(vTexCoords[i])));
+                    textureView.Write((segmentIndex * 4) + i, v2ToF2(cMath::ToForgeVec2(vTexCoords[i])));
 			    }
 			}
 
 			//Update Normal and Tangent
 			for(int i=0; i<4; ++i)
 			{
-                normalView.Write(i + segmentIndex, v3ToF3(cMath::ToForgeVec3(vFwd)));
-			    tangentView.Write(i + segmentIndex, v3ToF3(cMath::ToForgeVec3(vRight)));
-                colorView.Write(i + segmentIndex,float4(finalColor.r,finalColor.g,finalColor.b,finalColor.a));
+                normalView.Write(i + (segmentIndex * 4), v3ToF3(cMath::ToForgeVec3(vFwd)));
+			    tangentView.Write(i + (segmentIndex * 4), v3ToF3(cMath::ToForgeVec3(vRight)));
+                colorView.Write(i + (segmentIndex * 4),float4(finalColor.r,finalColor.g,finalColor.b,finalColor.a));
 			}
 
             segmentIndex++;
 
-			//Update misc
 			vPrevPos = vPos;
 		}
 
