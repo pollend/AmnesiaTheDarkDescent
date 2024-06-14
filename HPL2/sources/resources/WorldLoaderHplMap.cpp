@@ -21,6 +21,7 @@
 
 #include "Common_3/Graphics/Interfaces/IGraphics.h"
 #include "Common_3/Utilities/Log/Log.h"
+#include "Common_3/Utilities/ThirdParty/OpenSource/ModifiedSonyMath/sse/vectormath.hpp"
 #include "engine/RTTI.h"
 #include "graphics/GraphicsBuffer.h"
 #include "graphics/Image.h"
@@ -1412,109 +1413,59 @@ namespace hpl {
 	void cWorldLoaderHplMap::CombineObjectsAndCreatePhysics(std::vector<cHplMapPhysicsObject> &avObjects, int alFirstIdx, int alLastIdx)
 	{
 		if(gbLog) Log("  Combining objects %d -> %d\n", alFirstIdx, alLastIdx);
+		tString sName = "CombinedObjects"+cString::ToString(mlCombinedBodyNameCount);
 		const int lMaxIndices= 30;
 
-		///////////////////////////////////////////
-		//Iterate objects to get the total amount of vertex data
-		int lTotalVtxAmount =0;
-		int lTotalIdxAmount =0;
-		tString sName = "CombinedObjects"+cString::ToString(mlCombinedBodyNameCount);
-		for(int i=alFirstIdx; i<=alLastIdx; ++i)
-		{
-			if(avObjects[i].mpUserData->mbCollides==false) continue;
+		mlCombinedBodyNameCount++;
 
-			iVertexBuffer *pVtxBuffer = avObjects[i].mpObject->GetVertexBuffer();
+        GraphicsBuffer positionBuffer;
+        GraphicsBuffer indexBuffer;
+
+        GraphicsBuffer::BufferStructuredView<float3> positionView = positionBuffer.CreateStructuredView<float3>();
+        GraphicsBuffer::BufferIndexView indexView = indexBuffer.CreateIndexView();
+       
+		size_t VertexElementIdx = 0;
+		size_t indexElementIdx = 0;
+		//Fill vertex buffer with data
+		for(int vtxbuffer=alFirstIdx; vtxbuffer<=alLastIdx; ++vtxbuffer)
+		{
+			if(avObjects[vtxbuffer].mpUserData->mbCollides == false) continue;
+
+			cSubMeshEntity *pObject = avObjects[vtxbuffer].mpObject;
+			cSubMesh *pSubMesh =  avObjects[vtxbuffer].mpObject->GetSubMesh();
+		    auto& indexStream =pSubMesh->IndexStream();
 
 			//Do a special debug test and skip highpoly entities, loading the map faster.
-            if((mlCurrentFlags & eWorldLoadFlag_FastPhysicsLoad) && pVtxBuffer->GetIndexNum() > lMaxIndices)	continue;
+			if((mlCurrentFlags & eWorldLoadFlag_FastPhysicsLoad) && indexStream.m_numberElements > lMaxIndices) continue;
+            LOGF_IF(LogLevel::eERROR, gbLog, "   Copying position data from '%s'\n", pObject->GetName().c_str());
 
 
-			lTotalVtxAmount += pVtxBuffer->GetVertexNum();
-			lTotalIdxAmount += pVtxBuffer->GetIndexNum();
+            const cMatrixf worldTransform = pObject->GetWorldMatrix();
+		    auto positionStream = pSubMesh->getStreamBySemantic(SEMANTIC_POSITION);
+		    ASSERT(positionStream != pSubMesh->streamBuffers().end());
+            auto subIndexView = indexStream.GetView();
+            auto subPositionView = positionStream->GetStructuredView<float3>();
 
-			if(gbLog) Log("   '%s' has %d vtx and %d idx\n",avObjects[i].mpObject->GetName().c_str(),pVtxBuffer->GetVertexNum(),pVtxBuffer->GetIndexNum());
+            for (size_t i = 0; i < indexStream.m_numberElements; i++) {
+				indexView.Write(indexElementIdx++,VertexElementIdx + subIndexView.Get(i));
+			}
+            for (size_t i = 0; i < positionStream->m_numberElements; i++) {
+                float3 localPos = subPositionView.Get(i);
+                cVector3f outputPos = cMath::MatrixMul(worldTransform, cVector3f(localPos.x, localPos.y, localPos.z));
+                positionView.Write(VertexElementIdx++, float3(outputPos.x, outputPos.y, outputPos.z));
+            }
 		}
-		if(gbLog) Log("   Total amount %d vtx and %d idx\n",lTotalVtxAmount, lTotalIdxAmount);
-
-		///////////////////////////////////////////
-		//If no vertex buffers, then just exit
-		if(lTotalVtxAmount<=0 || lTotalIdxAmount<=0)
+		if(VertexElementIdx<=0 || indexElementIdx<=0)
 		{
 			return;
 		}
-		mlCombinedBodyNameCount++;
 
 
-		///////////////////////////////////////////
-		//Create the vertex buffer (skipping color!)
-		auto* targetVertexBuffer = static_cast<LegacyVertexBuffer*>(mpGraphics->GetLowLevel()->CreateVertexBuffer(	eVertexBufferType_Software, eVertexBufferDrawType_Tri,
-																					eVertexBufferUsageType_Dynamic,lTotalVtxAmount, lTotalIdxAmount));
-
-		targetVertexBuffer->CreateElementArray(eVertexBufferElement_Position,eVertexBufferElementFormat_Float, 4);
-		targetVertexBuffer->ResizeArray(eVertexBufferElement_Position, lTotalVtxAmount * 4);
-		auto* targetPositionElement = targetVertexBuffer->GetElement(eVertexBufferElement_Position);
-		ASSERT(targetPositionElement != nullptr && "positionElement is null");
-
-		//Set up and get indices
-		targetVertexBuffer->ResizeIndices(lTotalIdxAmount);
-		unsigned int* pIndexArray = targetVertexBuffer->GetIndices();
-
-		///////////////////////////////////////////
-		//Fill vertex buffer with data
-		int lIdxOffset =0;
-		size_t targetPositionOffset = 0;
-		for(int vtxbuffer=alFirstIdx; vtxbuffer<=alLastIdx; ++vtxbuffer)
-		{
-			if(avObjects[vtxbuffer].mpUserData->mbCollides==false) continue;
-
-			cSubMeshEntity *pObject = avObjects[vtxbuffer].mpObject;
-
-			////////////////////////////
-			//Add colliders if any
-			cSubMesh *pSubMesh =  avObjects[vtxbuffer].mpObject->GetSubMesh();
-
-			//Do a special debug test and skip highpoly entities, loading the map faster.
-			if((mlCurrentFlags & eWorldLoadFlag_FastPhysicsLoad) && pSubMesh->GetVertexBuffer()->GetIndexNum() > lMaxIndices) continue;
-
-			if(gbLog) Log("   Copying position data from '%s'\n", pObject->GetName().c_str());
-
-			////////////////////////
-			//Get vertex copy and transform
-			iVertexBuffer *pSubVtxBuffer = pObject->GetVertexBuffer();
-			auto* pTransformedVtxBuffer = static_cast<LegacyVertexBuffer*>(pSubVtxBuffer->CreateCopy(	eVertexBufferType_Software, eVertexBufferUsageType_Static,
-																				eVertexElementFlag_Position));
-			pTransformedVtxBuffer->Transform(pObject->GetWorldMatrix());
-			auto sourceElement = pTransformedVtxBuffer->GetElement(eVertexBufferElement_Position);
-			ASSERT(targetPositionElement != nullptr && "targetPositionElement != nullptr");
-			ASSERT(targetPositionElement->m_type == sourceElement->m_type && "targetPositionElement->m_type == sourceElement->m_type");
-			ASSERT(targetPositionElement->m_num == sourceElement->m_num && "targetPositionElement->m_num == sourceElement->m_num");
-
-			auto elementStart = &(targetPositionElement->Data().data()[targetPositionOffset]);
-			std::copy(sourceElement->Data().begin(), sourceElement->Data().end(), elementStart);
-			targetPositionOffset += sourceElement->Data().size();
-
-			//Copy to index array and increase index pointer
-			unsigned int* pTransIdxArray = pTransformedVtxBuffer->GetIndices();
-			for(int i=0; i<pTransformedVtxBuffer->GetIndexNum(); ++i)
-			{
-				pIndexArray[i] = pTransIdxArray[i] + lIdxOffset;
-			}
-
-			lIdxOffset += pTransformedVtxBuffer->GetVertexNum();
-			pIndexArray += pTransformedVtxBuffer->GetIndexNum();
-
-			hplDelete(pTransformedVtxBuffer);
-		}
-
-		targetVertexBuffer->Compile(0);
-
-
-		///////////////////////////////////////////
 		//Create the mesh physics body
 		iRenderable *pFirstObject = avObjects[alFirstIdx].mpObject;
 
-		iCollideShape *pShape = mpCurrentPhysicsWorld->CreateMeshShape(targetVertexBuffer);
-		hplDelete(targetVertexBuffer);
+		iCollideShape *pShape = mpCurrentPhysicsWorld->CreateMeshShape(indexElementIdx, 0, 0,
+		    indexView, positionView);
 
 		iPhysicsBody *pBody = mpCurrentPhysicsWorld->CreateBody(sName,pShape);
 		pBody->SetMass(0);
