@@ -16,6 +16,9 @@
 #include "Common_3/Utilities/Math/MathTypes.h"
 #include "FixPreprocessor.h"
 
+#include "graphics/GraphicsBuffer.h"
+
+
 namespace hpl {
 
 class DebugDraw final {
@@ -59,6 +62,19 @@ class DebugDraw final {
         void DebugDraw2DLineQuad(cRect2f rect, const Vector4& color);
 
         // draws line
+        void DebugSolidFromVertexBuffer(
+            size_t numberIndecies,
+            GraphicsBuffer::BufferStructuredView<float3> position,
+            GraphicsBuffer::BufferIndexView index,
+            const Vector4& color,
+            const DebugDrawOptions& options = DebugDrawOptions());
+        void DebugWireFrameFromVertexBuffer(
+            size_t numberIndecies,
+            GraphicsBuffer::BufferStructuredView<float3> position,
+            GraphicsBuffer::BufferIndexView index,
+            const Vector4& color,
+            const DebugDrawOptions& options = DebugDrawOptions());
+
         void DebugSolidFromVertexBuffer(iVertexBuffer* vertexBuffer, const Vector4& color, const DebugDrawOptions& options = DebugDrawOptions());
         void DebugWireFrameFromVertexBuffer(iVertexBuffer* vertexBuffer, const Vector4& color, const DebugDrawOptions& options = DebugDrawOptions());
         void DebugDrawLine(const Vector3& start, const Vector3& end, const Vector4& color, const DebugDrawOptions& options = DebugDrawOptions());

@@ -29,10 +29,10 @@
 
 #include "graphics/Color.h"
 #include "graphics/DebugDraw.h"
+#include "graphics/MeshUtility.h"
 
 #include <algorithm>
 
-//----------------------------------------------------------------------
 
 cEntityWrapperTypeBone::cEntityWrapperTypeBone() : iEntityWrapperType(eEditorEntityType_Bone, _W("Bone"), "Bone")
 {
@@ -113,13 +113,10 @@ iEntityWrapper* cEntityWrapperDataBone::CreateSpecificEntity()
 cEntityWrapperBone::cEntityWrapperBone(iEntityWrapperData* apData) : iEntityWrapper(apData)
 {
 	mpParentBone = NULL;
-	mpVBBone = NULL;
 }
 
 cEntityWrapperBone::~cEntityWrapperBone()
 {
-	if(mpVBBone)
-		hplDelete(mpVBBone);
 }
 
 //----------------------------------------------------------------------
@@ -197,17 +194,15 @@ bool cEntityWrapperBone::CheckRayIntersect(cEditorWindowViewport* apViewport, cV
 	// Check Links to children
 	for(int i=0;i<(int)mvChildBones.size();++i)
 	{
-		float fT;
-		cVector3f vPos;
 		cEntityWrapperBone* pBone = mvChildBones[i];
-		if(cMath::CheckLineTriVertexBufferIntersection(	vStart, vEnd, cMatrixf::Identity, pBone->GetBoneVB(), &vPos,
-														&fT, NULL))
+		auto result = pBone->RayIntersection(cMath::ToForgeVec3(vStart), cMath::ToForgeVec3(vEnd));
+		if(result.hit)
 		{
 			bIntersect=true;
-			if(fT<fMinT)
+			if(result.ftT<fMinT)
 			{
-				fMinT = fT;
-				vMinPos = vPos;
+				fMinT = result.ftT;
+				vMinPos = cMath::FromForgeVector3(result.hitPosition);
 			}
 		}
 	}
@@ -289,16 +284,27 @@ void cEntityWrapperBone::Draw(cEditorWindowViewport* apViewport, DebugDraw* apFu
 
 void cEntityWrapperBone::DrawBone(cEditorWindowViewport* apViewport, DebugDraw* apFunctions, iEditorEditMode* apEditMode, bool abIsSelected)
 {
-	if(mpVBBone)
+	if(numIndecies > 0)
 	{
-		apFunctions->DebugWireFrameFromVertexBuffer(mpVBBone, Vector4(0,1,0,1));
+		apFunctions->DebugWireFrameFromVertexBuffer(
+            numIndecies,
+            positionBuffer.CreateStructuredView<float3>(),
+            indexBuffer.CreateIndexView()
+		    , Vector4(color.r,color.g,color.b,color.a));
 	}
 }
 
-//----------------------------------------------------------------------
 
-//----------------------------------------------------------------------
+MeshUtility::MeshIntersectionResult cEntityWrapperBone::RayIntersection(Vector3 lineStart, Vector3 lineEnd) {
+    return MeshUtility::RayMeshIntersection(
+        false,
+        numIndecies,
+        lineStart, lineEnd,
+        indexBuffer.CreateIndexView(),
+        positionBuffer.CreateStructuredView<float3>()
+    );
 
+}
 
 void cEntityWrapperBone::OnSetSelected(bool abX)
 {
@@ -310,32 +316,13 @@ void cEntityWrapperBone::OnSetSelected(bool abX)
 	}
 }
 
-//----------------------------------------------------------------------
 
 
 void cEntityWrapperBone::SetBoneVBColor(const cColor& aCol)
 {
-	if(mpVBBone==NULL)
-		return;
-
-	float *fColArray = mpVBBone->GetFloatArray(eVertexBufferElement_Color0);
-	int lStride = mpVBBone->GetElementNum(eVertexBufferElement_Color0);
-
-	for(int i=0;i<mpVBBone->GetVertexNum();++i)
-	{
-		fColArray[i*lStride] = aCol.r;
-		fColArray[i*lStride+1] = aCol.g;
-		fColArray[i*lStride+2] = aCol.b;
-		fColArray[i*lStride+3] = aCol.a;
-	}
-
-	mpVBBone->UpdateData(eVertexElementFlag_Color0, false);
+    color = aCol;
 }
 
-
-//----------------------------------------------------------------------
-//----------------------------------------------------------------------
-//----------------------------------------------------------------------
 
 void cEntityWrapperBone::CreateLinkToParent()
 {
@@ -346,33 +333,36 @@ void cEntityWrapperBone::CreateLinkToParent()
 	float fLength = vDirToParent.Length();
 	vDirToParent=vDirToParent/fLength;
 
-	cMeshCreator* pCreator = GetEditorWorld()->GetEditor()->GetEngine()->GetGraphics()->GetMeshCreator();
-    cMesh* pMesh = pCreator->CreateCone("", cVector2f(0.01f, fLength), 4, "editor_rect.mat");
+    auto position = positionBuffer.CreateStructuredView<float3>();
+    auto index = indexBuffer.CreateIndexView();
+    MeshUtility::MeshCreateResult result = MeshUtility::CreateCone(float2(0.01f, fLength), 4, &index, &position);
+    numIndecies = result.numIndices;
+    numVertices = result.numVertices;
 
-	mpVBBone = pMesh->GetSubMesh(0)->GetVertexBuffer()->CreateCopy(eVertexBufferType_Hardware, eVertexBufferUsageType_Dynamic,
-																	eVertexElementFlag_Normal | eVertexElementFlag_Position |
-																	eVertexElementFlag_Color0 | eVertexElementFlag_Texture0);
+    cVector3f vUp = mvPosition - mpParentBone->GetPosition();
 
-	hplDelete(pMesh);
+    cVector3f vRight, vFwd;
+    cVector3f vWorldRight = cVector3f(1, 0, 0);
 
-	cVector3f vUp = mvPosition-mpParentBone->GetPosition();
+    vRight = vWorldRight - cMath::Vector3Cross(cMath::Vector3Dot(vWorldRight, vUp), vUp);
+    vRight = cMath::Vector3Project(vRight, vWorldRight);
+    vFwd = cMath::Vector3Cross(vRight, vUp);
 
-	cVector3f vRight, vFwd;
-	cVector3f vWorldRight = cVector3f(1,0,0);
+    cMath::Vector3OrthonormalizeBasis(vUp, vRight, vFwd, vUp, vRight, vFwd);
 
-	vRight = vWorldRight - cMath::Vector3Cross(cMath::Vector3Dot(vWorldRight, vUp), vUp);
-	vRight = cMath::Vector3Project(vRight, vWorldRight);
-	vFwd = cMath::Vector3Cross(vRight, vUp);
+    cMatrixf mtxRotation = cMath::MatrixInverse(cMath::MatrixUnitVectors(vRight, vUp, vFwd, 0)).GetTranspose();
+    for(size_t i = 0; i < numVertices; i++) {
+        float3 p = position.Get(i);
+        Vector4 result =
+            cMath::ToForgeMatrix4(
+                cMath::MatrixMul(cMath::MatrixTranslate(mvPosition),
+                cMath::MatrixMul(mtxRotation, cMath::MatrixTranslate(cVector3f(0, -fLength * 0.5f, 0))))) * Vector4(p.x, p.y, p.z, 1.0f);
+        position.Write(i, float3(result.getX(), result.getY(), result.getZ()));
+    }
 
-	cMath::Vector3OrthonormalizeBasis(vUp, vRight, vFwd, vUp, vRight, vFwd);
-
-	cMatrixf mtxRotation = cMath::MatrixInverse(cMath::MatrixUnitVectors(vRight, vUp, vFwd,0)).GetTranspose();
-	mpVBBone->Transform(cMath::MatrixMul(cMath::MatrixTranslate(mvPosition),cMath::MatrixMul(mtxRotation, cMath::MatrixTranslate(cVector3f(0,-fLength*0.5f,0)))));
-
-	SetBoneVBColor(cColor(0.3f,1));
+    SetBoneVBColor(cColor(0.3f, 1));
 }
 
-//----------------------------------------------------------------------
 
 void cEntityWrapperBone::OnAddToWorld()
 {
@@ -380,4 +370,3 @@ void cEntityWrapperBone::OnAddToWorld()
 	pType->AddBone(this);
 }
 
-//----------------------------------------------------------------------

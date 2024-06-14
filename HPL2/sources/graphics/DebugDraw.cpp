@@ -549,6 +549,39 @@ namespace hpl {
     }
 
     void DebugDraw::DebugSolidFromVertexBuffer(
+        size_t numberIndecies,
+        GraphicsBuffer::BufferStructuredView<float3> position,
+        GraphicsBuffer::BufferIndexView index,
+        const Vector4& color,
+        const DebugDrawOptions& options) {
+        for (uint32_t i = 0; i < numberIndecies; i += 3) {
+
+            float3 p1 = position.Get(index.Get(i + 0));
+            float3 p2 = position.Get(index.Get(i + 1));
+            float3 p3 = position.Get(index.Get(i + 2));
+            DrawTri(f3Tov3(p1), f3Tov3(p2), f3Tov3(p3), color, options);
+        }
+    }
+    void DebugDraw::DebugWireFrameFromVertexBuffer(
+        size_t numberIndecies,
+        GraphicsBuffer::BufferStructuredView<float3> position,
+        GraphicsBuffer::BufferIndexView index,
+        const Vector4& color,
+        const DebugDrawOptions& options) {
+        for (uint32_t i = 0; i < numberIndecies; i += 3) {
+            Vector3 points[] = {
+                f3Tov3(position.Get(index.Get(i + 0))),
+                f3Tov3(position.Get(index.Get(i + 1))),
+                f3Tov3(position.Get(index.Get(i + 2)))
+            };
+            for (int i = 0; i < 3; ++i) {
+                int lNext = i == 2 ? 0 : i + 1;
+                DebugDrawLine(points[i], points[lNext], color, options);
+            }
+        }
+    }
+
+    void DebugDraw::DebugSolidFromVertexBuffer(
         iVertexBuffer* vertexBuffer, const Vector4& color, const DebugDrawOptions& options) {
         ///////////////////////////////////////
         // Set up variables

@@ -15,6 +15,18 @@ namespace hpl::MeshUtility {
         uint32_t numIndices;
     };
 
+    enum class RayCullMode {
+        Backface,
+        FrontFace,
+        Both
+    };
+    struct MeshIntersectionResult {
+        bool hit;
+        float ftT;
+        uint32_t triIdx;
+        Vector3 hitPosition;
+    };
+
     // for create might have to offset the indecies
     //void OffsetIndecies(uint32_t vtxOffset, uint32_t numIndecies, AssetBuffer::BufferIndexView* index);
 
@@ -90,6 +102,19 @@ namespace hpl::MeshUtility {
 
     );
 
+    struct LineIntersectionResult {
+        bool hit;
+        float hitT;
+    };
+
+    LineIntersectionResult TesLineTriangleIntersection(
+        const Vector3& avLineStart,
+        const Vector3& avLineEnd,
+        const Vector3& avP0,
+        const Vector3& avP1,
+        const Vector3& avP2,
+        bool abSkipBackfacing);
+
     MeshCreateResult CreatePlane(
         Vector3 p1,
         Vector3 p2,
@@ -105,7 +130,19 @@ namespace hpl::MeshUtility {
         std::variant<GraphicsBuffer::BufferStructuredView<float3>*, GraphicsBuffer::BufferStructuredView<float4>*> tangent
     );
 
+    MeshIntersectionResult RayMeshIntersection(
+        bool skipBackfaces,
+        size_t numIndices,
+        Vector3 rayStart, Vector3 rayEnd,
+        GraphicsBuffer::BufferIndexView index,
+        GraphicsBuffer::BufferStructuredView<float3> position);
+
     MeshCreateResult CreateCone(const float2 avSize, int alSections,
+        GraphicsBuffer::BufferIndexView* index,
+        GraphicsBuffer::BufferStructuredView<float3>* position);
+
+    MeshCreateResult CreateCone(const float2 avSize, int alSections,
+        GraphicsBuffer::BufferIndexView* index,
         GraphicsBuffer::BufferStructuredView<float3>* position,
         GraphicsBuffer::BufferStructuredView<float4>* color,
         GraphicsBuffer::BufferStructuredView<float3>* normal,

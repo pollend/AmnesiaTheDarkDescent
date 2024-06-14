@@ -21,6 +21,7 @@
 #define HPLEDITOR_ENTITY_WRAPPER_BONE_H
 
 #include "EntityWrapper.h"
+#include "graphics/MeshUtility.h"
 
 //------------------------------------------------------------
 
@@ -76,8 +77,6 @@ protected:
 typedef std::vector<cEntityWrapperBone*> tBoneWrapperVec;
 typedef tBoneWrapperVec::iterator		 tBoneWrapperVecIt;
 
-//------------------------------------------------------------
-
 class cEntityWrapperBone : public iEntityWrapper
 {
 public:
@@ -108,17 +107,21 @@ public:
 
 	void CreateLinkToParent();
 
-	iVertexBuffer* GetBoneVB() { return mpVBBone; }
+    MeshUtility::MeshIntersectionResult RayIntersection(Vector3 lineStart, Vector3 lineEnd);
 	void SetBoneVBColor(const cColor& aCol);
 
 protected:
 	void OnAddToWorld();
 
+    uint32_t numIndecies;
+    uint32_t numVertices;
+    cColor color;
+    GraphicsBuffer positionBuffer;
+    GraphicsBuffer indexBuffer;
+
 	cEntityWrapperBone* mpParentBone;
 	tBoneWrapperVec mvChildBones;
 
-
-	iVertexBuffer* mpVBBone;
 };
 
 //------------------------------------------------------------

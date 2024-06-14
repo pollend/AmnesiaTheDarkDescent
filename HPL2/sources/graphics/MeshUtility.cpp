@@ -469,6 +469,111 @@ namespace hpl::MeshUtility {
 
     MeshCreateResult CreateCone(const float2 avSize, int alSections,
         GraphicsBuffer::BufferIndexView* index,
+        GraphicsBuffer::BufferStructuredView<float3>* position) {
+		const float fAngleStep = k2Pif/(float)alSections;
+		const float fHalfHeight = avSize.y*0.5f;
+
+        uint32_t vertexBufIdx = 0;
+        uint32_t indexBufIndex = 0;
+
+        position->Write(vertexBufIdx++, float3(0.0f, fHalfHeight, 0.0f));
+
+		// Create vertices for base
+        details::CreateCircumference(avSize.x, fAngleStep, -fHalfHeight, [&](float3 pos) {
+			float3 norm = v3ToF3(normalize(f3Tov3(pos)));
+            position->Write(vertexBufIdx++, pos);
+        });
+
+		// Base center vertex
+        position->Write(vertexBufIdx++, float3(0.0f, -fHalfHeight, 0.0f));
+
+        indexBufIndex = details::WrapUpperCap(indexBufIndex, index, 0, 1, alSections);
+		indexBufIndex = details::WrapLowerCap(indexBufIndex, index, vertexBufIdx - 1, (vertexBufIdx - 1) - alSections, alSections);
+
+        MeshCreateResult result;
+        result.numIndices = indexBufIndex;
+        result.numVertices = vertexBufIdx;
+        return result;
+
+    }
+    LineIntersectionResult TesLineTriangleIntersection(
+        const Vector3& avLineStart,
+        const Vector3& avLineEnd,
+        const Vector3& avP0,
+        const Vector3& avP1,
+        const Vector3& avP2,
+        bool abSkipBackfacing) {
+		Vector3 vLineDelta = avLineEnd - avLineStart;
+
+		Vector3 vEdge1 = avP1 - avP0;
+		Vector3 vEdge2 = avP2 - avP0;
+
+		if(abSkipBackfacing)
+		{
+			Vector3 vNormal = cross(vEdge1, vEdge2);
+
+			float fDDotN = dot(vNormal, vLineDelta);
+			if(fDDotN<0)
+				return {false, 0.0f};
+		}
+
+
+		Vector3 vDCrossE = cross(vLineDelta, vEdge2);
+
+        float fEDotN = dot(vEdge1, vDCrossE);
+		if(fabs(fEDotN) < 0.00001f) return {false, 0.0f}; //Line is parallel
+
+		float fF = 1.0f / fEDotN;
+
+		Vector3 vTriToStart = avLineStart - avP0;
+
+		//Get U
+		float fU = fF * dot(vTriToStart, vDCrossE);
+		if(fU < 0.0f || fU > 1.0f) return {false, 0.0f};
+
+		//Get V
+		Vector3 vQ = cross(vTriToStart,vEdge1);
+		float fV = fF * dot(vLineDelta, vQ);
+		if (fV < 0.0 || fU + fV > 1.0) return {false, 0.0f};
+
+        //Get T
+		float fT = fF * dot(vEdge2, vQ);
+        if(fT <0 || fT >1.0f) return {false, 0.0f};
+
+		return {true, fT};
+
+    }
+
+    MeshIntersectionResult RayMeshIntersection(
+        bool skipBackFaces,
+        size_t numIndices,
+        Vector3 rayStart,
+        Vector3 rayEnd,
+        GraphicsBuffer::BufferIndexView index,
+        GraphicsBuffer::BufferStructuredView<float3> position) {
+        float hitT = 0;
+        uint32_t triIdx = 0;
+        for (uint32_t i = 0; i < numIndices; i += 3) {
+            MeshUtility::LineIntersectionResult result = TesLineTriangleIntersection(
+                rayStart,
+                rayEnd,
+                f3Tov3(position.Get(index.Get(i))),
+                f3Tov3(position.Get(index.Get(i + 1))),
+                f3Tov3(position.Get(index.Get(i + 2))),
+                skipBackFaces);
+            if (result.hit && hitT < result.hitT) {
+                hitT = result.hitT;
+                triIdx = i;
+            }
+        }
+        if (hitT > 0) {
+            return { true, hitT, triIdx, rayStart + (rayEnd - rayStart) * hitT };
+        }
+        return { false, 0, 0, Vector3(0, 0, 0) };
+    }
+
+    MeshCreateResult CreateCone(const float2 avSize, int alSections,
+        GraphicsBuffer::BufferIndexView* index,
         GraphicsBuffer::BufferStructuredView<float3>* position,
         GraphicsBuffer::BufferStructuredView<float4>* color,
         GraphicsBuffer::BufferStructuredView<float3>* normal,
