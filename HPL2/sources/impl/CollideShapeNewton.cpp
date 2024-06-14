@@ -307,11 +307,7 @@ namespace hpl {
 
 		int lCount=0;
 
-		//unsigned long lStartTime = cPlatform::GetApplicationTime();
-		//Log("%d triangles: ", alIndexNum/3);
-
 		mpNewtonCollision = NewtonCreateTreeCollision(mpNewtonWorld, 0);
-		//Log("-- Creating mesh collision.:\n");
 		NewtonTreeCollisionBeginBuild(mpNewtonCollision);
 		for(int tri = 0; tri < alIndexNum; tri+=3)
 		{
@@ -324,54 +320,6 @@ namespace hpl {
 				vTriVec[idx*3 + 1] = apVertexArray[lVtx + 1];
 				vTriVec[idx*3 + 2] = apVertexArray[lVtx + 2];
 			}
-
-			//if(alIndexNum<100)
-			//{
-			//	for(int i=0;i<3; ++i) Log("%f, %f, %f, ", vTriVec[i*3 + 0],vTriVec[i*3 + 1],vTriVec[i*3 + 2]);
-			//	Log("\n");
-			//}
-			//lCount+=9;
-
-			//cannot allow negative zeros! it is true!
-			/*for(int i=0;i<9; ++i)
-			{
-				if(fabs(vTriVec[i]-0.0f) < 0.000001f) vTriVec[i] = 0;
-			}*/
-
-			if(false)//bOptimize==false)
-			{
-				cPlanef tempPlane;
-				cVector3f vP1(vTriVec[0+0],vTriVec[0+1],vTriVec[0+2]);
-				cVector3f vP2(vTriVec[1*3+0],vTriVec[1*3+1],vTriVec[1*3+2]);
-				cVector3f vP3(vTriVec[2*3+0],vTriVec[2*3+1],vTriVec[2*3+2]);
-
-				tempPlane.FromPoints(vP1, vP2, vP3);
-
-				//Log("P1: %s P2: %s P3: %s\n",vP1.ToString().c_str(),vP2.ToString().c_str(),vP3.ToString().c_str());
-				//Log("Plane: a: %f b: %f c: %f d: %f\n",tempPlane.a,tempPlane.b,tempPlane.c,tempPlane.d);
-
-				/////////////////////////////////
-				//Check if the triangles are on the same plane. If so, do not optimize
-				// Do not check first triangle
-				if(bCreatedPlane==false)
-				{
-					plane = tempPlane;
-					bCreatedPlane = true;
-				}
-				// First plane created.
-				else
-				{
-					//Check the plane equation is different from the first one (allow a small difference thoug).
-					if(	std::abs(plane.a - tempPlane.a) > 0.001f ||
-						std::abs(plane.b - tempPlane.b) > 0.001f ||
-						std::abs(plane.c - tempPlane.c) > 0.001f ||
-						std::abs(plane.d - tempPlane.d) > 0.001f )
-					{
-						bOptimize = true;
-					}
-				}
-			}
-					
             NewtonTreeCollisionAddFace(mpNewtonCollision,3,vTriVec,sizeof(float)*3,1);
 		}
 

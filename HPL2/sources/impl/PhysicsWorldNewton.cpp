@@ -286,6 +286,45 @@ namespace hpl {
 		return pShape;
 	}
 
+
+    iCollideShape* cPhysicsWorldNewton::CreateMeshShape(uint32_t numberIndecies,
+		uint32_t vertexOffset, uint32_t indexOffset,
+        GraphicsBuffer::BufferIndexView indexView,
+        GraphicsBuffer::BufferStructuredView<float3> position) {
+        cCollideShapeNewton* pShape = hplNew(cCollideShapeNewton, (eCollideShapeType_Mesh, 0, NULL, mpNewtonWorld, this));
+
+        Vector3 minLocal = Vector3(100000, 100000, 100000);
+        Vector3 maxLocal = Vector3(-100000, -100000, -100000);
+        pShape->mpNewtonCollision = NewtonCreateTreeCollision(mpNewtonWorld, 0);
+        NewtonTreeCollisionBeginBuild(pShape->mpNewtonCollision);
+        for (size_t i = 0; i < numberIndecies; i += 3) {
+            float3 p1 = position.Get(vertexOffset + indexView.Get(indexOffset + i));
+            float3 p2 = position.Get(vertexOffset + indexView.Get(indexOffset + i + 1));
+            float3 p3 = position.Get(vertexOffset + indexView.Get(indexOffset + i + 2));
+
+            maxLocal = maxPerElem(f3Tov3(p1), maxLocal);
+            minLocal = minPerElem(f3Tov3(p1), minLocal);
+
+            maxLocal = maxPerElem(f3Tov3(p2), maxLocal);
+            minLocal = minPerElem(f3Tov3(p2), minLocal);
+
+            maxLocal = maxPerElem(f3Tov3(p3), maxLocal);
+            minLocal = minPerElem(f3Tov3(p3), minLocal);
+
+            float face[3 * 3] = {
+                p1.x, p1.y, p1.z,
+                p2.x, p2.y, p2.z,
+                p3.x, p3.y, p3.z
+            };
+            NewtonTreeCollisionAddFace(pShape->mpNewtonCollision, 3, face, sizeof(float) * 3, 1);
+        }
+        NewtonTreeCollisionEndBuild(pShape->mpNewtonCollision, 0);
+
+        pShape->GetBoundingVolume().SetLocalMinMax(cMath::FromForgeVector3(minLocal), cMath::FromForgeVector3(maxLocal));
+        mlstShapes.push_back(pShape);
+        return pShape;
+    }
+
 	//-----------------------------------------------------------------------
 
 	iCollideShape* cPhysicsWorldNewton::LoadMeshShapeFromBuffer(cBinaryBuffer *apBuffer)
@@ -307,6 +346,7 @@ namespace hpl {
 		cCollideShapeNewton *pNewtonMeshShape = static_cast<cCollideShapeNewton*>(apMeshShape);
 		pNewtonMeshShape->SaveToSerializedData(apBuffer);
 	}
+
 
 	//-----------------------------------------------------------------------
 

@@ -60,10 +60,8 @@ namespace hpl {
 
 		NewtonCollision* GetNewtonCollision(){ return mpNewtonCollision;}
 
-	private:
-		NewtonCollision* mpNewtonCollision;
+	    NewtonCollision* mpNewtonCollision;
 		NewtonWorld *mpNewtonWorld;
-
 		tCollideShapeVec mvSubShapes;
 	};
 };

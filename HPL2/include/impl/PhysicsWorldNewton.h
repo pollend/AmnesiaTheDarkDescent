@@ -34,75 +34,80 @@ namespace hpl {
 		cPhysicsWorldNewton();
 		~cPhysicsWorldNewton();
 
-		void Simulate(float afTimeStep);
+		void Simulate(float afTimeStep) override;
 
-		void  SetMaxTimeStep(float afTimeStep);
-		float GetMaxTimeStep();
+		void  SetMaxTimeStep(float afTimeStep) override;
+		float GetMaxTimeStep() override;
 
-		void SetWorldSize(const cVector3f &avMin,const cVector3f &avMax);
-		cVector3f GetWorldSizeMin();
-		cVector3f GetWorldSizeMax();
+		void SetWorldSize(const cVector3f &avMin,const cVector3f &avMax) override;
+		cVector3f GetWorldSizeMin() override;
+		cVector3f GetWorldSizeMax() override;
 
-		void SetGravity(const cVector3f& avGravity);
-		cVector3f GetGravity();
+		void SetGravity(const cVector3f& avGravity) override;
+		cVector3f GetGravity() override;
 
-		void SetAccuracyLevel(ePhysicsAccuracy aAccuracy);
-		ePhysicsAccuracy GetAccuracyLevel();
+		void SetAccuracyLevel(ePhysicsAccuracy aAccuracy) override;
+		ePhysicsAccuracy GetAccuracyLevel() override;
 
-		void SetNumberOfThreads(int alThreads);
-		int GetNumberOfThreads();
+		void SetNumberOfThreads(int alThreads) override;
+		int GetNumberOfThreads() override;
 
-		iCollideShape* CreateNullShape();
-		iCollideShape* CreateBoxShape(const cVector3f &avSize, cMatrixf* apOffsetMtx);
-		iCollideShape* CreateSphereShape(const cVector3f &avRadii, cMatrixf* apOffsetMtx);
-		iCollideShape* CreateCylinderShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx);
-		iCollideShape* CreateCapsuleShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx);
+		iCollideShape* CreateNullShape() override;
+		iCollideShape* CreateBoxShape(const cVector3f &avSize, cMatrixf* apOffsetMtx) override;
+		iCollideShape* CreateSphereShape(const cVector3f &avRadii, cMatrixf* apOffsetMtx) override;
+		iCollideShape* CreateCylinderShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx) override;
+		iCollideShape* CreateCapsuleShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx) override;
 
-		iCollideShape* CreateMeshShape(iVertexBuffer *apVtxBuffer);
-		iCollideShape* LoadMeshShapeFromBuffer(cBinaryBuffer *apBuffer);
-		void SaveMeshShapeToBuffer(iCollideShape* apMeshShape, cBinaryBuffer *apBuffer);
+		iCollideShape* CreateMeshShape(iVertexBuffer *apVtxBuffer) override;
+	    iCollideShape* CreateMeshShape(uint32_t numberIndecies,
+		                uint32_t vertexOffset, uint32_t indexOffset,
+		                GraphicsBuffer::BufferIndexView indexView,
+		                GraphicsBuffer::BufferStructuredView<float3> position) override;
 
-		iCollideShape* CreateCompundShape(tCollideShapeVec &avShapes);
-		iCollideShape* CreateStaticSceneShape(tCollideShapeVec &avShapes, tMatrixfVec *apMatrices);
+	    iCollideShape* LoadMeshShapeFromBuffer(cBinaryBuffer *apBuffer) override;
+		void SaveMeshShapeToBuffer(iCollideShape* apMeshShape, cBinaryBuffer *apBuffer) override;
+
+		iCollideShape* CreateCompundShape(tCollideShapeVec &avShapes) override;
+		iCollideShape* CreateStaticSceneShape(tCollideShapeVec &avShapes, tMatrixfVec *apMatrices) override;
 
 		iPhysicsJointBall* CreateJointBall(const tString &asName,const cVector3f& avPivotPoint,
 												const cVector3f& avPinDir,
-												iPhysicsBody* apParentBody, iPhysicsBody *apChildBody);
+												iPhysicsBody* apParentBody, iPhysicsBody *apChildBody) override;
 		iPhysicsJointHinge* CreateJointHinge(const tString &asName,const cVector3f& avPivotPoint,
 												const cVector3f& avPinDir,
-												iPhysicsBody* apParentBody, iPhysicsBody *apChildBody);
+												iPhysicsBody* apParentBody, iPhysicsBody *apChildBody) override;
 		iPhysicsJointSlider* CreateJointSlider(const tString &asName,const cVector3f& avPivotPoint,
 												const cVector3f& avPinDir,
-												iPhysicsBody* apParentBody, iPhysicsBody *apChildBody);
+												iPhysicsBody* apParentBody, iPhysicsBody *apChildBody) override;
 		iPhysicsJointScrew* CreateJointScrew(const tString &asName,const cVector3f& avPivotPoint,
 												const cVector3f& avPinDir,
-												iPhysicsBody* apParentBody, iPhysicsBody *apChildBody);
+												iPhysicsBody* apParentBody, iPhysicsBody *apChildBody) override;
 
-		iPhysicsBody* CreateBody(const tString &asName,iCollideShape *apShape);
+		iPhysicsBody* CreateBody(const tString &asName,iCollideShape *apShape) override;
 
-		void GetBodiesInBV(cBoundingVolume *apBV, std::vector<iPhysicsBody*> *apBodyVec);
+		void GetBodiesInBV(cBoundingVolume *apBV, std::vector<iPhysicsBody*> *apBodyVec) override;
 
-		iCharacterBody *CreateCharacterBody(const tString &asName, const cVector3f &avSize);
+		iCharacterBody *CreateCharacterBody(const tString &asName, const cVector3f &avSize) override;
 
-		iPhysicsMaterial* CreateMaterial(const tString &asName);
+		iPhysicsMaterial* CreateMaterial(const tString &asName) override;
 
-		iPhysicsController *CreateController(const tString &asName);
+		iPhysicsController *CreateController(const tString &asName) override;
 
-		iPhysicsRope* CreateRope(const tString &asName, const cVector3f &avStartPos, const cVector3f &avEndPos);
+		iPhysicsRope* CreateRope(const tString &asName, const cVector3f &avStartPos, const cVector3f &avEndPos) override;
 
 		void CastRay(iPhysicsRayCallback *apCallback,
 							const cVector3f &avOrigin, const cVector3f& avEnd,
 							bool abCalcDist, bool abCalcNormal, bool abCalcPoint,
-							bool abUsePrefilter = false);
+							bool abUsePrefilter = false) override;
 
 		bool CheckShapeCollision(	iCollideShape* apShapeA, const cMatrixf& a_mtxA,
 						iCollideShape* apShapeB, const cMatrixf& a_mtxB,
 						cCollideData & aCollideData, int alMaxPoints,
-						bool abCorrectNormalDirection);
+						bool abCorrectNormalDirection) override;
 
 		void RenderShapeDebugGeometry(	iCollideShape *apShape, const cMatrixf& a_mtxTransform,
-										DebugDraw *apLowLevel, const cColor& aColor);
-		void RenderDebugGeometry(DebugDraw *apLowLevel, const cColor& aColor);
+										DebugDraw *apLowLevel, const cColor& aColor) override;
+		void RenderDebugGeometry(DebugDraw *apLowLevel, const cColor& aColor) override;
 
 		NewtonWorld* GetNewtonWorld(){ return mpNewtonWorld;}
 	private:

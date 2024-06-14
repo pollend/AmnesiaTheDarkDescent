@@ -129,9 +129,10 @@ namespace hpl {
 		virtual iCollideShape* CreateCylinderShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx)=0;
 		virtual iCollideShape* CreateCapsuleShape(float afRadius, float afHeight, cMatrixf* apOffsetMtx)=0;
 		virtual iCollideShape* CreateMeshShape(iVertexBuffer *apVtxBuffer)=0;
-		//virtual iCollideShape* CreateMeshShape(size_t numberVerticies,
-		//                GraphicsBuffer::BufferIndexView indexView,
-		//                GraphicsBuffer::BufferStructuredView<float3> position)=0;
+		virtual iCollideShape* CreateMeshShape(uint32_t numberIndecies,
+		                uint32_t vertexOffset, uint32_t indexOffset,
+		                GraphicsBuffer::BufferIndexView indexView,
+		                GraphicsBuffer::BufferStructuredView<float3> position)=0;
 		/**
 		 * The buffer position must be pointing to where the data is saved!
 		 */

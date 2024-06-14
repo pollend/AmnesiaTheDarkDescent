@@ -135,6 +135,8 @@ namespace hpl {
                         return std::span<T>(reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(m_asset->m_mapped.m_mappedData) + m_byteOffset), (m_asset->m_mapped.m_size - m_byteOffset) / sizeof(T));
                     }
                 }
+                return std::span<T>();
+
             }
             inline std::span<uint8_t> rawByteSpan() {
                 switch(m_asset->m_type) {
